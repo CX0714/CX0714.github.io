@@ -1700,25 +1700,6 @@
                     }
                 },
 
-                deliverReply() {
-                    const messages = AppState.buildReplyMessages();
-                    if (messages.length === 0) {
-                        AppState.isTyping = false;
-                        Renderer.renderChat();
-                        return;
-                    }
-                    const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
-                    const delay = Math.random() * maxDelay;
-                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
-                    AppState.typingTimer = setTimeout(() => {
-                        AppState.typingTimer = null;
-                        sendReplySequence(messages, () => {
-                            AutoMessage.lastSentAt = Date.now();
-                            AutoMessage.scheduleNext();
-                        });
-                    }, delay);
-                },
-
                 handleUploadAvatar(e, who) {
                     const file = e.target.files[0];
                     if (!file) return;
@@ -1757,10 +1738,6 @@
                     const input = Renderer.elements.chatInput;
                     const text = input.value.trim();
                     if (!text) return;
-                    if (AppState.isTyping) {
-                        Renderer.showToast("他正在输入中，请稍等...");
-                        return;
-                    }
                     const data = AppState.getData();
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) {
                         Renderer.showToast("字卡库为空，先去添加一些他会说的话吧");
@@ -1773,9 +1750,10 @@
                     input.focus();
                     AppState.addMessage("me", text);
                     Renderer.renderChat();
-                    AppState.isTyping = true;
-                    Renderer.renderChat();
-                    this.deliverReply();
+                    const messages = AppState.buildReplyMessages();
+                    if (messages.length > 0) {
+                        ReplyQueue.push(messages);
+                    }
                 },
                 handleAddCard() {
                     const input = Renderer.elements.inputNewCard;
@@ -2002,6 +1980,9 @@
                         if (imported) {
                             AppState.data = imported;
                             Storage.save(imported);
+                            ReplyQueue.clear();
+                            AppState.isTyping = false;
+                            if (AppState.typingTimer) { clearTimeout(AppState.typingTimer); AppState.typingTimer = null; }
                             Renderer.applyBackground();
                             Renderer.applyBubbleHeight(imported.bubbleHeight != null ? imported.bubbleHeight : 2);
                             Renderer.applyBubbleCSS();
@@ -2032,6 +2013,9 @@
                             AppState.resetAll();
                             AutoMessage.stop();
                             KeepAlive.stop();
+                            ReplyQueue.clear();
+                            AppState.isTyping = false;
+                            if (AppState.typingTimer) { clearTimeout(AppState.typingTimer); AppState.typingTimer = null; }
                             Renderer.applyBackground();
                             Renderer.applyBubbleHeight(2);
                             Renderer.applyBubbleCSS();
@@ -2109,31 +2093,20 @@
                         this.scheduleNext();
                         return;
                     }
-                    if (AppState.isTyping) { this.scheduleNext(); return; }
+                    if (ReplyQueue.hasPending()) { this.scheduleNext(); return; }
                     this._sendOne();
                 },
                 _sendOne() {
                     const messages = AppState.buildReplyMessages();
                     if (messages.length === 0) { this.scheduleNext(); return; }
-                    AppState.isTyping = true;
-                    Renderer.renderChat();
-                    const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
-                    const delay = Math.random() * maxDelay;
-                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
-                    AppState.typingTimer = setTimeout(() => {
-                        AppState.typingTimer = null;
-                        sendReplySequence(messages, () => {
-                            this.lastSentAt = Date.now();
-                            this.scheduleNext();
-                        });
-                    }, delay);
+                    ReplyQueue.push(messages);
                 },
                 onVisible() {
                     const data = AppState.getData();
                     const cfg = data.config || {};
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
-                    if (AppState.isTyping) { this.scheduleNext(); return; }
+                    if (ReplyQueue.hasPending()) { this.scheduleNext(); return; }
                     if (!this.lastSentAt) { this.lastSentAt = Date.now(); this.scheduleNext(); return; }
                     const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
                     const elapsed = Date.now() - this.lastSentAt;
@@ -2150,52 +2123,75 @@
                 },
                 _queueCatchUp(delay) {
                     setTimeout(() => {
-                        if (AppState.isTyping) return;
+                        if (ReplyQueue.hasPending()) return;
                         const messages = AppState.buildReplyMessages();
                         if (messages.length === 0) return;
-                        AppState.isTyping = true;
-                        Renderer.renderChat();
-                        const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
-                        const d = Math.random() * maxDelay;
-                        if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
-                        AppState.typingTimer = setTimeout(() => {
-                            AppState.typingTimer = null;
-                            sendReplySequence(messages, () => {
-                                this.lastSentAt = Date.now();
-                            });
-                        }, d);
+                        ReplyQueue.push(messages);
                     }, delay);
                 },
             };
 
-            function sendReplySequence(messages, onComplete) {
-                let idx = 0;
-                const step = () => {
-                    if (idx >= messages.length) {
+            const ReplyQueue = {
+                queue: [],
+                busy: false,
+                push(messages) {
+                    this.queue.push(messages);
+                    if (!this.busy) this._next();
+                },
+                _next() {
+                    if (this.queue.length === 0) {
+                        this.busy = false;
                         AppState.isTyping = false;
                         Renderer.renderChat();
                         Renderer.updateHeader();
-                        if (onComplete) onComplete();
                         return;
                     }
-                    const msg = messages[idx++];
-                    if (msg.type === "sticker") {
-                        AppState.addMessage("ta", msg.src, "sticker");
-                    } else {
-                        AppState.addMessage("ta", msg.text);
-                    }
+                    this.busy = true;
+                    const messages = this.queue.shift();
+                    const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
+                    const delay = Math.random() * maxDelay;
+                    AppState.isTyping = true;
                     Renderer.renderChat();
-                    if (idx >= messages.length) {
-                        step();
-                    } else {
-                        AppState.typingTimer = setTimeout(() => {
-                            AppState.typingTimer = null;
+                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
+                    AppState.typingTimer = setTimeout(() => {
+                        AppState.typingTimer = null;
+                        this._emit(messages);
+                    }, delay);
+                },
+                _emit(messages) {
+                    let idx = 0;
+                    const step = () => {
+                        if (idx >= messages.length) {
+                            AutoMessage.lastSentAt = Date.now();
+                            AutoMessage.scheduleNext();
+                            this._next();
+                            return;
+                        }
+                        const msg = messages[idx++];
+                        if (msg.type === "sticker") {
+                            AppState.addMessage("ta", msg.src, "sticker");
+                        } else {
+                            AppState.addMessage("ta", msg.text);
+                        }
+                        Renderer.renderChat();
+                        if (idx >= messages.length) {
                             step();
-                        }, 600 + Math.random() * 900);
-                    }
-                };
-                step();
-            }
+                        } else {
+                            AppState.typingTimer = setTimeout(() => {
+                                AppState.typingTimer = null;
+                                step();
+                            }, 600 + Math.random() * 900);
+                        }
+                    };
+                    step();
+                },
+                hasPending() {
+                    return this.busy || this.queue.length > 0;
+                },
+                clear() {
+                    this.queue = [];
+                },
+            };
 
             const KeepAlive = {
                 audioCtx: null,
