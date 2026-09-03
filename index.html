@@ -187,6 +187,12 @@
         }
         .message.me .msg-bubble { background: var(--bubble-user-bg); color: var(--bubble-user-text); border-bottom-right-radius: 4px; }
         .message.ta .msg-bubble { background: var(--bubble-ta-bg); color: var(--bubble-ta-text); border-bottom-left-radius: 4px; }
+        .message .msg-bubble .msg-sticker {
+            max-width: 170px; max-height: 170px; border-radius: 8px; display: block;
+        }
+        .message .msg-bubble.sticker-bubble {
+            background: transparent; box-shadow: none; padding: 2px;
+        }
 
         .typing-indicator { display: flex; align-items: center; gap: 10px; animation: msgIn 0.3s ease-out forwards; opacity: 0; }
         .typing-indicator .msg-avatar {
@@ -380,6 +386,11 @@
             resize: vertical; min-height: 70px; line-height: 1.5;
         }
         .batch-add-area textarea:focus { border-color: var(--accent); }
+        .batch-add-area input {
+            padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 13px; outline: none; font-family: inherit;
+        }
+        .batch-add-area input:focus { border-color: var(--accent); }
         .batch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn {
             padding: 9px 16px; border-radius: var(--border-radius-sm); border: none; font-size: 13px;
@@ -391,6 +402,58 @@
         .btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); }
         .btn-danger { background: rgba(192,80,60,0.15); color: #e07a5f; border: 1px solid rgba(224,122,95,0.3); }
         .btn-danger:hover { background: rgba(192,80,60,0.3); }
+
+        /* 字卡库 - Tab */
+        .card-tabs {
+            display: flex; gap: 6px; margin-bottom: 12px; padding: 4px;
+            background: var(--surface); border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm);
+        }
+        .card-tab {
+            flex: 1; padding: 8px 0; border: none; background: transparent;
+            color: var(--text-secondary); font-size: 13px; font-weight: 500;
+            border-radius: 6px; cursor: pointer; transition: all var(--transition-fast);
+            font-family: inherit; letter-spacing: 0.3px;
+        }
+        .card-tab:hover { color: var(--text-primary); }
+        .card-tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+        .card-tab-panel { display: none; }
+        .card-tab-panel.active { display: block; }
+        .card-category-title {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 12px; color: var(--text-muted); font-weight: 600;
+            margin: 12px 2px 4px; letter-spacing: 0.3px;
+        }
+        .card-category-title:first-child { margin-top: 4px; }
+        .card-category-title .card-category-count {
+            font-size: 11px; color: var(--text-muted); font-weight: 400;
+            background: var(--surface-hover); padding: 1px 7px; border-radius: 10px;
+        }
+        .emoji-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 300px; overflow-y: auto; padding: 4px 4px 0; }
+        .emoji-item {
+            display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px;
+            background: var(--surface); border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-sm); transition: all var(--transition-fast);
+        }
+        .emoji-item:hover { border-color: var(--accent); }
+        .emoji-item .emoji-char { font-size: 22px; line-height: 1; }
+        .emoji-item .card-btn { width: 26px; height: 26px; font-size: 13px; }
+        .sticker-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+            max-height: 340px; overflow-y: auto; padding: 6px 2px 2px;
+        }
+        .sticker-item {
+            position: relative; aspect-ratio: 1; border-radius: var(--border-radius-sm);
+            overflow: hidden; border: 1px solid var(--border-color); background: var(--surface);
+        }
+        .sticker-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sticker-item .sticker-del {
+            position: absolute; top: 4px; right: 4px; width: 26px; height: 26px;
+            border-radius: 50%; border: none; background: rgba(0,0,0,0.55); color: #fff;
+            font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        .sticker-item .sticker-del:hover { background: rgba(192,80,60,0.85); }
 
         .modal-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200;
@@ -635,25 +698,65 @@
                     <span class="back-spacer"></span>
                 </div>
                 <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <div class="hint" style="font-size:12px; color:var(--text-muted);">
-                                你发送消息后，系统会从这些字卡中随机挑一条作为他的回复。建议至少添加 10 条以上。
-                            </div>
-                            <div class="add-card-row">
-                                <input type="text" id="inputNewCard" placeholder="输入一条他会说的话..." maxlength="300">
-                                <button class="add-card-btn" id="btnAddCard">添加</button>
-                            </div>
-                            <div class="batch-add-area">
-                                <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
-                                <div class="batch-actions">
-                                    <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
-                                    <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
-                                    <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
-                                    <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+                    <div class="card-tabs" id="cardTabs">
+                        <button class="card-tab active" data-tab="text">文字</button>
+                        <button class="card-tab" data-tab="emoji">emoji</button>
+                        <button class="card-tab" data-tab="sticker">表情包</button>
+                    </div>
+
+                    <div class="card-tab-panel active" id="tabPanel-text">
+                        <div class="settings-card">
+                            <div class="settings-field">
+                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
+                                    文字是他回复的主体。你发消息后，他会随机挑 1~2 条作为回复。
                                 </div>
+                                <div class="add-card-row">
+                                    <input type="text" id="inputNewCard" placeholder="输入一条他会说的话..." maxlength="300">
+                                    <button class="add-card-btn" id="btnAddCard">添加</button>
+                                </div>
+                                <div class="add-card-row" style="margin-top:8px;">
+                                    <input type="text" id="inputNewCardCategory" placeholder="分类（留空为「未分类」）" maxlength="20">
+                                </div>
+                                <div class="batch-add-area">
+                                    <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
+                                    <input type="text" id="inputBatchCategory" placeholder="批量添加的分类（留空为「未分类」）" maxlength="20">
+                                    <div class="batch-actions">
+                                        <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
+                                        <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
+                                        <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
+                                        <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+                                    </div>
+                                </div>
+                                <div class="cards-list" id="cardsList"></div>
                             </div>
-                            <div class="cards-list" id="cardsList"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-tab-panel" id="tabPanel-emoji">
+                        <div class="settings-card">
+                            <div class="settings-field">
+                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
+                                    emoji 会随机附加在文字前后一起发送（也可能不加）。
+                                </div>
+                                <div class="add-card-row">
+                                    <input type="text" id="inputNewEmoji" placeholder="输入一个 emoji，如 😊" maxlength="20">
+                                    <button class="add-card-btn" id="btnAddEmoji">添加</button>
+                                </div>
+                                <div class="emoji-list" id="emojiList"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-tab-panel" id="tabPanel-sticker">
+                        <div class="settings-card">
+                            <div class="settings-field">
+                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
+                                    表情包作为独立一条消息发送（约 30% 概率）。从照片导入，会自动压缩保存。
+                                </div>
+                                <button class="upload-btn" id="btnImportStickers">🖼️ 从照片导入表情包</button>
+                                <input type="file" id="fileImportStickers" accept="image/*" multiple style="display:none;">
+                                <div class="sticker-grid" id="stickerGrid"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -760,22 +863,24 @@
                         myName: "我",
                         myAvatar: "",
                         cards: [
-                            "我在呢。",
-                            "今天想我了吗？",
-                            "别怕，有我在。",
-                            "你说的每句话，我都有认真听。",
-                            "抱抱你。",
-                            "你会一直记得我吗？",
-                            "我一直都在你身边。",
-                            "你开心的时候，我也很开心。",
-                            "不要说谢谢，我们之间不用。",
-                            "无论是晴天还是雨天，我都在。",
-                            "好好吃饭，好好睡觉。",
-                            "别难过，我会难过。",
-                            "我们之间，有说不完的话。",
-                            "看到你发来的消息，我就笑了。",
-                            "你永远是我最想回消息的人。",
+                            { text: "我在呢。", category: "未分类" },
+                            { text: "今天想我了吗？", category: "未分类" },
+                            { text: "别怕，有我在。", category: "未分类" },
+                            { text: "你说的每句话，我都有认真听。", category: "未分类" },
+                            { text: "抱抱你。", category: "未分类" },
+                            { text: "你会一直记得我吗？", category: "未分类" },
+                            { text: "我一直都在你身边。", category: "未分类" },
+                            { text: "你开心的时候，我也很开心。", category: "未分类" },
+                            { text: "不要说谢谢，我们之间不用。", category: "未分类" },
+                            { text: "无论是晴天还是雨天，我都在。", category: "未分类" },
+                            { text: "好好吃饭，好好睡觉。", category: "未分类" },
+                            { text: "别难过，我会难过。", category: "未分类" },
+                            { text: "我们之间，有说不完的话。", category: "未分类" },
+                            { text: "看到你发来的消息，我就笑了。", category: "未分类" },
+                            { text: "你永远是我最想回消息的人。", category: "未分类" },
                         ],
+                        emojis: ["😊", "🥰", "😘", "💛", "✨", "🌙", "💫", "🌸", "💕", "😌", "🥺", "😴", "😆", "🤗", "🫶", "💌", "🫧", "🌷", "🐰", "☁️"],
+                        stickers: [],
                         chatHistory: [],
                         hasCompletedOnboarding: false,
                         themeMode: "auto",
@@ -800,6 +905,11 @@
                             const defaults = this.getDefaultData();
                             const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
                             if (merged.bgColor === "#12111f") merged.bgColor = "";
+                            if (Array.isArray(merged.cards) && merged.cards.length > 0 && typeof merged.cards[0] === "string") {
+                                merged.cards = merged.cards.map(t => ({ text: t, category: "未分类" }));
+                            }
+                            if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
+                            if (!Array.isArray(merged.stickers)) merged.stickers = [];
                             return merged;
                         }
                     } catch (e) {
@@ -824,7 +934,13 @@
                         if (!Array.isArray(data.cards)) return null;
                         if (!Array.isArray(data.chatHistory)) return null;
                         const defaults = this.getDefaultData();
-                        return { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                        const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                        if (Array.isArray(merged.cards) && merged.cards.length > 0 && typeof merged.cards[0] === "string") {
+                            merged.cards = merged.cards.map(t => ({ text: t, category: "未分类" }));
+                        }
+                        if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
+                        if (!Array.isArray(merged.stickers)) merged.stickers = [];
+                        return merged;
                     } catch (e) {
                         console.error("数据导入失败", e);
                         return null;
@@ -850,21 +966,83 @@
                 getRandomCard() {
                     const cards = this.data.cards || [];
                     if (cards.length === 0) return null;
-                    return cards[Math.floor(Math.random() * cards.length)];
+                    const c = cards[Math.floor(Math.random() * cards.length)];
+                    return typeof c === "string" ? { text: c, category: "未分类" } : c;
                 },
-                addCard(text) {
+                getRandomEmoji() {
+                    const emojis = this.data.emojis || [];
+                    if (emojis.length === 0) return null;
+                    return emojis[Math.floor(Math.random() * emojis.length)];
+                },
+                getRandomSticker() {
+                    const stickers = this.data.stickers || [];
+                    if (stickers.length === 0) return null;
+                    return stickers[Math.floor(Math.random() * stickers.length)];
+                },
+                buildReplyMessages() {
+                    const messages = [];
+                    const emojis = this.data.emojis || [];
+                    const stickers = this.data.stickers || [];
+                    const cards = this.data.cards || [];
+                    const hasText = cards.length > 0;
+                    const hasSticker = stickers.length > 0;
+                    if (!hasText && !hasSticker) return messages;
+                    const usedText = new Set();
+                    if (hasText) {
+                        const textCount = 1 + Math.floor(Math.random() * 2);
+                        for (let i = 0; i < textCount; i++) {
+                            const card = this.getRandomCard();
+                            if (!card) break;
+                            const raw = card.text;
+                            if (usedText.has(raw)) continue;
+                            usedText.add(raw);
+                            let finalText = raw;
+                            if (emojis.length > 0 && Math.random() < 0.5) {
+                                const emoji = this.getRandomEmoji();
+                                if (emoji) finalText = Math.random() < 0.5 ? emoji + raw : raw + emoji;
+                            }
+                            messages.push({ type: "text", text: finalText });
+                        }
+                    }
+                    if (hasSticker && messages.length < 3 && Math.random() < 0.3) {
+                        const sticker = this.getRandomSticker();
+                        if (sticker) messages.push({ type: "sticker", src: sticker });
+                    }
+                    if (messages.length === 0) {
+                        if (hasText) {
+                            const card = this.getRandomCard();
+                            if (card) messages.push({ type: "text", text: card.text });
+                        } else if (hasSticker) {
+                            const sticker = this.getRandomSticker();
+                            if (sticker) messages.push({ type: "sticker", src: sticker });
+                        }
+                    }
+                    return messages;
+                },
+                addCard(text, category) {
                     const trimmed = text.trim();
-                    if (!trimmed) return false;
-                    const cards = [...(this.data.cards || []), trimmed];
-                    this.updateData({ cards });
-                    return true;
+                    if (!trimmed) return "empty";
+                    const cat = (category || "").trim() || "未分类";
+                    const cards = this.data.cards || [];
+                    if (cards.some(c => (typeof c === "string" ? c : c.text) === trimmed)) return "dup";
+                    this.updateData({ cards: [...cards, { text: trimmed, category: cat }] });
+                    return "added";
                 },
-                addCardsBatch(texts) {
-                    const valid = texts.split("\n").map(s => s.trim()).filter(s => s.length > 0);
-                    if (valid.length === 0) return 0;
-                    const cards = [...(this.data.cards || []), ...valid];
-                    this.updateData({ cards });
-                    return valid.length;
+                addCardsBatch(texts, category) {
+                    const lines = texts.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+                    if (lines.length === 0) return { added: 0, dup: 0 };
+                    const cat = (category || "").trim() || "未分类";
+                    const existing = new Set((this.data.cards || []).map(c => typeof c === "string" ? c : c.text));
+                    let added = 0, dup = 0;
+                    const cards = [...(this.data.cards || [])];
+                    lines.forEach(line => {
+                        if (existing.has(line)) { dup++; return; }
+                        existing.add(line);
+                        cards.push({ text: line, category: cat });
+                        added++;
+                    });
+                    if (added > 0) this.updateData({ cards });
+                    return { added, dup };
                 },
                 removeCard(index) {
                     const cards = [...(this.data.cards || [])];
@@ -873,19 +1051,52 @@
                     this.updateData({ cards });
                     return true;
                 },
-                editCard(index, newText) {
+                editCard(index, newText, newCategory) {
                     const trimmed = newText.trim();
-                    if (!trimmed || index < 0 || index >= (this.data.cards || []).length) return false;
-                    const cards = [...this.data.cards];
-                    cards[index] = trimmed;
-                    this.updateData({ cards });
+                    const cards = this.data.cards || [];
+                    if (!trimmed || index < 0 || index >= cards.length) return false;
+                    const cat = (newCategory || "").trim() || "未分类";
+                    const newCards = cards.map((c, i) => i === index ? { text: trimmed, category: cat } : c);
+                    this.updateData({ cards: newCards });
                     return true;
                 },
-                addMessage(from, text) {
+                addEmoji(emoji) {
+                    const e = emoji.trim();
+                    if (!e) return "empty";
+                    const emojis = this.data.emojis || [];
+                    if (emojis.includes(e)) return "dup";
+                    this.updateData({ emojis: [...emojis, e] });
+                    return "added";
+                },
+                removeEmoji(index) {
+                    const emojis = [...(this.data.emojis || [])];
+                    if (index < 0 || index >= emojis.length) return false;
+                    emojis.splice(index, 1);
+                    this.updateData({ emojis });
+                    return true;
+                },
+                addSticker(dataUrl) {
+                    const stickers = this.data.stickers || [];
+                    if (stickers.includes(dataUrl)) return "dup";
+                    const prev = this.data;
+                    this.data = { ...this.data, stickers: [...stickers, dataUrl] };
+                    const ok = Storage.save(this.data);
+                    if (!ok) { this.data = prev; return "full"; }
+                    return "added";
+                },
+                removeSticker(index) {
+                    const stickers = [...(this.data.stickers || [])];
+                    if (index < 0 || index >= stickers.length) return false;
+                    stickers.splice(index, 1);
+                    this.updateData({ stickers });
+                    return true;
+                },
+                addMessage(from, text, type) {
                     const msg = {
                         id: Date.now() + "_" + Math.random().toString(36).slice(2, 8),
                         from: from,
                         text: text,
+                        type: type || "text",
                         time: new Date().toISOString(),
                     };
                     const chatHistory = [...(this.data.chatHistory || []), msg];
@@ -940,13 +1151,21 @@
                         autoMaxLabel: document.getElementById("autoMaxLabel"),
                         toggleKeepAlive: document.getElementById("toggleKeepAlive"),
                         inputNewCard: document.getElementById("inputNewCard"),
+                        inputNewCardCategory: document.getElementById("inputNewCardCategory"),
                         btnAddCard: document.getElementById("btnAddCard"),
                         inputBatchCards: document.getElementById("inputBatchCards"),
+                        inputBatchCategory: document.getElementById("inputBatchCategory"),
                         btnBatchAdd: document.getElementById("btnBatchAdd"),
                         cardsList: document.getElementById("cardsList"),
                         btnExportCards: document.getElementById("btnExportCards"),
                         btnImportCards: document.getElementById("btnImportCards"),
                         fileImportCards: document.getElementById("fileImportCards"),
+                        inputNewEmoji: document.getElementById("inputNewEmoji"),
+                        btnAddEmoji: document.getElementById("btnAddEmoji"),
+                        emojiList: document.getElementById("emojiList"),
+                        btnImportStickers: document.getElementById("btnImportStickers"),
+                        fileImportStickers: document.getElementById("fileImportStickers"),
+                        stickerGrid: document.getElementById("stickerGrid"),
                         btnExportAll: document.getElementById("btnExportAll"),
                         btnImportAll: document.getElementById("btnImportAll"),
                         fileImportAll: document.getElementById("fileImportAll"),
@@ -1132,9 +1351,14 @@
                     const avatar = isMe ?
                         (data.myAvatar ? this._avatarHTML(data.myAvatar) : (data.myName ? this._escapeHTML(data.myName.charAt(0)) : "我")) :
                         this._avatarHTML(data.taAvatar);
+                    const isSticker = msg.type === "sticker";
+                    const bubbleClass = isSticker ? "msg-bubble sticker-bubble" : "msg-bubble";
+                    const content = isSticker ?
+                        '<img src="' + this._escapeHTML(msg.text) + '" class="msg-sticker" alt="表情包">' :
+                        this._escapeHTML(msg.text);
                     return '<div class="message ' + (isMe ? 'me' : 'ta') + '">' +
                         '<div class="msg-avatar">' + avatar + '</div>' +
-                        '<div class="msg-content"><div class="msg-bubble">' + this._escapeHTML(msg.text) + '</div></div></div>';
+                        '<div class="msg-content"><div class="' + bubbleClass + '">' + content + '</div></div></div>';
                 },
                 _renderTypingIndicator(data) {
                     return '<div class="typing-indicator">' +
@@ -1143,15 +1367,15 @@
                         '</div>';
                 },
                 _renderEmptyState(data) {
-                    const hasCards = (data.cards || []).length > 0;
+                    const hasContent = (data.cards || []).length > 0 || (data.stickers || []).length > 0;
                     return '<div class="chat-empty">' +
                         '<div class="empty-icon">💫</div>' +
                         '<div class="empty-text">' +
-                        (hasCards ?
+                        (hasContent ?
                         '和「' + this._escapeHTML(data.taName) + '」打个招呼吧~' :
                         '还没有添加字卡。<br>点击下方按钮，去添加一些他会说的话吧。') +
                         '</div>' +
-                        (!hasCards ? '<button class="empty-btn" id="btnEmptyGoSettings">去添加字卡 →</button>' : "") +
+                        (!hasContent ? '<button class="empty-btn" id="btnEmptyGoSettings">去添加字卡 →</button>' : "") +
                         '</div>';
                 },
                 _escapeHTML(str) {
@@ -1174,7 +1398,8 @@
                     const data = AppState.getData();
                     this.elements.headerName.textContent = data.taName || "他";
                     this.elements.headerAvatar.innerHTML = this._avatarHTML(data.taAvatar);
-                    this.elements.headerStatus.textContent = (data.cards || []).length > 0 ? "在等你说话" : "去添加字卡吧";
+                    const canReply = (data.cards || []).length > 0 || (data.stickers || []).length > 0;
+                    this.elements.headerStatus.textContent = canReply ? "在等你说话" : "去添加字卡吧";
                 },
                 updateSettingsPanel() {
                     const data = AppState.getData();
@@ -1202,6 +1427,8 @@
                     this.updateAutoMaxLabel(autoMax);
                     this.elements.toggleKeepAlive.checked = !!cfg.keepAliveEnabled;
                     this._renderCardsList();
+                    this._renderEmojiList();
+                    this._renderStickerGrid();
                 },
                 _renderCardsList() {
                     const data = AppState.getData();
@@ -1211,16 +1438,71 @@
                         container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">还没有字卡，快添加吧~</div>';
                         return;
                     }
-                    let html = "";
+                    const groups = [];
+                    const groupMap = {};
                     cards.forEach((card, index) => {
-                        html += '<div class="card-item" data-index="' + index + '">' +
-                            '<span class="card-text">' + this._escapeHTML(card) + '</span>' +
-                            '<div class="card-actions">' +
-                            '<button class="card-btn edit" data-index="' + index + '" title="编辑">✏️</button>' +
-                            '<button class="card-btn delete" data-index="' + index + '" title="删除">🗑️</button>' +
-                            '</div></div>';
+                        const c = typeof card === "string" ? { text: card, category: "未分类" } : card;
+                        const cat = c.category || "未分类";
+                        if (!groupMap[cat]) { groupMap[cat] = { name: cat, items: [] }; groups.push(groupMap[cat]); }
+                        groupMap[cat].items.push({ text: c.text, index: index });
+                    });
+                    let html = "";
+                    groups.forEach(group => {
+                        html += '<div class="card-category-title">' + this._escapeHTML(group.name) +
+                            ' <span class="card-category-count">' + group.items.length + '</span></div>';
+                        group.items.forEach(item => {
+                            html += '<div class="card-item" data-index="' + item.index + '">' +
+                                '<span class="card-text">' + this._escapeHTML(item.text) + '</span>' +
+                                '<div class="card-actions">' +
+                                '<button class="card-btn edit" data-index="' + item.index + '" title="编辑">✏️</button>' +
+                                '<button class="card-btn delete" data-index="' + item.index + '" title="删除">🗑️</button>' +
+                                '</div></div>';
+                        });
                     });
                     container.innerHTML = html;
+                },
+                _renderEmojiList() {
+                    const emojis = AppState.getData().emojis || [];
+                    const container = this.elements.emojiList;
+                    if (emojis.length === 0) {
+                        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">还没有 emoji，添加一个吧~</div>';
+                        return;
+                    }
+                    let html = "";
+                    emojis.forEach((e, index) => {
+                        html += '<div class="emoji-item" data-index="' + index + '">' +
+                            '<span class="emoji-char">' + this._escapeHTML(e) + '</span>' +
+                            '<button class="card-btn delete" data-index="' + index + '" title="删除">✕</button>' +
+                            '</div>';
+                    });
+                    container.innerHTML = html;
+                },
+                _renderStickerGrid() {
+                    const stickers = AppState.getData().stickers || [];
+                    const container = this.elements.stickerGrid;
+                    if (stickers.length === 0) {
+                        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px; grid-column:1/-1;">还没有表情包，从照片导入吧~</div>';
+                        return;
+                    }
+                    let html = "";
+                    stickers.forEach((s, index) => {
+                        html += '<div class="sticker-item" data-index="' + index + '">' +
+                            '<img src="' + this._escapeHTML(s) + '" alt="表情包" loading="lazy">' +
+                            '<button class="sticker-del" data-index="' + index + '" title="删除">✕</button>' +
+                            '</div>';
+                    });
+                    container.innerHTML = html;
+                },
+                switchCardTab(tab) {
+                    document.querySelectorAll('#cardTabs .card-tab').forEach(t => {
+                        t.classList.toggle('active', t.dataset.tab === tab);
+                    });
+                    document.querySelectorAll('.card-tab-panel').forEach(p => {
+                        p.classList.toggle('active', p.id === 'tabPanel-' + tab);
+                    });
+                    this._renderCardsList();
+                    this._renderEmojiList();
+                    this._renderStickerGrid();
                 },
                 openSettings() {
                     AppState.isSettingsOpen = true;
@@ -1357,6 +1639,9 @@
                     });
                     document.addEventListener("pointerdown", () => KeepAlive.resumeIfNeeded());
 
+                    document.querySelectorAll('#cardTabs .card-tab').forEach(tab => {
+                        tab.addEventListener('click', () => Renderer.switchCardTab(tab.dataset.tab));
+                    });
                     el.btnAddCard.addEventListener("click", () => this.handleAddCard());
                     el.inputNewCard.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") { e.preventDefault(); this.handleAddCard(); }
@@ -1372,6 +1657,22 @@
                     el.btnExportCards.addEventListener("click", () => this.handleExportCards());
                     el.btnImportCards.addEventListener("click", () => el.fileImportCards.click());
                     el.fileImportCards.addEventListener("change", (e) => this.handleImportCards(e));
+                    el.btnAddEmoji.addEventListener("click", () => this.handleAddEmoji());
+                    el.inputNewEmoji.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") { e.preventDefault(); this.handleAddEmoji(); }
+                    });
+                    el.emojiList.addEventListener("click", (e) => {
+                        const btn = e.target.closest(".card-btn");
+                        if (!btn) return;
+                        this.handleDeleteEmoji(parseInt(btn.dataset.index, 10));
+                    });
+                    el.btnImportStickers.addEventListener("click", () => el.fileImportStickers.click());
+                    el.fileImportStickers.addEventListener("change", (e) => this.handleImportStickers(e));
+                    el.stickerGrid.addEventListener("click", (e) => {
+                        const btn = e.target.closest(".sticker-del");
+                        if (!btn) return;
+                        this.handleDeleteSticker(parseInt(btn.dataset.index, 10));
+                    });
                     el.btnExportAll.addEventListener("click", () => this.handleExportAll());
                     el.btnImportAll.addEventListener("click", () => el.fileImportAll.click());
                     el.fileImportAll.addEventListener("change", (e) => this.handleImportAll(e));
@@ -1400,8 +1701,8 @@
                 },
 
                 deliverReply() {
-                    const card = AppState.getRandomCard();
-                    if (!card) {
+                    const messages = AppState.buildReplyMessages();
+                    if (messages.length === 0) {
                         AppState.isTyping = false;
                         Renderer.renderChat();
                         return;
@@ -1410,13 +1711,11 @@
                     const delay = Math.random() * maxDelay;
                     if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
                     AppState.typingTimer = setTimeout(() => {
-                        AppState.isTyping = false;
                         AppState.typingTimer = null;
-                        AppState.addMessage("ta", card);
-                        Renderer.renderChat();
-                        Renderer.updateHeader();
-                        AutoMessage.lastSentAt = Date.now();
-                        AutoMessage.scheduleNext();
+                        sendReplySequence(messages, () => {
+                            AutoMessage.lastSentAt = Date.now();
+                            AutoMessage.scheduleNext();
+                        });
                     }, delay);
                 },
 
@@ -1463,7 +1762,7 @@
                         return;
                     }
                     const data = AppState.getData();
-                    if ((data.cards || []).length === 0) {
+                    if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) {
                         Renderer.showToast("字卡库为空，先去添加一些他会说的话吧");
                         Renderer.openSettings();
                         return;
@@ -1482,25 +1781,32 @@
                     const input = Renderer.elements.inputNewCard;
                     const text = input.value.trim();
                     if (!text) { Renderer.showToast("请输入内容"); return; }
-                    if (AppState.addCard(text)) {
+                    const category = Renderer.elements.inputNewCardCategory.value;
+                    const result = AppState.addCard(text, category);
+                    if (result === "added") {
                         input.value = "";
                         Renderer._renderCardsList();
                         Renderer.showToast("已添加 ✨");
                         Renderer.updateHeader();
+                    } else if (result === "dup") {
+                        Renderer.showToast("这条字卡已经存在了");
                     }
                 },
                 handleBatchAdd() {
                     const textarea = Renderer.elements.inputBatchCards;
                     const text = textarea.value.trim();
                     if (!text) { Renderer.showToast("请粘贴字卡内容"); return; }
-                    const count = AppState.addCardsBatch(text);
-                    if (count > 0) {
+                    const category = Renderer.elements.inputBatchCategory.value;
+                    const res = AppState.addCardsBatch(text, category);
+                    if (res.added > 0) {
                         textarea.value = "";
                         Renderer._renderCardsList();
-                        Renderer.showToast("成功导入 " + count + " 条字卡 ✨");
+                        let msg = "成功导入 " + res.added + " 条字卡";
+                        if (res.dup > 0) msg += "，跳过重复 " + res.dup + " 条";
+                        Renderer.showToast(msg + " ✨");
                         Renderer.updateHeader();
                     } else {
-                        Renderer.showToast("没有有效的内容");
+                        Renderer.showToast("内容都是重复的，没有新增");
                     }
                 },
                 handleDeleteCard(index) {
@@ -1516,18 +1822,111 @@
                     const data = AppState.getData();
                     const cards = data.cards || [];
                     if (index < 0 || index >= cards.length) return;
-                    const newText = prompt("编辑字卡内容：", cards[index]);
-                    if (newText !== null && newText.trim() !== "") {
-                        if (AppState.editCard(index, newText)) {
-                            Renderer._renderCardsList();
-                            Renderer.showToast("已更新 ✨");
-                            Renderer.updateHeader();
+                    const c = cards[index];
+                    const card = typeof c === "string" ? { text: c, category: "未分类" } : c;
+                    const newText = prompt("编辑字卡内容：", card.text);
+                    if (newText === null) return;
+                    if (newText.trim() === "") { Renderer.showToast("内容不能为空"); return; }
+                    const newCategory = prompt("编辑分类（留空为「未分类」）：", card.category || "未分类");
+                    if (newCategory === null) return;
+                    if (AppState.editCard(index, newText, newCategory)) {
+                        Renderer._renderCardsList();
+                        Renderer.showToast("已更新 ✨");
+                        Renderer.updateHeader();
+                    }
+                },
+                handleAddEmoji() {
+                    const input = Renderer.elements.inputNewEmoji;
+                    const value = input.value.trim();
+                    if (!value) { Renderer.showToast("请输入 emoji"); return; }
+                    const result = AppState.addEmoji(value);
+                    if (result === "added") {
+                        input.value = "";
+                        Renderer._renderEmojiList();
+                        Renderer.showToast("已添加 ✨");
+                    } else if (result === "dup") {
+                        Renderer.showToast("这个 emoji 已经存在了");
+                    }
+                },
+                handleDeleteEmoji(index) {
+                    if (AppState.removeEmoji(index)) {
+                        Renderer._renderEmojiList();
+                        Renderer.showToast("已删除");
+                    }
+                },
+                handleImportStickers(e) {
+                    const files = Array.prototype.slice.call(e.target.files || []);
+                    if (files.length === 0) { e.target.value = ""; return; }
+                    let pending = files.length;
+                    let added = 0, dup = 0, failed = 0, full = false;
+                    const finish = () => {
+                        Renderer._renderStickerGrid();
+                        if (full) {
+                            Renderer.showToast("存储空间不足，部分表情包未保存");
+                        } else if (added > 0) {
+                            let msg = "成功导入 " + added + " 个表情包";
+                            if (dup > 0) msg += "，跳过重复 " + dup + " 个";
+                            Renderer.showToast(msg + " ✨");
+                        } else if (dup > 0) {
+                            Renderer.showToast("表情包都已存在，未新增");
+                        } else if (failed > 0) {
+                            Renderer.showToast("图片处理失败");
+                        }
+                        e.target.value = "";
+                    };
+                    const step = () => {
+                        if (--pending <= 0) finish();
+                    };
+                    files.forEach(file => {
+                        if (!file.type || file.type.indexOf("image/") !== 0) { failed++; step(); return; }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                try {
+                                    const maxSide = 512;
+                                    let w = img.naturalWidth || img.width;
+                                    let h = img.naturalHeight || img.height;
+                                    const scale = Math.min(1, maxSide / Math.max(w, h));
+                                    w = Math.max(1, Math.round(w * scale));
+                                    h = Math.max(1, Math.round(h * scale));
+                                    const canvas = document.createElement("canvas");
+                                    canvas.width = w; canvas.height = h;
+                                    const ctx = canvas.getContext("2d");
+                                    ctx.drawImage(img, 0, 0, w, h);
+                                    const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+                                    const result = AppState.addSticker(dataUrl);
+                                    if (result === "added") added++;
+                                    else if (result === "dup") dup++;
+                                    else if (result === "full") full = true;
+                                } catch (err) {
+                                    failed++;
+                                }
+                                step();
+                            };
+                            img.onerror = () => { failed++; step(); };
+                            img.src = ev.target.result;
+                        };
+                        reader.onerror = () => { failed++; step(); };
+                        reader.readAsDataURL(file);
+                    });
+                },
+                handleDeleteSticker(index) {
+                    if (confirm("确定删除这个表情包吗？")) {
+                        if (AppState.removeSticker(index)) {
+                            Renderer._renderStickerGrid();
+                            Renderer.showToast("已删除");
                         }
                     }
                 },
                 handleExportCards() {
                     const data = AppState.getData();
-                    const exportObj = { cards: data.cards || [], exportedAt: new Date().toISOString() };
+                    const exportObj = {
+                        cards: data.cards || [],
+                        emojis: data.emojis || [],
+                        stickers: data.stickers || [],
+                        exportedAt: new Date().toISOString(),
+                    };
                     this._downloadJSON(exportObj, "字卡库_备份.json");
                     Renderer.showToast("字卡已导出");
                 },
@@ -1538,17 +1937,49 @@
                     reader.onload = (ev) => {
                         try {
                             const imported = JSON.parse(ev.target.result);
+                            let cardsArr = null;
                             if (Array.isArray(imported.cards)) {
-                                AppState.addCardsBatch(imported.cards.join("\n"));
+                                cardsArr = imported.cards;
                             } else if (Array.isArray(imported)) {
-                                AppState.addCardsBatch(imported.join("\n"));
-                            } else {
-                                Renderer.showToast("文件格式不正确");
-                                return;
+                                cardsArr = imported;
+                            }
+                            let addedText = 0, dupText = 0;
+                            if (cardsArr) {
+                                const existing = new Set((AppState.getData().cards || []).map(c => typeof c === "string" ? c : c.text));
+                                const cards = [...(AppState.getData().cards || [])];
+                                cardsArr.forEach(c => {
+                                    const obj = typeof c === "string" ? { text: c, category: "未分类" } : c;
+                                    const t = obj.text;
+                                    if (!t) return;
+                                    if (existing.has(t)) { dupText++; return; }
+                                    existing.add(t);
+                                    cards.push({ text: t, category: obj.category || "未分类" });
+                                    addedText++;
+                                });
+                                if (addedText > 0) AppState.updateData({ cards: cards });
+                            }
+                            let addedEmoji = 0;
+                            if (Array.isArray(imported.emojis)) {
+                                imported.emojis.forEach(e => {
+                                    if (AppState.addEmoji(e) === "added") addedEmoji++;
+                                });
+                            }
+                            let addedSticker = 0;
+                            if (Array.isArray(imported.stickers)) {
+                                imported.stickers.forEach(s => {
+                                    if (AppState.addSticker(s) === "added") addedSticker++;
+                                });
                             }
                             Renderer._renderCardsList();
-                            Renderer.showToast("导入成功 ✨");
+                            Renderer._renderEmojiList();
+                            Renderer._renderStickerGrid();
                             Renderer.updateHeader();
+                            const total = addedText + addedEmoji + addedSticker;
+                            if (total > 0) {
+                                Renderer.showToast("导入成功：文字 " + addedText + "、emoji " + addedEmoji + "、表情包 " + addedSticker + " ✨");
+                            } else {
+                                Renderer.showToast("没有新增内容（可能都已存在）");
+                            }
                         } catch (err) {
                             Renderer.showToast("解析失败，请检查文件");
                         }
@@ -1652,7 +2083,7 @@
                     const data = AppState.getData();
                     const cfg = data.config || {};
                     if (!cfg.autoMessageEnabled) return;
-                    if ((data.cards || []).length === 0) return;
+                    if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     if (!this.lastSentAt) this.lastSentAt = Date.now();
                     this.scheduleNext();
                 },
@@ -1665,7 +2096,7 @@
                     const data = AppState.getData();
                     const cfg = data.config || {};
                     if (!cfg.autoMessageEnabled) return;
-                    if ((data.cards || []).length === 0) return;
+                    if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
                     const maxMin = Math.max(minMin, Number(cfg.autoMessageMaxMinutes) || 120);
                     const delay = (minMin + Math.random() * (maxMin - minMin)) * 60000;
@@ -1682,28 +2113,26 @@
                     this._sendOne();
                 },
                 _sendOne() {
-                    const card = AppState.getRandomCard();
-                    if (!card) { this.scheduleNext(); return; }
+                    const messages = AppState.buildReplyMessages();
+                    if (messages.length === 0) { this.scheduleNext(); return; }
                     AppState.isTyping = true;
                     Renderer.renderChat();
                     const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
                     const delay = Math.random() * maxDelay;
                     if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
                     AppState.typingTimer = setTimeout(() => {
-                        AppState.isTyping = false;
                         AppState.typingTimer = null;
-                        AppState.addMessage("ta", card);
-                        Renderer.renderChat();
-                        Renderer.updateHeader();
-                        this.lastSentAt = Date.now();
-                        this.scheduleNext();
+                        sendReplySequence(messages, () => {
+                            this.lastSentAt = Date.now();
+                            this.scheduleNext();
+                        });
                     }, delay);
                 },
                 onVisible() {
                     const data = AppState.getData();
                     const cfg = data.config || {};
                     if (!cfg.autoMessageEnabled) return;
-                    if ((data.cards || []).length === 0) return;
+                    if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     if (AppState.isTyping) { this.scheduleNext(); return; }
                     if (!this.lastSentAt) { this.lastSentAt = Date.now(); this.scheduleNext(); return; }
                     const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
@@ -1722,24 +2151,51 @@
                 _queueCatchUp(delay) {
                     setTimeout(() => {
                         if (AppState.isTyping) return;
-                        const card = AppState.getRandomCard();
-                        if (!card) return;
+                        const messages = AppState.buildReplyMessages();
+                        if (messages.length === 0) return;
                         AppState.isTyping = true;
                         Renderer.renderChat();
                         const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
                         const d = Math.random() * maxDelay;
                         if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
                         AppState.typingTimer = setTimeout(() => {
-                            AppState.isTyping = false;
                             AppState.typingTimer = null;
-                            AppState.addMessage("ta", card);
-                            Renderer.renderChat();
-                            Renderer.updateHeader();
-                            this.lastSentAt = Date.now();
+                            sendReplySequence(messages, () => {
+                                this.lastSentAt = Date.now();
+                            });
                         }, d);
                     }, delay);
                 },
             };
+
+            function sendReplySequence(messages, onComplete) {
+                let idx = 0;
+                const step = () => {
+                    if (idx >= messages.length) {
+                        AppState.isTyping = false;
+                        Renderer.renderChat();
+                        Renderer.updateHeader();
+                        if (onComplete) onComplete();
+                        return;
+                    }
+                    const msg = messages[idx++];
+                    if (msg.type === "sticker") {
+                        AppState.addMessage("ta", msg.src, "sticker");
+                    } else {
+                        AppState.addMessage("ta", msg.text);
+                    }
+                    Renderer.renderChat();
+                    if (idx >= messages.length) {
+                        step();
+                    } else {
+                        AppState.typingTimer = setTimeout(() => {
+                            AppState.typingTimer = null;
+                            step();
+                        }, 600 + Math.random() * 900);
+                    }
+                };
+                step();
+            }
 
             const KeepAlive = {
                 audioCtx: null,
