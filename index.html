@@ -15,6 +15,7 @@
             --border-radius-lg: 24px;
             --border-radius-xl: 28px;
             --border-radius-square: 12px;
+            --bubble-padding-y: 11px;
             --chat-max-width: 560px;
             --header-height: 64px;
             --panel-width: 420px;
@@ -110,8 +111,6 @@
             max-width: var(--chat-max-width); margin: 0 auto;
             box-shadow: 0 0 60px rgba(0,0,0,0.15); overflow: hidden;
         }
-
-        /* 聊天界面容器——支持自定义背景 */
         .chat-container {
             flex: 1; display: flex; flex-direction: column; min-width: 0;
             background-color: var(--chat-bg-color);
@@ -175,13 +174,11 @@
         }
         .chat-empty .empty-btn:hover { background: var(--accent); color: var(--on-accent); }
 
-        /* 时间戳（居中，微信风格） */
         .chat-timestamp {
             text-align: center; font-size: 11px; color: var(--text-muted);
             margin: 8px 0 4px; opacity: 0.85; letter-spacing: 0.3px;
         }
 
-        /* 消息气泡 */
         .message { display: flex; gap: 10px; max-width: 85%; animation: msgIn 0.3s ease-out forwards; opacity: 0; transform: translateY(8px); }
         @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
         .message.me { align-self: flex-end; flex-direction: row-reverse; }
@@ -194,7 +191,7 @@
         .message .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .message .msg-content { display: flex; flex-direction: column; gap: 0; }
         .message .msg-bubble {
-            padding: 12px 16px; border-radius: var(--border-radius-lg); font-size: 15px; line-height: 1.6;
+            padding: var(--bubble-padding-y) 16px; border-radius: var(--border-radius-lg); font-size: 15px; line-height: 1.6;
             word-wrap: break-word; word-break: break-word; white-space: pre-wrap; box-shadow: var(--shadow-bubble);
             letter-spacing: 0.3px; position: relative;
         }
@@ -267,29 +264,25 @@
             align-items: center; justify-content: center; transition: all var(--transition-fast);
         }
         .panel-close:hover { background: var(--surface-hover); color: var(--text-primary); }
-        .panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; }
 
-        /* 折叠分类 */
-        .settings-group {
+        /* 直开列表（iOS 风格分组） */
+        .settings-section { margin-bottom: 18px; }
+        .section-header {
+            font-size: 13px; color: var(--text-muted);
+            padding: 0 4px 8px; font-weight: 500; letter-spacing: 0.3px;
+        }
+        .settings-card {
+            background: var(--surface);
             border: 1px solid var(--border-color);
             border-radius: var(--border-radius-md);
-            background: var(--surface);
             overflow: hidden;
         }
-        .settings-group summary {
-            list-style: none; padding: 14px 16px; font-size: 14px; font-weight: 600;
-            cursor: pointer; display: flex; align-items: center; justify-content: space-between;
-            color: var(--text-primary); user-select: none;
+        .settings-card .settings-field {
+            padding: 12px 16px;
+            border-top: 1px solid var(--border-color);
         }
-        .settings-group summary::-webkit-details-marker { display: none; }
-        .settings-group summary::after {
-            content: "›"; font-size: 18px; color: var(--text-muted);
-            transition: transform var(--transition-fast); line-height: 1;
-        }
-        .settings-group[open] summary::after { transform: rotate(90deg); }
-        .group-content {
-            padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 12px;
-        }
+        .settings-card .settings-field:first-child { border-top: none; }
 
         .settings-field { display: flex; flex-direction: column; gap: 6px; }
         .settings-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
@@ -302,6 +295,7 @@
         .settings-field textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
         .settings-field .hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
         .settings-field input[type="color"] { padding: 0; height: 40px; cursor: pointer; }
+        .settings-field input[type="range"] { padding: 0; accent-color: var(--accent); }
 
         .upload-btn {
             display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
@@ -438,9 +432,9 @@
         </div>
         <div class="panel-body">
 
-            <details class="settings-group" open>
-                <summary>👤 他的信息</summary>
-                <div class="group-content">
+            <div class="settings-section">
+                <div class="section-header">👤 他的信息</div>
+                <div class="settings-card">
                     <div class="settings-field">
                         <label for="inputTaName">名字 / 称呼</label>
                         <input type="text" id="inputTaName" placeholder="比如：小月亮" maxlength="20">
@@ -452,11 +446,11 @@
                         <button class="upload-btn" id="btnUploadTaAvatar">📷 上传本地照片</button>
                     </div>
                 </div>
-            </details>
+            </div>
 
-            <details class="settings-group">
-                <summary>👤 我的信息</summary>
-                <div class="group-content">
+            <div class="settings-section">
+                <div class="section-header">👤 我的信息</div>
+                <div class="settings-card">
                     <div class="settings-field">
                         <label for="inputMyName">我的名字 / 称呼</label>
                         <input type="text" id="inputMyName" placeholder="比如：我" maxlength="20">
@@ -468,11 +462,11 @@
                         <button class="upload-btn" id="btnUploadMyAvatar">📷 上传本地照片</button>
                     </div>
                 </div>
-            </details>
+            </div>
 
-            <details class="settings-group">
-                <summary>🎨 外观</summary>
-                <div class="group-content">
+            <div class="settings-section">
+                <div class="section-header">🎨 外观</div>
+                <div class="settings-card">
                     <div class="settings-field">
                         <label for="selectThemeMode">主题模式</label>
                         <select id="selectThemeMode">
@@ -493,59 +487,81 @@
                         <button class="upload-btn" id="btnUploadBgImage">🖼️ 上传本地图片</button>
                     </div>
                 </div>
-            </details>
+            </div>
 
-            <details class="settings-group">
-                <summary>💌 字卡库</summary>
-                <div class="group-content">
-                    <div class="hint" style="font-size:12px; color:var(--text-muted);">
-                        你发送消息后，系统会从这些字卡中随机挑一条作为他的回复。建议至少添加 10 条以上。
+            <div class="settings-section">
+                <div class="section-header">💬 气泡</div>
+                <div class="settings-card">
+                    <div class="settings-field">
+                        <label for="rangeBubbleHeight">气泡高度 <span id="bubbleHeightLabel" style="color:var(--accent);">2.0</span> 倍</label>
+                        <input type="range" id="rangeBubbleHeight" min="1" max="3" step="0.1" value="2">
+                        <div class="hint">1 = 最紧凑（贴合文字），3 = 最宽松</div>
                     </div>
-                    <div class="add-card-row">
-                        <input type="text" id="inputNewCard" placeholder="输入一条他会说的话..." maxlength="300">
-                        <button class="add-card-btn" id="btnAddCard">添加</button>
+                    <div class="settings-field">
+                        <label for="textareaBubbleCSS">自定义气泡样式（CSS）</label>
+                        <textarea id="textareaBubbleCSS" placeholder="例如：border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"></textarea>
+                        <div class="hint">直接粘贴 CSS 属性，会覆盖默认样式（如背景色、圆角等）</div>
                     </div>
-                    <div class="batch-add-area">
-                        <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-header">💌 字卡库</div>
+                <div class="settings-card">
+                    <div class="settings-field">
+                        <div class="hint" style="font-size:12px; color:var(--text-muted);">
+                            你发送消息后，系统会从这些字卡中随机挑一条作为他的回复。建议至少添加 10 条以上。
+                        </div>
+                        <div class="add-card-row">
+                            <input type="text" id="inputNewCard" placeholder="输入一条他会说的话..." maxlength="300">
+                            <button class="add-card-btn" id="btnAddCard">添加</button>
+                        </div>
+                        <div class="batch-add-area">
+                            <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
+                            <div class="batch-actions">
+                                <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
+                                <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
+                                <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
+                                <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+                            </div>
+                        </div>
+                        <div class="cards-list" id="cardsList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <div class="section-header">💾 数据管理</div>
+                <div class="settings-card">
+                    <div class="settings-field">
                         <div class="batch-actions">
-                            <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
-                            <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
-                            <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
-                            <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+                            <button class="btn btn-secondary" id="btnExportAll">导出全部数据</button>
+                            <button class="btn btn-secondary" id="btnImportAll">导入数据</button>
+                            <input type="file" id="fileImportAll" accept=".json" style="display:none;">
+                        </div>
+                        <div class="batch-actions">
+                            <button class="btn btn-danger" id="btnClearChat">清空聊天记录</button>
+                            <button class="btn btn-danger" id="btnResetAll">恢复出厂设置</button>
+                        </div>
+                        <div class="hint" style="font-size:11px; color:var(--text-muted);">
+                            恢复出厂设置会清除所有数据（包括字卡、设置、聊天记录），请谨慎操作。
                         </div>
                     </div>
-                    <div class="cards-list" id="cardsList"></div>
                 </div>
-            </details>
+            </div>
 
-            <details class="settings-group">
-                <summary>💾 数据管理</summary>
-                <div class="group-content">
-                    <div class="batch-actions">
-                        <button class="btn btn-secondary" id="btnExportAll">导出全部数据</button>
-                        <button class="btn btn-secondary" id="btnImportAll">导入数据</button>
-                        <input type="file" id="fileImportAll" accept=".json" style="display:none;">
-                    </div>
-                    <div class="batch-actions">
-                        <button class="btn btn-danger" id="btnClearChat">清空聊天记录</button>
-                        <button class="btn btn-danger" id="btnResetAll">恢复出厂设置</button>
-                    </div>
-                    <div class="hint" style="font-size:11px; color:var(--text-muted);">
-                        恢复出厂设置会清除所有数据（包括字卡、设置、聊天记录），请谨慎操作。
+            <div class="settings-section">
+                <div class="section-header">ℹ️ 关于</div>
+                <div class="settings-card">
+                    <div class="settings-field">
+                        <p style="font-size:12px; color:var(--text-muted); line-height:1.6; text-align:center; padding: 8px 0;">
+                            这是一个专属于你和他的私人对话空间。<br>
+                            所有他说的话，都来自你亲手写下的字卡。<br>
+                            愿每一句回复，都能温暖你。💛
+                        </p>
                     </div>
                 </div>
-            </details>
-
-            <details class="settings-group">
-                <summary>ℹ️ 关于</summary>
-                <div class="group-content">
-                    <p style="font-size:12px; color:var(--text-muted); line-height:1.6; text-align:center; padding: 8px 0;">
-                        这是一个专属于你和他的私人对话空间。<br>
-                        所有他说的话，都来自你亲手写下的字卡。<br>
-                        愿每一句回复，都能温暖你。💛
-                    </p>
-                </div>
-            </details>
+            </div>
 
         </div>
     </div>
@@ -624,6 +640,8 @@
                         themeMode: "auto",
                         bgColor: "",
                         bgImageUrl: "",
+                        bubbleHeight: 2,
+                        bubbleCustomCSS: "",
                         config: {
                             replyDelayMin: 800,
                             replyDelayMax: 2500,
@@ -773,6 +791,9 @@
                         inputBgImageUrl: document.getElementById("inputBgImageUrl"),
                         btnUploadBgImage: document.getElementById("btnUploadBgImage"),
                         fileBgImage: document.getElementById("fileBgImage"),
+                        rangeBubbleHeight: document.getElementById("rangeBubbleHeight"),
+                        bubbleHeightLabel: document.getElementById("bubbleHeightLabel"),
+                        textareaBubbleCSS: document.getElementById("textareaBubbleCSS"),
                         inputNewCard: document.getElementById("inputNewCard"),
                         btnAddCard: document.getElementById("btnAddCard"),
                         inputBatchCards: document.getElementById("inputBatchCards"),
@@ -842,6 +863,27 @@
                     const bgColor = data.bgColor || defaultBg;
                     root.style.setProperty('--chat-bg-color', bgColor);
                     root.style.setProperty('--chat-bg-image', data.bgImageUrl ? 'url("' + data.bgImageUrl + '")' : 'none');
+                },
+                applyBubbleHeight(value) {
+                    const v = parseFloat(value);
+                    if (isNaN(v)) return;
+                    const paddingY = Math.round((v - 1) * 11);
+                    document.documentElement.style.setProperty('--bubble-padding-y', paddingY + 'px');
+                },
+                applyBubbleCSS(cssText) {
+                    const css = (cssText != null ? cssText : (AppState.getData().bubbleCustomCSS || '')).trim();
+                    let styleEl = document.getElementById('bubbleCustomStyle');
+                    if (!styleEl) {
+                        styleEl = document.createElement('style');
+                        styleEl.id = 'bubbleCustomStyle';
+                        document.head.appendChild(styleEl);
+                    }
+                    styleEl.textContent = css ? '.message .msg-bubble { ' + css + ' }' : '';
+                },
+                updateBubbleHeightLabel(value) {
+                    const v = parseFloat(value);
+                    if (isNaN(v)) return;
+                    if (this.elements.bubbleHeightLabel) this.elements.bubbleHeightLabel.textContent = v.toFixed(1);
                 },
                 renderChat() {
                     const data = AppState.getData();
@@ -950,6 +992,10 @@
                     this.elements.selectThemeMode.value = data.themeMode || "auto";
                     this.elements.inputBgColor.value = data.bgColor || "#f5f5f7";
                     this.elements.inputBgImageUrl.value = data.bgImageUrl || "";
+                    const bh = data.bubbleHeight != null ? data.bubbleHeight : 2;
+                    this.elements.rangeBubbleHeight.value = bh;
+                    this.updateBubbleHeightLabel(bh);
+                    this.elements.textareaBubbleCSS.value = data.bubbleCustomCSS || "";
                     this._renderCardsList();
                 },
                 _renderCardsList() {
@@ -983,6 +1029,8 @@
                     this.elements.panelOverlay.classList.remove("active");
                     this._saveSettingsFromPanel();
                     this.applyBackground();
+                    this.applyBubbleHeight(this.elements.rangeBubbleHeight.value);
+                    this.applyBubbleCSS();
                     this.updateHeader();
                     this.renderChat();
                 },
@@ -994,7 +1042,9 @@
                     const themeMode = this.elements.selectThemeMode.value || "auto";
                     const bgColor = this.elements.inputBgColor.value || "";
                     const bgImageUrl = this.elements.inputBgImageUrl.value.trim() || "";
-                    AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl });
+                    const bubbleHeight = parseFloat(this.elements.rangeBubbleHeight.value) || 2;
+                    const bubbleCustomCSS = this.elements.textareaBubbleCSS.value.trim();
+                    AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl, bubbleHeight, bubbleCustomCSS });
                 },
                 showWelcome() { this.elements.welcomeModal.classList.add("active"); },
                 hideWelcome() { this.elements.welcomeModal.classList.remove("active"); },
@@ -1034,6 +1084,20 @@
                     el.selectThemeMode.addEventListener("change", () => {
                         AppState.updateData({ themeMode: el.selectThemeMode.value });
                         Renderer.applyBackground();
+                    });
+
+                    el.rangeBubbleHeight.addEventListener("input", (e) => {
+                        Renderer.applyBubbleHeight(e.target.value);
+                        Renderer.updateBubbleHeightLabel(e.target.value);
+                    });
+                    el.rangeBubbleHeight.addEventListener("change", (e) => {
+                        AppState.updateData({ bubbleHeight: parseFloat(e.target.value) || 2 });
+                    });
+                    el.textareaBubbleCSS.addEventListener("input", () => {
+                        Renderer.applyBubbleCSS(el.textareaBubbleCSS.value);
+                    });
+                    el.textareaBubbleCSS.addEventListener("change", () => {
+                        AppState.updateData({ bubbleCustomCSS: el.textareaBubbleCSS.value.trim() });
                     });
 
                     el.btnAddCard.addEventListener("click", () => this.handleAddCard());
@@ -1237,6 +1301,8 @@
                             AppState.data = imported;
                             Storage.save(imported);
                             Renderer.applyBackground();
+                            Renderer.applyBubbleHeight(imported.bubbleHeight != null ? imported.bubbleHeight : 2);
+                            Renderer.applyBubbleCSS();
                             Renderer.updateHeader();
                             Renderer.updateSettingsPanel();
                             Renderer.renderChat();
@@ -1260,6 +1326,8 @@
                         if (confirm("再确认一次：真的要全部删除吗？")) {
                             AppState.resetAll();
                             Renderer.applyBackground();
+                            Renderer.applyBubbleHeight(2);
+                            Renderer.applyBubbleCSS();
                             Renderer.updateHeader();
                             Renderer.updateSettingsPanel();
                             Renderer.renderChat();
@@ -1281,6 +1349,8 @@
                     }
                     Renderer.hideWelcome();
                     Renderer.applyBackground();
+                    Renderer.applyBubbleHeight(2);
+                    Renderer.applyBubbleCSS();
                     Renderer.updateHeader();
                     Renderer.renderChat();
                 },
@@ -1303,6 +1373,8 @@
                 Renderer.init();
                 Renderer.generateStars();
                 Renderer.applyBackground();
+                Renderer.applyBubbleHeight(AppState.getData().bubbleHeight != null ? AppState.getData().bubbleHeight : 2);
+                Renderer.applyBubbleCSS();
                 Renderer.updateHeader();
                 Renderer.renderChat();
                 Renderer.elements.btnSend.disabled = true;
