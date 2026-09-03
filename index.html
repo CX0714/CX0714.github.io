@@ -316,6 +316,23 @@
         .settings-field input[type="color"] { padding: 0; height: 40px; cursor: pointer; }
         .settings-field input[type="range"] { padding: 0; accent-color: var(--accent); }
 
+        .field-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .field-title { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .switch { position: relative; display: inline-block; width: 52px; height: 30px; flex-shrink: 0; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch .slider {
+            position: absolute; cursor: pointer; inset: 0;
+            background: var(--border-color); border-radius: 30px;
+            transition: background var(--transition-fast);
+        }
+        .switch .slider::before {
+            content: ""; position: absolute; height: 24px; width: 24px; left: 3px; top: 3px;
+            background: #ffffff; border-radius: 50%; transition: transform var(--transition-fast);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        .switch input:checked + .slider { background: var(--accent); }
+        .switch input:checked + .slider::before { transform: translateX(22px); }
+
         .upload-btn {
             display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
             border-radius: var(--border-radius-sm); border: 1px solid var(--accent);
@@ -455,6 +472,7 @@
                     <div class="menu-item" data-page="me"><span>👤 我的信息</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="appearance"><span>🎨 外观</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="bubble"><span>💬 气泡</span><span class="arrow">›</span></div>
+                    <div class="menu-item" data-page="time"><span>⏱️ 时间</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="cards"><span>💌 字卡库</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="data"><span>💾 数据管理</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="about"><span>ℹ️ 关于</span><span class="arrow">›</span></div>
@@ -553,6 +571,58 @@
                             <label for="textareaBubbleCSS">自定义气泡样式（CSS）</label>
                             <textarea id="textareaBubbleCSS" placeholder="例如：border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"></textarea>
                             <div class="hint">直接粘贴 CSS 属性，会覆盖默认样式（如背景色、圆角等）</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sub-view" id="sub-time">
+                <div class="sub-header">
+                    <button class="back-btn">‹</button>
+                    <span class="sub-title">时间</span>
+                    <span class="back-spacer"></span>
+                </div>
+                <div class="sub-content">
+                    <div class="settings-card">
+                        <div class="settings-field">
+                            <label for="rangeReplyDelay">回复延迟（最长） <span id="replyDelayLabel" style="color:var(--accent);">3 秒</span></label>
+                            <input type="range" id="rangeReplyDelay" min="0" max="3600" step="1" value="3">
+                            <div class="hint">你发消息后，他会在 0 秒 ~ 这个时长之间随机延迟，然后回复。0 = 秒回；3600 秒 = 最长等 1 小时。</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card" style="margin-top:16px;">
+                        <div class="settings-field">
+                            <div class="field-row">
+                                <span class="field-title">他主动找我说话</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggleAutoMessage">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="hint">开启后，他会不定时主动给你发一条字卡（需要页面开着）。</div>
+                        </div>
+                        <div class="settings-field">
+                            <label for="rangeAutoMin">最短间隔 <span id="autoMinLabel" style="color:var(--accent);">5 分钟</span></label>
+                            <input type="range" id="rangeAutoMin" min="1" max="1440" step="1" value="5">
+                        </div>
+                        <div class="settings-field">
+                            <label for="rangeAutoMax">最长间隔 <span id="autoMaxLabel" style="color:var(--accent);">2 小时</span></label>
+                            <input type="range" id="rangeAutoMax" min="1" max="1440" step="1" value="120">
+                            <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点主动发消息。你不在页面时不会发，回到页面后会自动补发（最多 3 条）。</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card" style="margin-top:16px;">
+                        <div class="settings-field">
+                            <div class="field-row">
+                                <span class="field-title">静音保活</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggleKeepAlive">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="hint">像后台放音乐一样循环播放一段无声音频，尽量让手机别冻结页面，让「主动发消息」更持久。会更耗电，锁屏界面可能显示「正在播放」。</div>
                         </div>
                     </div>
                 </div>
@@ -714,8 +784,11 @@
                         bubbleHeight: 2,
                         bubbleCustomCSS: "",
                         config: {
-                            replyDelayMin: 800,
-                            replyDelayMax: 2500,
+                            replyMaxDelay: 3,
+                            autoMessageEnabled: false,
+                            autoMessageMinMinutes: 5,
+                            autoMessageMaxMinutes: 120,
+                            keepAliveEnabled: false,
                         },
                     };
                 },
@@ -819,15 +892,6 @@
                     this.updateData({ chatHistory });
                     return msg;
                 },
-                sendMessage(text) {
-                    const trimmed = text.trim();
-                    if (!trimmed) return null;
-                    const myMsg = this.addMessage("me", trimmed);
-                    const reply = this.getRandomCard();
-                    let taMsg = null;
-                    if (reply) taMsg = this.addMessage("ta", reply);
-                    return { myMsg, taMsg, reply };
-                },
                 clearChat() { this.updateData({ chatHistory: [] }); },
                 resetAll() {
                     this.data = Storage.getDefaultData();
@@ -867,6 +931,14 @@
                         rangeBubbleHeight: document.getElementById("rangeBubbleHeight"),
                         bubbleHeightLabel: document.getElementById("bubbleHeightLabel"),
                         textareaBubbleCSS: document.getElementById("textareaBubbleCSS"),
+                        rangeReplyDelay: document.getElementById("rangeReplyDelay"),
+                        replyDelayLabel: document.getElementById("replyDelayLabel"),
+                        toggleAutoMessage: document.getElementById("toggleAutoMessage"),
+                        rangeAutoMin: document.getElementById("rangeAutoMin"),
+                        autoMinLabel: document.getElementById("autoMinLabel"),
+                        rangeAutoMax: document.getElementById("rangeAutoMax"),
+                        autoMaxLabel: document.getElementById("autoMaxLabel"),
+                        toggleKeepAlive: document.getElementById("toggleKeepAlive"),
                         inputNewCard: document.getElementById("inputNewCard"),
                         btnAddCard: document.getElementById("btnAddCard"),
                         inputBatchCards: document.getElementById("inputBatchCards"),
@@ -957,6 +1029,34 @@
                     const v = parseFloat(value);
                     if (isNaN(v)) return;
                     if (this.elements.bubbleHeightLabel) this.elements.bubbleHeightLabel.textContent = v.toFixed(1);
+                },
+                formatDuration(seconds) {
+                    const s = Math.max(0, Math.floor(seconds));
+                    if (s < 60) return s + " 秒";
+                    if (s < 3600) {
+                        const m = Math.floor(s / 60);
+                        const r = s % 60;
+                        return r > 0 ? m + " 分 " + r + " 秒" : m + " 分钟";
+                    }
+                    const h = Math.floor(s / 3600);
+                    const r = Math.floor((s % 3600) / 60);
+                    return r > 0 ? h + " 小时 " + r + " 分" : h + " 小时";
+                },
+                formatMinutes(minutes) {
+                    const m = Math.max(0, Math.floor(minutes));
+                    if (m < 60) return m + " 分钟";
+                    const h = Math.floor(m / 60);
+                    const r = m % 60;
+                    return r > 0 ? h + " 小时 " + r + " 分" : h + " 小时";
+                },
+                updateReplyDelayLabel(value) {
+                    if (this.elements.replyDelayLabel) this.elements.replyDelayLabel.textContent = this.formatDuration(parseFloat(value) || 0);
+                },
+                updateAutoMinLabel(value) {
+                    if (this.elements.autoMinLabel) this.elements.autoMinLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
+                },
+                updateAutoMaxLabel(value) {
+                    if (this.elements.autoMaxLabel) this.elements.autoMaxLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
                 },
                 openMenu() {
                     this.elements.menuView.style.display = 'block';
@@ -1089,6 +1189,18 @@
                     this.elements.rangeBubbleHeight.value = bh;
                     this.updateBubbleHeightLabel(bh);
                     this.elements.textareaBubbleCSS.value = data.bubbleCustomCSS || "";
+                    const cfg = data.config || {};
+                    const replyMaxDelay = cfg.replyMaxDelay != null ? cfg.replyMaxDelay : 3;
+                    this.elements.rangeReplyDelay.value = replyMaxDelay;
+                    this.updateReplyDelayLabel(replyMaxDelay);
+                    this.elements.toggleAutoMessage.checked = !!cfg.autoMessageEnabled;
+                    const autoMin = cfg.autoMessageMinMinutes != null ? cfg.autoMessageMinMinutes : 5;
+                    const autoMax = cfg.autoMessageMaxMinutes != null ? cfg.autoMessageMaxMinutes : 120;
+                    this.elements.rangeAutoMin.value = autoMin;
+                    this.elements.rangeAutoMax.value = autoMax;
+                    this.updateAutoMinLabel(autoMin);
+                    this.updateAutoMaxLabel(autoMax);
+                    this.elements.toggleKeepAlive.checked = !!cfg.keepAliveEnabled;
                     this._renderCardsList();
                 },
                 _renderCardsList() {
@@ -1134,7 +1246,15 @@
                     const bgImageUrl = this.elements.inputBgImageUrl.value.trim() || "";
                     const bubbleHeight = parseFloat(this.elements.rangeBubbleHeight.value) || 2;
                     const bubbleCustomCSS = this.elements.textareaBubbleCSS.value.trim();
-                    AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl, bubbleHeight, bubbleCustomCSS });
+                    const config = {
+                        ...(AppState.getData().config || {}),
+                        replyMaxDelay: parseFloat(this.elements.rangeReplyDelay.value) || 3,
+                        autoMessageEnabled: this.elements.toggleAutoMessage.checked,
+                        autoMessageMinMinutes: parseFloat(this.elements.rangeAutoMin.value) || 5,
+                        autoMessageMaxMinutes: parseFloat(this.elements.rangeAutoMax.value) || 120,
+                        keepAliveEnabled: this.elements.toggleKeepAlive.checked,
+                    };
+                    AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl, bubbleHeight, bubbleCustomCSS, config });
                 },
                 showWelcome() { this.elements.welcomeModal.classList.add("active"); },
                 hideWelcome() { this.elements.welcomeModal.classList.remove("active"); },
@@ -1200,6 +1320,43 @@
                         AppState.updateData({ bubbleCustomCSS: el.textareaBubbleCSS.value.trim() });
                     });
 
+                    el.rangeReplyDelay.addEventListener("input", (e) => {
+                        Renderer.updateReplyDelayLabel(e.target.value);
+                    });
+                    el.rangeReplyDelay.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), replyMaxDelay: parseFloat(e.target.value) || 3 } });
+                    });
+                    el.toggleAutoMessage.addEventListener("change", () => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), autoMessageEnabled: el.toggleAutoMessage.checked } });
+                        AutoMessage.start();
+                    });
+                    el.rangeAutoMin.addEventListener("input", (e) => {
+                        Renderer.updateAutoMinLabel(e.target.value);
+                    });
+                    el.rangeAutoMin.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), autoMessageMinMinutes: parseFloat(e.target.value) || 5 } });
+                        AutoMessage.start();
+                    });
+                    el.rangeAutoMax.addEventListener("input", (e) => {
+                        Renderer.updateAutoMaxLabel(e.target.value);
+                    });
+                    el.rangeAutoMax.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), autoMessageMaxMinutes: parseFloat(e.target.value) || 120 } });
+                        AutoMessage.start();
+                    });
+                    el.toggleKeepAlive.addEventListener("change", () => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), keepAliveEnabled: el.toggleKeepAlive.checked } });
+                        KeepAlive.toggle(el.toggleKeepAlive.checked);
+                    });
+
+                    document.addEventListener("visibilitychange", () => {
+                        if (document.visibilityState === "visible") {
+                            KeepAlive.resumeIfNeeded();
+                            AutoMessage.onVisible();
+                        }
+                    });
+                    document.addEventListener("pointerdown", () => KeepAlive.resumeIfNeeded());
+
                     el.btnAddCard.addEventListener("click", () => this.handleAddCard());
                     el.inputNewCard.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") { e.preventDefault(); this.handleAddCard(); }
@@ -1240,6 +1397,27 @@
                             }
                         });
                     }
+                },
+
+                deliverReply() {
+                    const card = AppState.getRandomCard();
+                    if (!card) {
+                        AppState.isTyping = false;
+                        Renderer.renderChat();
+                        return;
+                    }
+                    const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
+                    const delay = Math.random() * maxDelay;
+                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
+                    AppState.typingTimer = setTimeout(() => {
+                        AppState.isTyping = false;
+                        AppState.typingTimer = null;
+                        AppState.addMessage("ta", card);
+                        Renderer.renderChat();
+                        Renderer.updateHeader();
+                        AutoMessage.lastSentAt = Date.now();
+                        AutoMessage.scheduleNext();
+                    }, delay);
                 },
 
                 handleUploadAvatar(e, who) {
@@ -1294,18 +1472,11 @@
                     input.style.height = "auto";
                     Renderer.elements.btnSend.disabled = true;
                     input.focus();
-                    AppState.sendMessage(text);
+                    AppState.addMessage("me", text);
                     Renderer.renderChat();
                     AppState.isTyping = true;
                     Renderer.renderChat();
-                    const delay = 800 + Math.random() * 1700;
-                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
-                    AppState.typingTimer = setTimeout(() => {
-                        AppState.isTyping = false;
-                        AppState.typingTimer = null;
-                        Renderer.renderChat();
-                        Renderer.updateHeader();
-                    }, delay);
+                    this.deliverReply();
                 },
                 handleAddCard() {
                     const input = Renderer.elements.inputNewCard;
@@ -1406,6 +1577,9 @@
                             Renderer.updateHeader();
                             Renderer.updateSettingsPanel();
                             Renderer.renderChat();
+                            AutoMessage.stop();
+                            AutoMessage.start();
+                            KeepAlive.toggle(!!(imported.config && imported.config.keepAliveEnabled));
                             Renderer.showToast("数据导入成功 ✨");
                         } else {
                             Renderer.showToast("数据格式无效，导入失败");
@@ -1425,6 +1599,8 @@
                     if (confirm("确定恢复出厂设置吗？所有数据（字卡、设置、聊天记录）都会被删除！")) {
                         if (confirm("再确认一次：真的要全部删除吗？")) {
                             AppState.resetAll();
+                            AutoMessage.stop();
+                            KeepAlive.stop();
                             Renderer.applyBackground();
                             Renderer.applyBubbleHeight(2);
                             Renderer.applyBubbleCSS();
@@ -1468,6 +1644,147 @@
                 },
             };
 
+            const AutoMessage = {
+                timer: null,
+                lastSentAt: 0,
+                start() {
+                    this.stop();
+                    const data = AppState.getData();
+                    const cfg = data.config || {};
+                    if (!cfg.autoMessageEnabled) return;
+                    if ((data.cards || []).length === 0) return;
+                    if (!this.lastSentAt) this.lastSentAt = Date.now();
+                    this.scheduleNext();
+                },
+                stop() {
+                    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+                },
+                scheduleNext() {
+                    if (this.timer) clearTimeout(this.timer);
+                    this.timer = null;
+                    const data = AppState.getData();
+                    const cfg = data.config || {};
+                    if (!cfg.autoMessageEnabled) return;
+                    if ((data.cards || []).length === 0) return;
+                    const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
+                    const maxMin = Math.max(minMin, Number(cfg.autoMessageMaxMinutes) || 120);
+                    const delay = (minMin + Math.random() * (maxMin - minMin)) * 60000;
+                    this.timer = setTimeout(() => this.fire(), delay);
+                },
+                fire() {
+                    const cfg = AppState.getData().config || {};
+                    if (!cfg.autoMessageEnabled) return;
+                    if (document.visibilityState !== 'visible') {
+                        this.scheduleNext();
+                        return;
+                    }
+                    if (AppState.isTyping) { this.scheduleNext(); return; }
+                    this._sendOne();
+                },
+                _sendOne() {
+                    const card = AppState.getRandomCard();
+                    if (!card) { this.scheduleNext(); return; }
+                    AppState.isTyping = true;
+                    Renderer.renderChat();
+                    const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
+                    const delay = Math.random() * maxDelay;
+                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
+                    AppState.typingTimer = setTimeout(() => {
+                        AppState.isTyping = false;
+                        AppState.typingTimer = null;
+                        AppState.addMessage("ta", card);
+                        Renderer.renderChat();
+                        Renderer.updateHeader();
+                        this.lastSentAt = Date.now();
+                        this.scheduleNext();
+                    }, delay);
+                },
+                onVisible() {
+                    const data = AppState.getData();
+                    const cfg = data.config || {};
+                    if (!cfg.autoMessageEnabled) return;
+                    if ((data.cards || []).length === 0) return;
+                    if (AppState.isTyping) { this.scheduleNext(); return; }
+                    if (!this.lastSentAt) { this.lastSentAt = Date.now(); this.scheduleNext(); return; }
+                    const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
+                    const elapsed = Date.now() - this.lastSentAt;
+                    if (elapsed < minMin * 60000) { this.scheduleNext(); return; }
+                    const expected = Math.floor(elapsed / (minMin * 60000));
+                    const toSend = Math.min(expected, 3);
+                    this.lastSentAt = Date.now();
+                    let acc = 0;
+                    for (let i = 0; i < toSend; i++) {
+                        acc += 1200 + Math.random() * 1800;
+                        this._queueCatchUp(acc);
+                    }
+                    this.scheduleNext();
+                },
+                _queueCatchUp(delay) {
+                    setTimeout(() => {
+                        if (AppState.isTyping) return;
+                        const card = AppState.getRandomCard();
+                        if (!card) return;
+                        AppState.isTyping = true;
+                        Renderer.renderChat();
+                        const maxDelay = (Number(AppState.getData().config.replyMaxDelay) || 3) * 1000;
+                        const d = Math.random() * maxDelay;
+                        if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
+                        AppState.typingTimer = setTimeout(() => {
+                            AppState.isTyping = false;
+                            AppState.typingTimer = null;
+                            AppState.addMessage("ta", card);
+                            Renderer.renderChat();
+                            Renderer.updateHeader();
+                            this.lastSentAt = Date.now();
+                        }, d);
+                    }, delay);
+                },
+            };
+
+            const KeepAlive = {
+                audioCtx: null,
+                source: null,
+                enabled: false,
+                start() {
+                    if (this.enabled) return true;
+                    try {
+                        const AC = window.AudioContext || window.webkitAudioContext;
+                        if (!AC) return false;
+                        if (!this.audioCtx) this.audioCtx = new AC();
+                        const ctx = this.audioCtx;
+                        if (ctx.state === "suspended") ctx.resume();
+                        const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+                        const source = ctx.createBufferSource();
+                        source.buffer = buffer;
+                        source.loop = true;
+                        const gain = ctx.createGain();
+                        gain.gain.value = 0.001;
+                        source.connect(gain);
+                        gain.connect(ctx.destination);
+                        source.start();
+                        this.source = source;
+                        this.enabled = true;
+                        return true;
+                    } catch (e) {
+                        console.warn("保活音频启动失败", e);
+                        return false;
+                    }
+                },
+                stop() {
+                    this.enabled = false;
+                    try { if (this.source) { this.source.stop(); this.source.disconnect(); this.source = null; } } catch (e) {}
+                },
+                resumeIfNeeded() {
+                    if (this.enabled && this.audioCtx && this.audioCtx.state === "suspended") {
+                        this.audioCtx.resume();
+                    }
+                },
+                toggle(on) {
+                    if (on) { if (!this.start()) Renderer.showToast("保活音频启动失败，请再点一次"); }
+                    else { this.stop(); }
+                },
+            };
+
             function bootstrap() {
                 AppState.init();
                 Renderer.init();
@@ -1481,6 +1798,9 @@
                 Renderer.autoResizeInput();
                 Renderer.updateSettingsPanel();
                 Events.init();
+                AutoMessage.start();
+                const keepAliveOn = !!(AppState.getData().config && AppState.getData().config.keepAliveEnabled);
+                KeepAlive.toggle(keepAliveOn);
                 Renderer.openMenu();
                 if (!AppState.getData().hasCompletedOnboarding) {
                     setTimeout(() => Renderer.showWelcome(), 300);
