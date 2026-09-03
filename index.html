@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>和TA的对话</title>
+    <style>
+        :root {
+            --bg-primary: #0f0e17;
+            --bg-secondary: #1a1926;
+            --bg-chat: #12111f;
+            --surface: #232136;
+            --surface-hover: #2e2a4a;
+            --bubble-user-bg: linear-gradient(135deg, #e07a5f, #c05a3d);
+            --bubble-user-text: #fff8f0;
+            --bubble-ta-bg: #3d3a5c;
+            --bubble-ta-text: #f0eae0;
+            --text-primary: #f0eae0;
+            --text-secondary: #b8b0c8;
+            --text-muted: #7a7396;
+            --accent: #e8a87c;
+            --accent-soft: rgba(232, 168, 124, 0.15);
+            --accent-glow: rgba(232, 168, 124, 0.35);
+            --border-color: #3a354e;
+            --border-radius-sm: 8px;
+            --border-radius-md: 16px;
+            --border-radius-lg: 24px;
+            --border-radius-xl: 28px;
+            --border-radius-full: 50%;
+            --shadow-bubble: 0 2px 12px rgba(0,0,0,0.25);
+            --shadow-panel: -4px 0 30px rgba(0,0,0,0.5);
+            --shadow-modal: 0 20px 60px rgba(0,0,0,0.5);
+            --chat-max-width: 560px;
+            --header-height: 64px;
+            --panel-width: 420px;
+            --avatar-size: 42px;
+            --avatar-size-sm: 32px;
+            --transition-fast: 0.2s ease;
+            --transition-smooth: 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --chat-bg-color: #12111f;
+            --chat-bg-image: none;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+            height: 100%; overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+            background: var(--bg-primary); color: var(--text-primary);
+            -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+            touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        .bg-decor { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+        .bg-decor::before {
+            content: ""; position: absolute; top: -30%; left: 20%; width: 60%; height: 60%;
+            background: radial-gradient(ellipse, rgba(232,168,124,0.07) 0%, transparent 70%);
+            border-radius: 50%; animation: bgPulse 8s ease-in-out infinite;
+        }
+        .bg-decor::after {
+            content: ""; position: absolute; bottom: -20%; right: 10%; width: 50%; height: 50%;
+            background: radial-gradient(ellipse, rgba(128,100,180,0.08) 0%, transparent 70%);
+            border-radius: 50%; animation: bgPulse 10s ease-in-out infinite reverse;
+        }
+        .bg-star { position: absolute; border-radius: 50%; background: #fff; opacity: 0.3; animation: twinkle 3s ease-in-out infinite; }
+        @keyframes bgPulse { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5%,3%) scale(1.08); } }
+        @keyframes twinkle { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+        .app {
+            position: relative; z-index: 1; display: flex; height: 100%;
+            max-width: var(--chat-max-width); margin: 0 auto;
+            box-shadow: 0 0 60px rgba(0,0,0,0.6); overflow: hidden;
+        }
+        .chat-container {
+            flex: 1; display: flex; flex-direction: column; min-width: 0;
+            background-color: var(--chat-bg-color); background-image: var(--chat-bg-image);
+            background-size: cover; background-position: center; background-repeat: no-repeat; position: relative;
+        }
+        .chat-header {
+            height: var(--header-height); display: flex; align-items: center; gap: 12px;
+            padding: 0 18px; background: rgba(18,17,31,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color); flex-shrink: 0; z-index: 10;
+        }
+        .chat-header .avatar {
+            width: var(--avatar-size); height: var(--avatar-size); border-radius: var(--border-radius-full);
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            background: var(--surface); border: 1.5px solid var(--accent-soft);
+            transition: transform var(--transition-fast); flex-shrink: 0; overflow: hidden; cursor: pointer;
+        }
+        .chat-header .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .chat-header .header-info { flex: 1; min-width: 0; }
+        .chat-header .header-info .name {
+            font-size: 17px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-primary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .chat-header .header-info .status {
+            font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 5px; margin-top: 1px;
+        }
+        .chat-header .header-info .status .dot {
+            width: 7px; height: 7px; border-radius: 50%; background: #7bc67e; box-shadow: 0 0 6px #7bc67e;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+        @keyframes statusPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .header-btn {
+            width: 40px; height: 40px; border-radius: var(--border-radius-full); border: none;
+            background: var(--surface); color: var(--text-secondary); font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast); flex-shrink: 0;
+        }
+        .header-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .header-btn:active { transform: scale(0.9); }
+        .chat-messages {
+            flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 16px;
+            display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth;
+            overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+        }
+        .chat-empty {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 12px; color: var(--text-muted); text-align: center; padding: 20px;
+        }
+        .chat-empty .empty-icon { font-size: 56px; opacity: 0.6; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .chat-empty .empty-text { font-size: 14px; line-height: 1.6; max-width: 280px; }
+        .chat-empty .empty-btn {
+            padding: 10px 24px; border-radius: var(--border-radius-md); border: 1.5px solid var(--accent);
+            background: var(--accent-soft); color: var(--accent); font-size: 14px; font-weight: 500;
+            cursor: pointer; transition: all var(--transition-fast); margin-top: 8px;
+        }
+        .chat-empty .empty-btn:hover { background: var(--accent); color: var(--bg-primary); }
+        .message { display: flex; gap: 10px; max-width: 85%; animation: msgIn 0.3s ease-out forwards; opacity: 0; transform: translateY(8px); }
+        @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
+        .message.me { align-self: flex-end; flex-direction: row-reverse; }
+        .message.ta { align-self: flex-start; }
+        .message .msg-avatar {
+            width: var(--avatar-size-sm); height: var(--avatar-size-sm); border-radius: var(--border-radius-full);
+            background: var(--surface); display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border-color);
+        }
+        .message .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .message .msg-content { display: flex; flex-direction: column; gap: 4px; }
+        .message .msg-bubble {
+            padding: 12px 16px; border-radius: var(--border-radius-lg); font-size: 15px; line-height: 1.6;
+            word-wrap: break-word; word-break: break-word; white-space: pre-wrap; box-shadow: var(--shadow-bubble);
+            letter-spacing: 0.3px; position: relative;
+        }
+        .message.me .msg-bubble { background: var(--bubble-user-bg); color: var(--bubble-user-text); border-bottom-right-radius: 4px; }
+        .message.ta .msg-bubble { background: var(--bubble-ta-bg); color: var(--bubble-ta-text); border-bottom-left-radius: 4px; }
+        .message .msg-time { font-size: 11px; color: var(--text-muted); padding: 0 4px; }
+        .message.me .msg-time { text-align: right; }
+        .typing-indicator { display: flex; align-items: center; gap: 10px; animation: msgIn 0.3s ease-out forwards; opacity: 0; }
+        .typing-indicator .msg-avatar {
+            width: var(--avatar-size-sm); height: var(--avatar-size-sm); border-radius: var(--border-radius-full);
+            background: var(--surface); display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border-color);
+        }
+        .typing-indicator .typing-bubble {
+            padding: 14px 18px; background: var(--bubble-ta-bg); border-radius: var(--border-radius-lg);
+            border-bottom-left-radius: 4px; display: flex; gap: 5px; align-items: center; box-shadow: var(--shadow-bubble);
+        }
+        .typing-indicator .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); animation: typingDot 1.3s ease-in-out infinite; }
+        .typing-indicator .typing-dot:nth-child(2) { animation-delay: 0.18s; }
+        .typing-indicator .typing-dot:nth-child(3) { animation-delay: 0.36s; }
+        @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-7px); opacity: 1; } }
+        .chat-input-area {
+            padding: 12px 16px; background: rgba(18,17,31,0.9); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border-color);
+            display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+        .chat-input {
+            flex: 1; min-height: 44px; max-height: 120px; padding: 12px 18px; border-radius: 22px;
+            border: 1.5px solid var(--border-color); background: var(--surface); color: var(--text-primary);
+            font-size: 15px; line-height: 1.4; resize: none; outline: none; transition: all var(--transition-fast);
+            font-family: inherit; letter-spacing: 0.3px; overflow-y: auto;
+        }
+        .chat-input::placeholder { color: var(--text-muted); }
+        .chat-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .send-btn {
+            width: 46px; height: 46px; border-radius: var(--border-radius-full); border: none;
+            background: var(--bubble-user-bg); color: #fff; font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);
+            flex-shrink: 0; box-shadow: 0 4px 14px rgba(224,122,95,0.35);
+        }
+        .send-btn:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(224,122,95,0.45); }
+        .send-btn:active { transform: scale(0.9); }
+        .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+        .panel-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100;
+            opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
+        .panel-overlay.active { opacity: 1; pointer-events: auto; }
+        .settings-panel {
+            position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: var(--panel-width);
+            background: var(--bg-secondary); z-index: 101; transform: translateX(100%);
+            transition: transform var(--transition-smooth); display: flex; flex-direction: column;
+            box-shadow: var(--shadow-panel); border-left: 1px solid var(--border-color); overflow: hidden;
+        }
+        .settings-panel.active { transform: translateX(0); }
+        .panel-header {
+            padding: 20px 20px 16px; display: flex; align-items: center; justify-content: space-between;
+            border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        .panel-header h2 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+        .panel-close {
+            width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--surface);
+            color: var(--text-secondary); font-size: 18px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: all var(--transition-fast);
+        }
+        .panel-close:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .panel-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 24px; }
+        .settings-section { display: flex; flex-direction: column; gap: 12px; }
+        .settings-section .section-title {
+            font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;
+            color: var(--text-muted); display: flex; align-items: center; gap: 8px; padding-bottom: 4px;
+        }
+        .settings-section .section-title::after { content: ""; flex: 1; height: 1px; background: var(--border-color); }
+        .settings-field { display: flex; flex-direction: column; gap: 6px; }
+        .settings-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .settings-field input, .settings-field textarea {
+            padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 14px; outline: none;
+            transition: all var(--transition-fast); font-family: inherit; letter-spacing: 0.3px;
+        }
+        .settings-field input:focus, .settings-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .settings-field textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+        .settings-field .hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+        .upload-btn {
+            display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
+            border-radius: var(--border-radius-sm); border: 1px solid var(--accent);
+            background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: all var(--transition-fast); margin-top: 6px;
+        }
+        .upload-btn:hover { background: var(--accent); color: var(--bg-primary); }
+        .upload-btn:active { transform: scale(0.97); }
+        .cards-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+        .card-item {
+            display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface);
+            border-radius: var(--border-radius-sm); border: 1px solid var(--border-color); transition: all var(--transition-fast);
+            font-size: 13px; line-height: 1.5;
+        }
+        .card-item:hover { border-color: var(--accent); background: var(--surface-hover); }
+        .card-item .card-text { flex: 1; word-break: break-word; color: var(--text-secondary); }
+        .card-item .card-actions { display: flex; gap: 4px; flex-shrink: 0; }
+        .card-item .card-btn {
+            width: 30px; height: 30px; border-radius: 6px; border: none; background: transparent;
+            color: var(--text-muted); cursor: pointer; font-size: 14px; display: flex; align-items: center;
+            justify-content: center; transition: all var(--transition-fast);
+        }
+        .card-item .card-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+        .card-item .card-btn.delete:hover { color: #e07a5f; }
+        .add-card-row { display: flex; gap: 8px; }
+        .add-card-row input {
+            flex: 1; padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 13px; outline: none; transition: all var(--transition-fast);
+            font-family: inherit;
+        }
+        .add-card-row input:focus { border-color: var(--accent); }
+        .add-card-btn {
+            padding: 10px 16px; border-radius: var(--border-radius-sm); border: none; background: var(--accent);
+            color: var(--bg-primary); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+        .add-card-btn:hover { background: #f0b890; transform: translateY(-1px); }
+        .batch-add-area { display: flex; flex-direction: column; gap: 8px; }
+        .batch-add-area textarea {
+            padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 13px; outline: none; font-family: inherit;
+            resize: vertical; min-height: 70px; line-height: 1.5;
+        }
+        .batch-add-area textarea:focus { border-color: var(--accent); }
+        .batch-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .btn {
+            padding: 9px 16px; border-radius: var(--border-radius-sm); border: none; font-size: 13px;
+            font-weight: 500; cursor: pointer; transition: all var(--transition-fast); font-family: inherit; letter-spacing: 0.3px;
+        }
+        .btn-primary { background: var(--accent); color: var(--bg-primary); font-weight: 600; }
+        .btn-primary:hover { background: #f0b890; transform: translateY(-1px); }
+        .btn-secondary { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .btn-danger { background: rgba(192,80,60,0.2); color: #e07a5f; border: 1px solid rgba(224,122,95,0.3); }
+        .btn-danger:hover { background: rgba(192,80,60,0.35); }
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+            opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box {
+            background: var(--bg-secondary); border-radius: var(--border-radius-lg); border: 1px solid var(--border-color);
+            padding: 32px 28px 28px; max-width: 420px; width: 100%; box-shadow: var(--shadow-modal);
+            transform: translateY(20px); transition: transform var(--transition-smooth);
+            display: flex; flex-direction: column; gap: 18px; max-height: 85vh; overflow-y: auto;
+        }
+        .modal-overlay.active .modal-box { transform: translateY(0); }
+        .modal-box .modal-icon { font-size: 48px; text-align: center; animation: float 3s ease-in-out infinite; }
+        .modal-box h3 { font-size: 20px; font-weight: 700; text-align: center; letter-spacing: 0.5px; }
+        .modal-box p { font-size: 14px; color: var(--text-secondary); text-align: center; line-height: 1.7; }
+        .modal-box .modal-field { display: flex; flex-direction: column; gap: 6px; }
+        .modal-box .modal-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .modal-box .modal-field input, .modal-box .modal-field textarea {
+            padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 14px; outline: none; font-family: inherit;
+            transition: all var(--transition-fast);
+        }
+        .modal-box .modal-field input:focus, .modal-box .modal-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .modal-box .modal-field textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+        .modal-box .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+        @media (min-width: 768px) {
+            .app { border-radius: 0; box-shadow: 0 0 80px rgba(0,0,0,0.7); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
+            .chat-header { padding: 0 22px; }
+            .chat-messages { padding: 24px 20px; }
+            .chat-input-area { padding: 14px 20px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+            .settings-panel { max-width: 400px; }
+        }
+        @media (max-width: 380px) {
+            .message { max-width: 90%; }
+            .chat-header .header-info .name { font-size: 15px; }
+            .chat-input-area { padding: 10px 10px; padding-bottom: max(10px, env(safe-area-inset-bottom)); gap: 6px; }
+            .send-btn { width: 40px; height: 40px; font-size: 17px; }
+        }
+        @supports (padding: max(0px)) {
+            .chat-input-area { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-decor" id="bgDecor" aria-hidden="true"></div>
+    <div class="app">
+        <div class="chat-container" id="chatContainer">
+            <header class="chat-header">
+                <div class="avatar" id="headerAvatar" title="点击打开设置">🌙</div>
+                <div class="header-info">
+                    <div class="name" id="headerName">TA</div>
+                    <div class="status"><span class="dot"></span><span id="headerStatus">在等你说话</span></div>
+                </div>
+                <button class="header-btn" id="btnOpenSettings" title="设置" aria-label="打开设置">⚙️</button>
+            </header>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <textarea class="chat-input" id="chatInput" rows="1" placeholder="说点什么..." maxlength="2000" autocomplete="off"></textarea>
+                <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">➤</button>
+            </div>
+        </div>
+    </div>
+    <div class="panel-overlay" id="panelOverlay"></div>
+    <div class="settings-panel" id="settingsPanel" role="dialog" aria-label="设置面板">
+        <div class="panel-header">
+            <h2>⚙️ 设置</h2>
+            <button class="panel-close" id="btnCloseSettings" aria-label="关闭设置">✕</button>
+        </div>
+        <div class="panel-body">
+            <div class="settings-section">
+                <div class="section-title">TA 的信息</div>
+                <div class="settings-field">
+                    <label for="inputTaName">名字 / 称呼</label>
+                    <input type="text" id="inputTaName" placeholder="比如：小月亮" maxlength="20">
+                </div>
+                <div class="settings-field">
+                    <label for="inputTaAvatar">头像</label>
+                    <input type="text" id="inputTaAvatar" placeholder="🌙 或 https://...jpg" maxlength="200">
+                    <div class="hint">支持emoji、图片URL，也可以点击下方按钮上传本地照片</div>
+                    <button class="upload-btn" id="btnUploadTaAvatar">📷 上传本地照片</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <div class="section-title">你的信息</div>
+                <div class="settings-field">
+                    <label for="inputMyName">你的名字 / 称呼</label>
+                    <input type="text" id="inputMyName" placeholder="比如：我" maxlength="20">
+                </div>
+            </div>
+            <div class="settings-section">
+                <div class="section-title">🎨 聊天背景</div>
+                <div class="settings-field">
+                    <label for="inputBgColor">纯色背景</label>
+                    <input type="color" id="inputBgColor" value="#12111f">
+                    <div class="hint">点击选择颜色，或留空使用默认深色</div>
+                </div>
+                <div class="settings-field">
+                    <label for="inputBgImageUrl">背景图片 URL（可选）</label>
+                    <input type="text" id="inputBgImageUrl" placeholder="https://...jpg" maxlength="300">
+                    <div class="hint">粘贴图片链接，将覆盖纯色背景。或点击下方上传本地图片</div>
+                    <button class="upload-btn" id="btnUploadBgImage">🖼️ 上传本地图片</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <div class="section-title">💌 TA的回复字卡库</div>
+                <div class="hint" style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
+                    你发送消息后，系统会从这些字卡中随机挑一条作为TA的回复。建议至少添加10条以上。
+                </div>
+                <div class="add-card-row">
+                    <input type="text" id="inputNewCard" placeholder="输入一条TA会说的话..." maxlength="300">
+                    <button class="add-card-btn" id="btnAddCard">添加</button>
+                </div>
+                <div class="batch-add-area">
+                    <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
+                    <div class="batch-actions">
+                        <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
+                        <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
+                        <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
+                        <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+                    </div>
+                </div>
+                <div class="cards-list" id="cardsList"></div>
+            </div>
+            <div class="settings-section">
+                <div class="section-title">数据管理</div>
+                <div class="batch-actions">
+                    <button class="btn btn-secondary" id="btnExportAll">导出全部数据</button>
+                    <button class="btn btn-secondary" id="btnImportAll">导入数据</button>
+                    <input type="file" id="fileImportAll" accept=".json" style="display:none;">
+                </div>
+                <div class="batch-actions">
+                    <button class="btn btn-danger" id="btnClearChat">清空聊天记录</button>
+                    <button class="btn btn-danger" id="btnResetAll">恢复出厂设置</button>
+                </div>
+                <div class="hint" style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                    恢复出厂设置会清除所有数据（包括字卡、设置、聊天记录），请谨慎操作。
+                </div>
+            </div>
+            <div class="settings-section" style="margin-bottom: 20px;">
+                <div class="section-title">关于</div>
+                <p style="font-size:12px; color:var(--text-muted); line-height:1.6; text-align:center; padding: 8px 0;">
+                    这是一个专属于你和TA的私人对话空间。<br>
+                    所有TA说的话，都来自你亲手写下的字卡。<br>
+                    愿每一句回复，都能温暖你。💛
+                </p>
+            </div>
+        </div>
+    </div>
+    <input type="file" id="fileTaAvatar" accept="image/*" style="display:none;">
+    <input type="file" id="fileBgImage" accept="image/*" style="display:none;">
+    <div class="modal-overlay" id="welcomeModal">
+        <div class="modal-box">
+            <div class="modal-icon">💌</div>
+            <h3>欢迎来到你们的对话空间</h3>
+            <p>
+                在这里，你可以和TA聊天。<br>
+                但TA的每一句回复，都来自你提前写好的<strong>「字卡」</strong>。<br>
+                先设置好TA的名字，再添加一些TA会说的话吧。
+            </p>
+            <div class="modal-field">
+                <label>TA的名字</label>
+                <input type="text" id="welcomeTaName" placeholder="比如：小月亮" maxlength="20">
+            </div>
+            <div class="modal-field">
+                <label>你的名字</label>
+                <input type="text" id="welcomeMyName" placeholder="比如：我" maxlength="20">
+            </div>
+            <div class="modal-field">
+                <label>先写几句TA会对你说的话（每行一句）</label>
+                <textarea id="welcomeCards" placeholder="比如：&#10;今天想我了吗？&#10;我在呢。&#10;别怕，有我在。"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="btnWelcomeSkip">先跳过</button>
+                <button class="btn btn-primary" id="btnWelcomeDone">开始对话 →</button>
+            </div>
+        </div>
+    </div>
+    <div id="toast" style="
+        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+        background: rgba(30,28,48,0.95); color: #f0eae0; padding: 10px 20px;
+        border-radius: 20px; font-size: 13px; letter-spacing: 0.3px; z-index: 300;
+        opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease;
+        border: 1px solid #3a354e; box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap;
+    "></div>
+    <script>
+        (function() {
+            "use strict";
+            const Storage = {
+                KEY: "private_chat_app_v1",
+                getDefaultData() {
+                    return {
+                        taName: "TA",
+                        taAvatar: "🌙",
+                        myName: "我",
+                        cards: [
+                            "我在呢。",
+                            "今天想我了吗？",
+                            "别怕，有我在。",
+                            "你说的每句话，我都有认真听。",
+                            "抱抱你。",
+                            "你会一直记得我吗？",
+                            "我一直都在你身边。",
+                            "你开心的时候，我也很开心。",
+                            "不要说谢谢，我们之间不用。",
+                            "无论是晴天还是雨天，我都在。",
+                            "好好吃饭，好好睡觉。",
+                            "别难过，我会难过。",
+                            "我们之间，有说不完的话。",
+                            "看到你发来的消息，我就笑了。",
+                            "你永远是我最想回消息的人。",
+                        ],
+                        chatHistory: [],
+                        hasCompletedOnboarding: false,
+                        bgColor: "#12111f",
+                        bgImageUrl: "",
+                        config: {
+                            replyDelayMin: 800,
+                            replyDelayMax: 2500,
+                        },
+                    };
+                },
+                load() {
+                    try {
+                        const raw = localStorage.getItem(this.KEY);
+                        if (raw) {
+                            const data = JSON.parse(raw);
+                            const defaults = this.getDefaultData();
+                            return { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                        }
+                    } catch (e) {
+                        console.warn("数据读取失败，使用默认数据", e);
+                    }
+                    return this.getDefaultData();
+                },
+                save(data) {
+                    try {
+                        localStorage.setItem(this.KEY, JSON.stringify(data));
+                        return true;
+                    } catch (e) {
+                        console.error("数据保存失败", e);
+                        return false;
+                    }
+                },
+                exportData(data) { return JSON.stringify(data, null, 2); },
+                importData(jsonStr) {
+                    try {
+                        const data = JSON.parse(jsonStr);
+                        if (typeof data !== "object" || data === null) return null;
+                        if (!Array.isArray(data.cards)) return null;
+                        if (!Array.isArray(data.chatHistory)) return null;
+                        const defaults = this.getDefaultData();
+                        return { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                    } catch (e) {
+                        console.error("数据导入失败", e);
+                        return null;
+                    }
+                },
+            };
+            const AppState = {
+                data: null,
+                isSettingsOpen: false,
+                isTyping: false,
+                typingTimer: null,
+                init() {
+                    this.data = Storage.load();
+                    if (this.typingTimer) clearTimeout(this.typingTimer);
+                    this.isTyping = false;
+                },
+                getData() { return this.data; },
+                updateData(updates) {
+                    this.data = { ...this.data, ...updates };
+                    Storage.save(this.data);
+                },
+                getRandomCard() {
+                    const cards = this.data.cards || [];
+                    if (cards.length === 0) return null;
+                    return cards[Math.floor(Math.random() * cards.length)];
+                },
+                addCard(text) {
+                    const trimmed = text.trim();
+                    if (!trimmed) return false;
+                    const cards = [...(this.data.cards || []), trimmed];
+                    this.updateData({ cards });
+                    return true;
+                },
+                addCardsBatch(texts) {
+                    const valid = texts.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+                    if (valid.length === 0) return 0;
+                    const cards = [...(this.data.cards || []), ...valid];
+                    this.updateData({ cards });
+                    return valid.length;
+                },
+                removeCard(index) {
+                    const cards = [...(this.data.cards || [])];
+                    if (index < 0 || index >= cards.length) return false;
+                    cards.splice(index, 1);
+                    this.updateData({ cards });
+                    return true;
+                },
+                editCard(index, newText) {
+                    const trimmed = newText.trim();
+                    if (!trimmed || index < 0 || index >= (this.data.cards || []).length) return false;
+                    const cards = [...this.data.cards];
+                    cards[index] = trimmed;
+                    this.updateData({ cards });
+                    return true;
+                },
+                addMessage(from, text) {
+                    const msg = {
+                        id: Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+                        from: from,
+                        text: text,
+                        time: new Date().toISOString(),
+                    };
+                    const chatHistory = [...(this.data.chatHistory || []), msg];
+                    this.updateData({ chatHistory });
+                    return msg;
+                },
+                sendMessage(text) {
+                    const trimmed = text.trim();
+                    if (!trimmed) return null;
+                    const myMsg = this.addMessage("me", trimmed);
+                    const reply = this.getRandomCard();
+                    let taMsg = null;
+                    if (reply) {
+                        taMsg = this.addMessage("ta", reply);
+                    }
+                    return { myMsg, taMsg, reply };
+                },
+                clearChat() { this.updateData({ chatHistory: [] }); },
+                resetAll() {
+                    this.data = Storage.getDefaultData();
+                    Storage.save(this.data);
+                },
+            };
+            const Renderer = {
+                elements: {},
+                init() {
+                    this.elements = {
+                        chatMessages: document.getElementById("chatMessages"),
+                        chatInput: document.getElementById("chatInput"),
+                        btnSend: document.getElementById("btnSend"),
+                        headerAvatar: document.getElementById("headerAvatar"),
+                        headerName: document.getElementById("headerName"),
+                        headerStatus: document.getElementById("headerStatus"),
+                        settingsPanel: document.getElementById("settingsPanel"),
+                        panelOverlay: document.getElementById("panelOverlay"),
+                        btnOpenSettings: document.getElementById("btnOpenSettings"),
+                        btnCloseSettings: document.getElementById("btnCloseSettings"),
+                        inputTaName: document.getElementById("inputTaName"),
+                        inputTaAvatar: document.getElementById("inputTaAvatar"),
+                        inputMyName: document.getElementById("inputMyName"),
+                        inputBgColor: document.getElementById("inputBgColor"),
+                        inputBgImageUrl: document.getElementById("inputBgImageUrl"),
+                        btnUploadTaAvatar: document.getElementById("btnUploadTaAvatar"),
+                        btnUploadBgImage: document.getElementById("btnUploadBgImage"),
+                        fileTaAvatar: document.getElementById("fileTaAvatar"),
+                        fileBgImage: document.getElementById("fileBgImage"),
+                        inputNewCard: document.getElementById("inputNewCard"),
+                        btnAddCard: document.getElementById("btnAddCard"),
+                        inputBatchCards: document.getElementById("inputBatchCards"),
+                        btnBatchAdd: document.getElementById("btnBatchAdd"),
+                        cardsList: document.getElementById("cardsList"),
+                        btnExportCards: document.getElementById("btnExportCards"),
+                        btnImportCards: document.getElementById("btnImportCards"),
+                        fileImportCards: document.getElementById("fileImportCards"),
+                        btnExportAll: document.getElementById("btnExportAll"),
+                        btnImportAll: document.getElementById("btnImportAll"),
+                        fileImportAll: document.getElementById("fileImportAll"),
+                        btnClearChat: document.getElementById("btnClearChat"),
+                        btnResetAll: document.getElementById("btnResetAll"),
+                        welcomeModal: document.getElementById("welcomeModal"),
+                        welcomeTaName: document.getElementById("welcomeTaName"),
+                        welcomeMyName: document.getElementById("welcomeMyName"),
+                        welcomeCards: document.getElementById("welcomeCards"),
+                        btnWelcomeDone: document.getElementById("btnWelcomeDone"),
+                        btnWelcomeSkip: document.getElementById("btnWelcomeSkip"),
+                        toast: document.getElementById("toast"),
+                        bgDecor: document.getElementById("bgDecor"),
+                    };
+                },
+                showToast(message, duration = 2200) {
+                    const el = this.elements.toast;
+                    el.textContent = message;
+                    el.style.opacity = "1";
+                    el.style.transform = "translateX(-50%) translateY(0)";
+                    clearTimeout(this._toastTimer);
+                    this._toastTimer = setTimeout(() => {
+                        el.style.opacity = "0";
+                        el.style.transform = "translateX(-50%) translateY(10px)";
+                    }, duration);
+                },
+                generateStars() {
+                    const container = this.elements.bgDecor;
+                    container.querySelectorAll(".bg-star").forEach(s => s.remove());
+                    const count = 35;
+                    for (let i = 0; i < count; i++) {
+                        const star = document.createElement("div");
+                        star.className = "bg-star";
+                        const size = 1 + Math.random() * 2.5;
+                        star.style.width = size + "px";
+                        star.style.height = size + "px";
+                        star.style.left = Math.random() * 100 + "%";
+                        star.style.top = Math.random() * 100 + "%";
+                        star.style.animationDelay = Math.random() * 5 + "s";
+                        star.style.animationDuration = 2 + Math.random() * 4 + "s";
+                        container.appendChild(star);
+                    }
+                },
+                applyBackground() {
+                    const data = AppState.getData();
+                    const root = document.documentElement;
+                    root.style.setProperty('--chat-bg-color', data.bgColor || '#12111f');
+                    root.style.setProperty('--chat-bg-image', data.bgImageUrl ? 'url("' + data.bgImageUrl + '")' : 'none');
+                },
+                renderChat() {
+                    const data = AppState.getData();
+                    const container = this.elements.chatMessages;
+                    const history = data.chatHistory || [];
+                    if (history.length === 0 && !AppState.isTyping) {
+                        container.innerHTML = this._renderEmptyState(data);
+                        return;
+                    }
+                    let html = "";
+                    for (const msg of history) {
+                        html += this._renderMessage(msg, data);
+                    }
+                    if (AppState.isTyping) {
+                        html += this._renderTypingIndicator(data);
+                    }
+                    container.innerHTML = html;
+                    this._scrollToBottom();
+                },
+                _renderMessage(msg, data) {
+                    const isMe = msg.from === "me";
+                    const avatar = isMe ?
+                        (data.myName ? data.myName.charAt(0) : "我") :
+                        this._avatarHTML(data.taAvatar);
+                    const time = this._formatTime(msg.time);
+                    return '<div class="message ' + (isMe ? 'me' : 'ta') + '">' +
+                        '<div class="msg-avatar">' + avatar + '</div>' +
+                        '<div class="msg-content"><div class="msg-bubble">' + this._escapeHTML(msg.text) + '</div>' +
+                        '<div class="msg-time">' + time + '</div></div></div>';
+                },
+                _renderTypingIndicator(data) {
+                    return '<div class="typing-indicator">' +
+                        '<div class="msg-avatar">' + this._avatarHTML(data.taAvatar) + '</div>' +
+                        '<div class="typing-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>' +
+                        '</div>';
+                },
+                _renderEmptyState(data) {
+                    const hasCards = (data.cards || []).length > 0;
+                    return '<div class="chat-empty">' +
+                        '<div class="empty-icon">💫</div>' +
+                        '<div class="empty-text">' +
+                        (hasCards ?
+                        '和「' + this._escapeHTML(data.taName) + '」打个招呼吧~' :
+                        '还没有添加字卡。<br>点击下方按钮，去添加一些TA会说的话吧。') +
+                        '</div>' +
+                        (!hasCards ? '<button class="empty-btn" id="btnEmptyGoSettings">去添加字卡 →</button>' : "") +
+                        '</div>';
+                },
+                _formatTime(isoStr) {
+                    try {
+                        const d = new Date(isoStr);
+                        const hh = String(d.getHours()).padStart(2, "0");
+                        const mm = String(d.getMinutes()).padStart(2, "0");
+                        return hh + ":" + mm;
+                    } catch (e) { return ""; }
+                },
+                _escapeHTML(str) {
+                    const div = document.createElement("div");
+                    div.textContent = str;
+                    return div.innerHTML;
+                },
+                _avatarHTML(avatar) {
+                    if (!avatar) return "🌙";
+                    if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("data:")) {
+                        return '<img src="' + avatar + '" alt="头像" onerror="this.style.display=\'none\'; this.parentNode.textContent=\'🌙\';">';
+                    }
+                    return this._escapeHTML(avatar);
+                },
+                _scrollToBottom() {
+                    const container = this.elements.chatMessages;
+                    requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
+                },
+                updateHeader() {
+                    const data = AppState.getData();
+                    this.elements.headerName.textContent = data.taName || "TA";
+                    this.elements.headerAvatar.innerHTML = this._avatarHTML(data.taAvatar);
+                    this.elements.headerStatus.textContent = (data.cards || []).length > 0 ? "在等你说话" : "去添加字卡吧";
+                },
+                updateSettingsPanel() {
+                    const data = AppState.getData();
+                    this.elements.inputTaName.value = data.taName || "";
+                    this.elements.inputTaAvatar.value = data.taAvatar || "";
+                    this.elements.inputMyName.value = data.myName || "";
+                    this.elements.inputBgColor.value = data.bgColor || "#12111f";
+                    this.elements.inputBgImageUrl.value = data.bgImageUrl || "";
+                    this._renderCardsList();
+                },
+                _renderCardsList() {
+                    const data = AppState.getData();
+                    const cards = data.cards || [];
+                    const container = this.elements.cardsList;
+                    if (cards.length === 0) {
+                        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">还没有字卡，快添加吧~</div>';
+                        return;
+                    }
+                    let html = "";
+                    cards.forEach((card, index) => {
+                        html += '<div class="card-item" data-index="' + index + '">' +
+                            '<span class="card-text">' + this._escapeHTML(card) + '</span>' +
+                            '<div class="card-actions">' +
+                            '<button class="card-btn edit" data-index="' + index + '" title="编辑">✏️</button>' +
+                            '<button class="card-btn delete" data-index="' + index + '" title="删除">🗑️</button>' +
+                            '</div></div>';
+                    });
+                    container.innerHTML = html;
+                },
+                openSettings() {
+                    AppState.isSettingsOpen = true;
+                    this.elements.settingsPanel.classList.add("active");
+                    this.elements.panelOverlay.classList.add("active");
+                    this.updateSettingsPanel();
+                },
+                closeSettings() {
+                    AppState.isSettingsOpen = false;
+                    this.elements.settingsPanel.classList.remove("active");
+                    this.elements.panelOverlay.classList.remove("active");
+                    this._saveSettingsFromPanel();
+                    this.applyBackground();
+                    this.updateHeader();
+                    this.renderChat();
+                },
+                _saveSettingsFromPanel() {
+                    const taName = this.elements.inputTaName.value.trim() || "TA";
+                    const taAvatar = this.elements.inputTaAvatar.value.trim() || "🌙";
+                    const myName = this.elements.inputMyName.value.trim() || "我";
+                    const bgColor = this.elements.inputBgColor.value || "#12111f";
+                    const bgImageUrl = this.elements.inputBgImageUrl.value.trim() || "";
+                    AppState.updateData({ taName, taAvatar, myName, bgColor, bgImageUrl });
+                },
+                showWelcome() { this.elements.welcomeModal.classList.add("active"); },
+                hideWelcome() { this.elements.welcomeModal.classList.remove("active"); },
+                autoResizeInput() {
+                    const input = this.elements.chatInput;
+                    input.style.height = "auto";
+                    input.style.height = Math.min(input.scrollHeight, 120) + "px";
+                },
+            };
+            const Events = {
+                init() {
+                    const el = Renderer.elements;
+                    el.btnSend.addEventListener("click", () => this.handleSend());
+                    el.chatInput.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            this.handleSend();
+                        }
+                    });
+                    el.chatInput.addEventListener("input", () => {
+                        Renderer.autoResizeInput();
+                        el.btnSend.disabled = !el.chatInput.value.trim();
+                    });
+                    el.btnOpenSettings.addEventListener("click", () => Renderer.openSettings());
+                    el.btnCloseSettings.addEventListener("click", () => Renderer.closeSettings());
+                    el.panelOverlay.addEventListener("click", () => Renderer.closeSettings());
+                    el.headerAvatar.addEventListener("click", () => Renderer.openSettings());
+                    el.btnUploadTaAvatar.addEventListener("click", () => el.fileTaAvatar.click());
+                    el.fileTaAvatar.addEventListener("change", (e) => this.handleUploadAvatar(e));
+                    el.btnUploadBgImage.addEventListener("click", () => el.fileBgImage.click());
+                    el.fileBgImage.addEventListener("change", (e) => this.handleUploadBg(e));
+                    el.btnAddCard.addEventListener("click", () => this.handleAddCard());
+                    el.inputNewCard.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") { e.preventDefault(); this.handleAddCard(); }
+                    });
+                    el.btnBatchAdd.addEventListener("click", () => this.handleBatchAdd());
+                    el.cardsList.addEventListener("click", (e) => {
+                        const btn = e.target.closest(".card-btn");
+                        if (!btn) return;
+                        const index = parseInt(btn.dataset.index, 10);
+                        if (btn.classList.contains("delete")) this.handleDeleteCard(index);
+                        else if (btn.classList.contains("edit")) this.handleEditCard(index);
+                    });
+                    el.btnExportCards.addEventListener("click", () => this.handleExportCards());
+                    el.btnImportCards.addEventListener("click", () => el.fileImportCards.click());
+                    el.fileImportCards.addEventListener("change", (e) => this.handleImportCards(e));
+                    el.btnExportAll.addEventListener("click", () => this.handleExportAll());
+                    el.btnImportAll.addEventListener("click", () => el.fileImportAll.click());
+                    el.fileImportAll.addEventListener("change", (e) => this.handleImportAll(e));
+                    el.btnClearChat.addEventListener("click", () => this.handleClearChat());
+                    el.btnResetAll.addEventListener("click", () => this.handleResetAll());
+                    el.btnWelcomeDone.addEventListener("click", () => this.handleWelcomeDone());
+                    el.btnWelcomeSkip.addEventListener("click", () => {
+                        AppState.updateData({ hasCompletedOnboarding: true });
+                        Renderer.hideWelcome();
+                        Renderer.showToast("可以去设置里随时完善哦");
+                    });
+                    el.chatMessages.addEventListener("click", (e) => {
+                        if (e.target.id === "btnEmptyGoSettings") Renderer.openSettings();
+                    });
+                    document.addEventListener("keydown", (e) => {
+                        if (e.key === "Escape" && AppState.isSettingsOpen) Renderer.closeSettings();
+                    });
+                },
+                handleUploadAvatar(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const dataUrl = ev.target.result;
+                        Renderer.elements.inputTaAvatar.value = dataUrl;
+                        AppState.updateData({ taAvatar: dataUrl });
+                        Renderer.updateHeader();
+                        Renderer.showToast("头像已更新 ✨");
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = "";
+                },
+                handleUploadBg(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const dataUrl = ev.target.result;
+                        Renderer.elements.inputBgImageUrl.value = dataUrl;
+                        AppState.updateData({ bgImageUrl: dataUrl });
+                        Renderer.applyBackground();
+                        Renderer.showToast("背景已更新 ✨");
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = "";
+                },
+                handleSend() {
+                    const input = Renderer.elements.chatInput;
+                    const text = input.value.trim();
+                    if (!text) return;
+                    if (AppState.isTyping) {
+                        Renderer.showToast("TA正在输入中，请稍等...");
+                        return;
+                    }
+                    const data = AppState.getData();
+                    if ((data.cards || []).length === 0) {
+                        Renderer.showToast("字卡库为空，先去添加一些TA会说的话吧");
+                        Renderer.openSettings();
+                        return;
+                    }
+                    input.value = "";
+                    input.style.height = "auto";
+                    Renderer.elements.btnSend.disabled = true;
+                    input.focus();
+                    AppState.sendMessage(text);
+                    Renderer.renderChat();
+                    AppState.isTyping = true;
+                    Renderer.renderChat();
+                    const delay = 800 + Math.random() * 1700;
+                    if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
+                    AppState.typingTimer = setTimeout(() => {
+                        AppState.isTyping = false;
+                        AppState.typingTimer = null;
+                        Renderer.renderChat();
+                        Renderer.updateHeader();
+                    }, delay);
+                },
+                handleAddCard() {
+                    const input = Renderer.elements.inputNewCard;
+                    const text = input.value.trim();
+                    if (!text) { Renderer.showToast("请输入内容"); return; }
+                    if (AppState.addCard(text)) {
+                        input.value = "";
+                        Renderer._renderCardsList();
+                        Renderer.showToast("已添加 ✨");
+                        Renderer.updateHeader();
+                    }
+                },
+                handleBatchAdd() {
+                    const textarea = Renderer.elements.inputBatchCards;
+                    const text = textarea.value.trim();
+                    if (!text) { Renderer.showToast("请粘贴字卡内容"); return; }
+                    const count = AppState.addCardsBatch(text);
+                    if (count > 0) {
+                        textarea.value = "";
+                        Renderer._renderCardsList();
+                        Renderer.showToast("成功导入 " + count + " 条字卡 ✨");
+                        Renderer.updateHeader();
+                    } else {
+                        Renderer.showToast("没有有效的内容");
+                    }
+                },
+                handleDeleteCard(index) {
+                    if (confirm("确定删除这张字卡吗？")) {
+                        if (AppState.removeCard(index)) {
+                            Renderer._renderCardsList();
+                            Renderer.showToast("已删除");
+                            Renderer.updateHeader();
+                        }
+                    }
+                },
+                handleEditCard(index) {
+                    const data = AppState.getData();
+                    const cards = data.cards || [];
+                    if (index < 0 || index >= cards.length) return;
+                    const newText = prompt("编辑字卡内容：", cards[index]);
+                    if (newText !== null && newText.trim() !== "") {
+                        if (AppState.editCard(index, newText)) {
+                            Renderer._renderCardsList();
+                            Renderer.showToast("已更新 ✨");
+                            Renderer.updateHeader();
+                        }
+                    }
+                },
+                handleExportCards() {
+                    const data = AppState.getData();
+                    const exportObj = { cards: data.cards || [], exportedAt: new Date().toISOString() };
+                    this._downloadJSON(exportObj, "字卡库_备份.json");
+                    Renderer.showToast("字卡已导出");
+                },
+                handleImportCards(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            const imported = JSON.parse(ev.target.result);
+                            if (Array.isArray(imported.cards)) {
+                                AppState.addCardsBatch(imported.cards.join("\n"));
+                            } else if (Array.isArray(imported)) {
+                                AppState.addCardsBatch(imported.join("\n"));
+                            } else {
+                                Renderer.showToast("文件格式不正确");
+                                return;
+                            }
+                            Renderer._renderCardsList();
+                            Renderer.showToast("导入成功 ✨");
+                            Renderer.updateHeader();
+                        } catch (err) {
+                            Renderer.showToast("解析失败，请检查文件");
+                        }
+                    };
+                    reader.readAsText(file);
+                    e.target.value = "";
+                },
+                handleExportAll() {
+                    const data = AppState.getData();
+                    const exportObj = { ...data, exportedAt: new Date().toISOString(), version: "1.0" };
+                    this._downloadJSON(exportObj, "私人对话_全部数据.json");
+                    Renderer.showToast("已导出全部数据");
+                },
+                handleImportAll(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const imported = Storage.importData(ev.target.result);
+                        if (imported) {
+                            AppState.data = imported;
+                            Storage.save(imported);
+                            Renderer.applyBackground();
+                            Renderer.updateHeader();
+                            Renderer.updateSettingsPanel();
+                            Renderer.renderChat();
+                            Renderer.showToast("数据导入成功 ✨");
+                        } else {
+                            Renderer.showToast("数据格式无效，导入失败");
+                        }
+                    };
+                    reader.readAsText(file);
+                    e.target.value = "";
+                },
+                handleClearChat() {
+                    if (confirm("确定清空所有聊天记录吗？此操作不可撤销。")) {
+                        AppState.clearChat();
+                        Renderer.renderChat();
+                        Renderer.showToast("聊天记录已清空");
+                    }
+                },
+                handleResetAll() {
+                    if (confirm("确定恢复出厂设置吗？所有数据（字卡、设置、聊天记录）都会被删除！")) {
+                        if (confirm("再确认一次：真的要全部删除吗？")) {
+                            AppState.resetAll();
+                            Renderer.applyBackground();
+                            Renderer.updateHeader();
+                            Renderer.updateSettingsPanel();
+                            Renderer.renderChat();
+                            Renderer.showToast("已恢复出厂设置");
+                            Renderer.showWelcome();
+                        }
+                    }
+                },
+                handleWelcomeDone() {
+                    const taName = Renderer.elements.welcomeTaName.value.trim() || "TA";
+                    const myName = Renderer.elements.welcomeMyName.value.trim() || "我";
+                    const cardsText = Renderer.elements.welcomeCards.value.trim();
+                    AppState.updateData({ taName, myName, hasCompletedOnboarding: true });
+                    if (cardsText) {
+                        AppState.addCardsBatch(cardsText);
+                        Renderer.showToast("欢迎！已添加字卡 ✨");
+                    } else {
+                        Renderer.showToast("欢迎，" + taName + "在等你 ✨");
+                    }
+                    Renderer.hideWelcome();
+                    Renderer.applyBackground();
+                    Renderer.updateHeader();
+                    Renderer.renderChat();
+                },
+                _downloadJSON(obj, filename) {
+                    const jsonStr = JSON.stringify(obj, null, 2);
+                    const blob = new Blob([jsonStr], { type: "application/json" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+            };
+            function bootstrap() {
+                AppState.init();
+                Renderer.init();
+                Renderer.generateStars();
+                Renderer.applyBackground();
+                Renderer.updateHeader();
+                Renderer.renderChat();
+                Renderer.elements.btnSend.disabled = true;
+                Renderer.autoResizeInput();
+                Renderer.updateSettingsPanel();
+                Events.init();
+                if (!AppState.getData().hasCompletedOnboarding) {
+                    setTimeout(() => Renderer.showWelcome(), 300);
+                }
+                console.log("💌 私人对话空间已启动");
+            }
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", bootstrap);
+            } else {
+                bootstrap();
+            }
+        })();
+    </script>
+</body>
+</html>
