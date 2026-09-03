@@ -7,31 +7,14 @@
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="apple-touch-icon" href="icon.svg">
     <style>
+        /* ========== 通用变量（不随主题变） ========== */
         :root {
-            --bg-primary: #0f0e17;
-            --bg-secondary: #1a1926;
-            --bg-chat: #12111f;
-            --surface: #232136;
-            --surface-hover: #2e2a4a;
-            --bubble-user-bg: linear-gradient(135deg, #e07a5f, #c05a3d);
-            --bubble-user-text: #fff8f0;
-            --bubble-ta-bg: #3d3a5c;
-            --bubble-ta-text: #f0eae0;
-            --text-primary: #f0eae0;
-            --text-secondary: #b8b0c8;
-            --text-muted: #7a7396;
-            --accent: #e8a87c;
-            --accent-soft: rgba(232, 168, 124, 0.15);
-            --accent-glow: rgba(232, 168, 124, 0.35);
-            --border-color: #3a354e;
+            --on-accent: #1c1c1e;
             --border-radius-sm: 8px;
             --border-radius-md: 16px;
             --border-radius-lg: 24px;
             --border-radius-xl: 28px;
             --border-radius-full: 50%;
-            --shadow-bubble: 0 2px 12px rgba(0,0,0,0.25);
-            --shadow-panel: -4px 0 30px rgba(0,0,0,0.5);
-            --shadow-modal: 0 20px 60px rgba(0,0,0,0.5);
             --chat-max-width: 560px;
             --header-height: 64px;
             --panel-width: 420px;
@@ -39,9 +22,59 @@
             --avatar-size-sm: 32px;
             --transition-fast: 0.2s ease;
             --transition-smooth: 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            --chat-bg-color: #12111f;
+        }
+
+        /* ========== 浅色主题（默认） ========== */
+        :root {
+            --bg-primary: #f2f2f6;
+            --bg-secondary: #ffffff;
+            --surface: #ffffff;
+            --surface-hover: #ececef;
+            --text-primary: #1c1c1e;
+            --text-secondary: #4a4a4f;
+            --text-muted: #8e8e93;
+            --border-color: #e2e2e6;
+            --accent: #e8a87c;
+            --accent-soft: rgba(232, 168, 124, 0.20);
+            --bubble-ta-bg: #e9e9eb;
+            --bubble-ta-text: #1c1c1e;
+            --bubble-user-bg: #b3c5db;
+            --bubble-user-text: #ffffff;
+            --header-bg: rgba(255, 255, 255, 0.7);
+            --input-bg: rgba(255, 255, 255, 0.7);
+            --shadow-bubble: 0 1px 6px rgba(0, 0, 0, 0.06);
+            --shadow-panel: -4px 0 30px rgba(0, 0, 0, 0.12);
+            --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.18);
+            --chat-bg-color: #f5f5f7;
             --chat-bg-image: none;
         }
+
+        /* ========== 深色主题（苹果风深灰） ========== */
+        [data-theme="dark"] {
+            --bg-primary: #000000;
+            --bg-secondary: #1c1c1e;
+            --surface: #2c2c2e;
+            --surface-hover: #3a3a3c;
+            --text-primary: #ffffff;
+            --text-secondary: #d1d1d6;
+            --text-muted: #8e8e93;
+            --border-color: #3a3a3c;
+            --accent: #e8a87c;
+            --accent-soft: rgba(232, 168, 124, 0.15);
+            --bubble-ta-bg: #2c2c2e;
+            --bubble-ta-text: #ffffff;
+            --bubble-user-bg: #40546b;
+            --bubble-user-text: #ffffff;
+            --header-bg: rgba(28, 28, 30, 0.7);
+            --input-bg: rgba(28, 28, 30, 0.7);
+            --shadow-bubble: 0 2px 12px rgba(0, 0, 0, 0.25);
+            --shadow-panel: -4px 0 30px rgba(0, 0, 0, 0.5);
+            --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.5);
+            --chat-bg-color: #000000;
+            --chat-bg-image: none;
+        }
+
+        /* ========== 全局重置 ========== */
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
             height: 100%; overflow: hidden;
@@ -49,14 +82,17 @@
             background: var(--bg-primary); color: var(--text-primary);
             -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
             touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;
+            transition: background 0.3s ease, color 0.3s ease;
         }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        /* ========== 背景装饰 ========== */
         .bg-decor { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
         .bg-decor::before {
             content: ""; position: absolute; top: -30%; left: 20%; width: 60%; height: 60%;
-            background: radial-gradient(ellipse, rgba(232,168,124,0.07) 0%, transparent 70%);
+            background: radial-gradient(ellipse, rgba(232,168,124,0.08) 0%, transparent 70%);
             border-radius: 50%; animation: bgPulse 8s ease-in-out infinite;
         }
         .bg-decor::after {
@@ -64,22 +100,31 @@
             background: radial-gradient(ellipse, rgba(128,100,180,0.08) 0%, transparent 70%);
             border-radius: 50%; animation: bgPulse 10s ease-in-out infinite reverse;
         }
-        .bg-star { position: absolute; border-radius: 50%; background: #fff; opacity: 0.3; animation: twinkle 3s ease-in-out infinite; }
+        .bg-star { position: absolute; border-radius: 50%; background: var(--text-muted); opacity: 0.25; animation: twinkle 3s ease-in-out infinite; }
         @keyframes bgPulse { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(5%,3%) scale(1.08); } }
-        @keyframes twinkle { 0%, 100% { opacity: 0.15; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.3); } }
+        @keyframes twinkle { 0%, 100% { opacity: 0.12; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.3); } }
+
+        /* ========== 应用主布局 ========== */
         .app {
             position: relative; z-index: 1; display: flex; height: 100%;
             max-width: var(--chat-max-width); margin: 0 auto;
-            box-shadow: 0 0 60px rgba(0,0,0,0.6); overflow: hidden;
+            box-shadow: 0 0 60px rgba(0,0,0,0.15); overflow: hidden;
         }
+
+        /* 聊天界面容器——支持自定义背景 */
         .chat-container {
             flex: 1; display: flex; flex-direction: column; min-width: 0;
-            background-color: var(--chat-bg-color); background-image: var(--chat-bg-image);
-            background-size: cover; background-position: center; background-repeat: no-repeat; position: relative;
+            background-color: var(--chat-bg-color);
+            background-image: var(--chat-bg-image);
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+            position: relative; transition: background-color 0.3s ease;
         }
+
+        /* ========== 顶栏（半透明） ========== */
         .chat-header {
             height: var(--header-height); display: flex; align-items: center; gap: 12px;
-            padding: 0 18px; background: rgba(18,17,31,0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 0 18px; background: var(--header-bg);
+            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
             border-bottom: 1px solid var(--border-color); flex-shrink: 0; z-index: 10;
         }
         .chat-header .avatar {
@@ -109,9 +154,11 @@
         }
         .header-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
         .header-btn:active { transform: scale(0.9); }
+
+        /* ========== 消息区域 ========== */
         .chat-messages {
             flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 16px;
-            display: flex; flex-direction: column; gap: 14px; scroll-behavior: smooth;
+            display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth;
             overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
         }
         .chat-empty {
@@ -126,7 +173,15 @@
             background: var(--accent-soft); color: var(--accent); font-size: 14px; font-weight: 500;
             cursor: pointer; transition: all var(--transition-fast); margin-top: 8px;
         }
-        .chat-empty .empty-btn:hover { background: var(--accent); color: var(--bg-primary); }
+        .chat-empty .empty-btn:hover { background: var(--accent); color: var(--on-accent); }
+
+        /* 时间戳（居中，微信风格） */
+        .chat-timestamp {
+            text-align: center; font-size: 11px; color: var(--text-muted);
+            margin: 8px 0 4px; opacity: 0.85; letter-spacing: 0.3px;
+        }
+
+        /* 消息气泡 */
         .message { display: flex; gap: 10px; max-width: 85%; animation: msgIn 0.3s ease-out forwards; opacity: 0; transform: translateY(8px); }
         @keyframes msgIn { to { opacity: 1; transform: translateY(0); } }
         .message.me { align-self: flex-end; flex-direction: row-reverse; }
@@ -137,7 +192,7 @@
             font-size: 18px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border-color);
         }
         .message .msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .message .msg-content { display: flex; flex-direction: column; gap: 4px; }
+        .message .msg-content { display: flex; flex-direction: column; gap: 0; }
         .message .msg-bubble {
             padding: 12px 16px; border-radius: var(--border-radius-lg); font-size: 15px; line-height: 1.6;
             word-wrap: break-word; word-break: break-word; white-space: pre-wrap; box-shadow: var(--shadow-bubble);
@@ -145,8 +200,7 @@
         }
         .message.me .msg-bubble { background: var(--bubble-user-bg); color: var(--bubble-user-text); border-bottom-right-radius: 4px; }
         .message.ta .msg-bubble { background: var(--bubble-ta-bg); color: var(--bubble-ta-text); border-bottom-left-radius: 4px; }
-        .message .msg-time { font-size: 11px; color: var(--text-muted); padding: 0 4px; }
-        .message.me .msg-time { text-align: right; }
+
         .typing-indicator { display: flex; align-items: center; gap: 10px; animation: msgIn 0.3s ease-out forwards; opacity: 0; }
         .typing-indicator .msg-avatar {
             width: var(--avatar-size-sm); height: var(--avatar-size-sm); border-radius: var(--border-radius-full);
@@ -161,9 +215,12 @@
         .typing-indicator .typing-dot:nth-child(2) { animation-delay: 0.18s; }
         .typing-indicator .typing-dot:nth-child(3) { animation-delay: 0.36s; }
         @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-7px); opacity: 1; } }
+
+        /* ========== 底部输入区（半透明） ========== */
         .chat-input-area {
-            padding: 12px 16px; background: rgba(18,17,31,0.9); backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px); border-top: 1px solid var(--border-color);
+            padding: 12px 16px; background: var(--input-bg);
+            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            border-top: 1px solid var(--border-color);
             display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0;
             padding-bottom: max(12px, env(safe-area-inset-bottom));
         }
@@ -179,13 +236,15 @@
             width: 46px; height: 46px; border-radius: var(--border-radius-full); border: none;
             background: var(--bubble-user-bg); color: #fff; font-size: 20px; cursor: pointer;
             display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);
-            flex-shrink: 0; box-shadow: 0 4px 14px rgba(224,122,95,0.35);
+            flex-shrink: 0; box-shadow: 0 4px 14px rgba(120,150,185,0.35);
         }
-        .send-btn:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(224,122,95,0.45); }
+        .send-btn:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(120,150,185,0.45); }
         .send-btn:active { transform: scale(0.9); }
         .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        /* ========== 设置面板 ========== */
         .panel-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 100;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
             opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
             backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
         }
@@ -208,31 +267,51 @@
             align-items: center; justify-content: center; transition: all var(--transition-fast);
         }
         .panel-close:hover { background: var(--surface-hover); color: var(--text-primary); }
-        .panel-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 24px; }
-        .settings-section { display: flex; flex-direction: column; gap: 12px; }
-        .settings-section .section-title {
-            font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;
-            color: var(--text-muted); display: flex; align-items: center; gap: 8px; padding-bottom: 4px;
+        .panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* 折叠分类 */
+        .settings-group {
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-md);
+            background: var(--surface);
+            overflow: hidden;
         }
-        .settings-section .section-title::after { content: ""; flex: 1; height: 1px; background: var(--border-color); }
+        .settings-group summary {
+            list-style: none; padding: 14px 16px; font-size: 14px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+            color: var(--text-primary); user-select: none;
+        }
+        .settings-group summary::-webkit-details-marker { display: none; }
+        .settings-group summary::after {
+            content: "›"; font-size: 18px; color: var(--text-muted);
+            transition: transform var(--transition-fast); line-height: 1;
+        }
+        .settings-group[open] summary::after { transform: rotate(90deg); }
+        .group-content {
+            padding: 4px 16px 16px; display: flex; flex-direction: column; gap: 12px;
+        }
+
         .settings-field { display: flex; flex-direction: column; gap: 6px; }
         .settings-field label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
-        .settings-field input, .settings-field textarea {
+        .settings-field input, .settings-field textarea, .settings-field select {
             padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
             background: var(--surface); color: var(--text-primary); font-size: 14px; outline: none;
             transition: all var(--transition-fast); font-family: inherit; letter-spacing: 0.3px;
         }
-        .settings-field input:focus, .settings-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .settings-field input:focus, .settings-field textarea:focus, .settings-field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
         .settings-field textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
         .settings-field .hint { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+        .settings-field input[type="color"] { padding: 0; height: 40px; cursor: pointer; }
+
         .upload-btn {
             display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px;
             border-radius: var(--border-radius-sm); border: 1px solid var(--accent);
             background: var(--accent-soft); color: var(--accent); font-size: 13px; font-weight: 500;
             cursor: pointer; transition: all var(--transition-fast); margin-top: 6px;
         }
-        .upload-btn:hover { background: var(--accent); color: var(--bg-primary); }
+        .upload-btn:hover { background: var(--accent); color: var(--on-accent); }
         .upload-btn:active { transform: scale(0.97); }
+
         .cards-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
         .card-item {
             display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--surface);
@@ -247,8 +326,9 @@
             color: var(--text-muted); cursor: pointer; font-size: 14px; display: flex; align-items: center;
             justify-content: center; transition: all var(--transition-fast);
         }
-        .card-item .card-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+        .card-item .card-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
         .card-item .card-btn.delete:hover { color: #e07a5f; }
+
         .add-card-row { display: flex; gap: 8px; }
         .add-card-row input {
             flex: 1; padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
@@ -258,10 +338,11 @@
         .add-card-row input:focus { border-color: var(--accent); }
         .add-card-btn {
             padding: 10px 16px; border-radius: var(--border-radius-sm); border: none; background: var(--accent);
-            color: var(--bg-primary); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast);
+            color: var(--on-accent); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast);
             white-space: nowrap;
         }
         .add-card-btn:hover { background: #f0b890; transform: translateY(-1px); }
+
         .batch-add-area { display: flex; flex-direction: column; gap: 8px; }
         .batch-add-area textarea {
             padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
@@ -274,14 +355,16 @@
             padding: 9px 16px; border-radius: var(--border-radius-sm); border: none; font-size: 13px;
             font-weight: 500; cursor: pointer; transition: all var(--transition-fast); font-family: inherit; letter-spacing: 0.3px;
         }
-        .btn-primary { background: var(--accent); color: var(--bg-primary); font-weight: 600; }
+        .btn-primary { background: var(--accent); color: var(--on-accent); font-weight: 600; }
         .btn-primary:hover { background: #f0b890; transform: translateY(-1px); }
         .btn-secondary { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border-color); }
         .btn-secondary:hover { background: var(--surface-hover); color: var(--text-primary); }
-        .btn-danger { background: rgba(192,80,60,0.2); color: #e07a5f; border: 1px solid rgba(224,122,95,0.3); }
-        .btn-danger:hover { background: rgba(192,80,60,0.35); }
+        .btn-danger { background: rgba(192,80,60,0.15); color: #e07a5f; border: 1px solid rgba(224,122,95,0.3); }
+        .btn-danger:hover { background: rgba(192,80,60,0.3); }
+
+        /* ========== 欢迎弹窗 ========== */
         .modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200;
             display: flex; align-items: center; justify-content: center; padding: 24px;
             opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
             backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -307,8 +390,10 @@
         .modal-box .modal-field input:focus, .modal-box .modal-field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
         .modal-box .modal-field textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
         .modal-box .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+
+        /* ========== 响应式 ========== */
         @media (min-width: 768px) {
-            .app { border-radius: 0; box-shadow: 0 0 80px rgba(0,0,0,0.7); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
+            .app { box-shadow: 0 0 80px rgba(0,0,0,0.2); border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); }
             .chat-header { padding: 0 22px; }
             .chat-messages { padding: 24px 20px; }
             .chat-input-area { padding: 14px 20px; padding-bottom: max(14px, env(safe-area-inset-bottom)); }
@@ -332,7 +417,7 @@
             <header class="chat-header">
                 <div class="avatar" id="headerAvatar" title="点击打开设置">🌙</div>
                 <div class="header-info">
-                    <div class="name" id="headerName">TA</div>
+                    <div class="name" id="headerName">他</div>
                     <div class="status"><span class="dot"></span><span id="headerStatus">在等你说话</span></div>
                 </div>
                 <button class="header-btn" id="btnOpenSettings" title="设置" aria-label="打开设置">⚙️</button>
@@ -345,104 +430,141 @@
         </div>
     </div>
     <div class="panel-overlay" id="panelOverlay"></div>
+
     <div class="settings-panel" id="settingsPanel" role="dialog" aria-label="设置面板">
         <div class="panel-header">
             <h2>⚙️ 设置</h2>
             <button class="panel-close" id="btnCloseSettings" aria-label="关闭设置">✕</button>
         </div>
         <div class="panel-body">
-            <div class="settings-section">
-                <div class="section-title">TA 的信息</div>
-                <div class="settings-field">
-                    <label for="inputTaName">名字 / 称呼</label>
-                    <input type="text" id="inputTaName" placeholder="比如：小月亮" maxlength="20">
-                </div>
-                <div class="settings-field">
-                    <label for="inputTaAvatar">头像</label>
-                    <input type="text" id="inputTaAvatar" placeholder="🌙 或 https://...jpg" maxlength="200">
-                    <div class="hint">支持emoji、图片URL，也可以点击下方按钮上传本地照片</div>
-                    <button class="upload-btn" id="btnUploadTaAvatar">📷 上传本地照片</button>
-                </div>
-            </div>
-            <div class="settings-section">
-                <div class="section-title">你的信息</div>
-                <div class="settings-field">
-                    <label for="inputMyName">你的名字 / 称呼</label>
-                    <input type="text" id="inputMyName" placeholder="比如：我" maxlength="20">
-                </div>
-            </div>
-            <div class="settings-section">
-                <div class="section-title">🎨 聊天背景</div>
-                <div class="settings-field">
-                    <label for="inputBgColor">纯色背景</label>
-                    <input type="color" id="inputBgColor" value="#12111f">
-                    <div class="hint">点击选择颜色，或留空使用默认深色</div>
-                </div>
-                <div class="settings-field">
-                    <label for="inputBgImageUrl">背景图片 URL（可选）</label>
-                    <input type="text" id="inputBgImageUrl" placeholder="https://...jpg" maxlength="300">
-                    <div class="hint">粘贴图片链接，将覆盖纯色背景。或点击下方上传本地图片</div>
-                    <button class="upload-btn" id="btnUploadBgImage">🖼️ 上传本地图片</button>
-                </div>
-            </div>
-            <div class="settings-section">
-                <div class="section-title">💌 TA的回复字卡库</div>
-                <div class="hint" style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">
-                    你发送消息后，系统会从这些字卡中随机挑一条作为TA的回复。建议至少添加10条以上。
-                </div>
-                <div class="add-card-row">
-                    <input type="text" id="inputNewCard" placeholder="输入一条TA会说的话..." maxlength="300">
-                    <button class="add-card-btn" id="btnAddCard">添加</button>
-                </div>
-                <div class="batch-add-area">
-                    <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
-                    <div class="batch-actions">
-                        <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
-                        <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
-                        <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
-                        <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+
+            <details class="settings-group" open>
+                <summary>👤 他的信息</summary>
+                <div class="group-content">
+                    <div class="settings-field">
+                        <label for="inputTaName">名字 / 称呼</label>
+                        <input type="text" id="inputTaName" placeholder="比如：小月亮" maxlength="20">
+                    </div>
+                    <div class="settings-field">
+                        <label for="inputTaAvatar">头像</label>
+                        <input type="text" id="inputTaAvatar" placeholder="🌙 或 https://...jpg" maxlength="200">
+                        <div class="hint">支持 emoji、图片链接，也可以上传本地照片</div>
+                        <button class="upload-btn" id="btnUploadTaAvatar">📷 上传本地照片</button>
                     </div>
                 </div>
-                <div class="cards-list" id="cardsList"></div>
-            </div>
-            <div class="settings-section">
-                <div class="section-title">数据管理</div>
-                <div class="batch-actions">
-                    <button class="btn btn-secondary" id="btnExportAll">导出全部数据</button>
-                    <button class="btn btn-secondary" id="btnImportAll">导入数据</button>
-                    <input type="file" id="fileImportAll" accept=".json" style="display:none;">
+            </details>
+
+            <details class="settings-group">
+                <summary>👤 我的信息</summary>
+                <div class="group-content">
+                    <div class="settings-field">
+                        <label for="inputMyName">我的名字 / 称呼</label>
+                        <input type="text" id="inputMyName" placeholder="比如：我" maxlength="20">
+                    </div>
+                    <div class="settings-field">
+                        <label for="inputMyAvatar">我的头像</label>
+                        <input type="text" id="inputMyAvatar" placeholder="🙂 或 https://...jpg" maxlength="200">
+                        <div class="hint">支持 emoji、图片链接，也可以上传本地照片</div>
+                        <button class="upload-btn" id="btnUploadMyAvatar">📷 上传本地照片</button>
+                    </div>
                 </div>
-                <div class="batch-actions">
-                    <button class="btn btn-danger" id="btnClearChat">清空聊天记录</button>
-                    <button class="btn btn-danger" id="btnResetAll">恢复出厂设置</button>
+            </details>
+
+            <details class="settings-group">
+                <summary>🎨 外观</summary>
+                <div class="group-content">
+                    <div class="settings-field">
+                        <label for="selectThemeMode">主题模式</label>
+                        <select id="selectThemeMode">
+                            <option value="auto">跟随系统</option>
+                            <option value="light">浅色</option>
+                            <option value="dark">深色</option>
+                        </select>
+                    </div>
+                    <div class="settings-field">
+                        <label for="inputBgColor">纯色背景（可选）</label>
+                        <input type="color" id="inputBgColor" value="#f5f5f7">
+                        <div class="hint">留空则使用主题默认背景</div>
+                    </div>
+                    <div class="settings-field">
+                        <label for="inputBgImageUrl">背景图片 URL（可选）</label>
+                        <input type="text" id="inputBgImageUrl" placeholder="https://...jpg" maxlength="300">
+                        <div class="hint">粘贴图片链接，将覆盖背景色。或点击下方上传本地图片</div>
+                        <button class="upload-btn" id="btnUploadBgImage">🖼️ 上传本地图片</button>
+                    </div>
                 </div>
-                <div class="hint" style="font-size:11px; color:var(--text-muted); margin-top:4px;">
-                    恢复出厂设置会清除所有数据（包括字卡、设置、聊天记录），请谨慎操作。
+            </details>
+
+            <details class="settings-group">
+                <summary>💌 他的回复字卡库</summary>
+                <div class="group-content">
+                    <div class="hint" style="font-size:12px; color:var(--text-muted);">
+                        你发送消息后，系统会从这些字卡中随机挑一条作为他的回复。建议至少添加 10 条以上。
+                    </div>
+                    <div class="add-card-row">
+                        <input type="text" id="inputNewCard" placeholder="输入一条他会说的话..." maxlength="300">
+                        <button class="add-card-btn" id="btnAddCard">添加</button>
+                    </div>
+                    <div class="batch-add-area">
+                        <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
+                        <div class="batch-actions">
+                            <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
+                            <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
+                            <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
+                            <input type="file" id="fileImportCards" accept=".json" style="display:none;">
+                        </div>
+                    </div>
+                    <div class="cards-list" id="cardsList"></div>
                 </div>
-            </div>
-            <div class="settings-section" style="margin-bottom: 20px;">
-                <div class="section-title">关于</div>
-                <p style="font-size:12px; color:var(--text-muted); line-height:1.6; text-align:center; padding: 8px 0;">
-                    这是一个专属于你和TA的私人对话空间。<br>
-                    所有TA说的话，都来自你亲手写下的字卡。<br>
-                    愿每一句回复，都能温暖你。💛
-                </p>
-            </div>
+            </details>
+
+            <details class="settings-group">
+                <summary>💾 数据管理</summary>
+                <div class="group-content">
+                    <div class="batch-actions">
+                        <button class="btn btn-secondary" id="btnExportAll">导出全部数据</button>
+                        <button class="btn btn-secondary" id="btnImportAll">导入数据</button>
+                        <input type="file" id="fileImportAll" accept=".json" style="display:none;">
+                    </div>
+                    <div class="batch-actions">
+                        <button class="btn btn-danger" id="btnClearChat">清空聊天记录</button>
+                        <button class="btn btn-danger" id="btnResetAll">恢复出厂设置</button>
+                    </div>
+                    <div class="hint" style="font-size:11px; color:var(--text-muted);">
+                        恢复出厂设置会清除所有数据（包括字卡、设置、聊天记录），请谨慎操作。
+                    </div>
+                </div>
+            </details>
+
+            <details class="settings-group">
+                <summary>ℹ️ 关于</summary>
+                <div class="group-content">
+                    <p style="font-size:12px; color:var(--text-muted); line-height:1.6; text-align:center; padding: 8px 0;">
+                        这是一个专属于你和他的私人对话空间。<br>
+                        所有他说的话，都来自你亲手写下的字卡。<br>
+                        愿每一句回复，都能温暖你。💛
+                    </p>
+                </div>
+            </details>
+
         </div>
     </div>
+
     <input type="file" id="fileTaAvatar" accept="image/*" style="display:none;">
+    <input type="file" id="fileMyAvatar" accept="image/*" style="display:none;">
     <input type="file" id="fileBgImage" accept="image/*" style="display:none;">
+
     <div class="modal-overlay" id="welcomeModal">
         <div class="modal-box">
             <div class="modal-icon">💌</div>
             <h3>欢迎来到你们的对话空间</h3>
             <p>
-                在这里，你可以和TA聊天。<br>
-                但TA的每一句回复，都来自你提前写好的<strong>「字卡」</strong>。<br>
-                先设置好TA的名字，再添加一些TA会说的话吧。
+                在这里，你可以和他聊天。<br>
+                但他的每一句回复，都来自你提前写好的<strong>「字卡」</strong>。<br>
+                先设置好他的名字，再添加一些他会说的话吧。
             </p>
             <div class="modal-field">
-                <label>TA的名字</label>
+                <label>他的名字</label>
                 <input type="text" id="welcomeTaName" placeholder="比如：小月亮" maxlength="20">
             </div>
             <div class="modal-field">
@@ -450,7 +572,7 @@
                 <input type="text" id="welcomeMyName" placeholder="比如：我" maxlength="20">
             </div>
             <div class="modal-field">
-                <label>先写几句TA会对你说的话（每行一句）</label>
+                <label>先写几句他会对你说的话（每行一句）</label>
                 <textarea id="welcomeCards" placeholder="比如：&#10;今天想我了吗？&#10;我在呢。&#10;别怕，有我在。"></textarea>
             </div>
             <div class="modal-actions">
@@ -459,6 +581,7 @@
             </div>
         </div>
     </div>
+
     <div id="toast" style="
         position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
         background: rgba(30,28,48,0.95); color: #f0eae0; padding: 10px 20px;
@@ -466,16 +589,19 @@
         opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease;
         border: 1px solid #3a354e; box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap;
     "></div>
+
     <script>
         (function() {
             "use strict";
+
             const Storage = {
                 KEY: "private_chat_app_v1",
                 getDefaultData() {
                     return {
-                        taName: "TA",
+                        taName: "他",
                         taAvatar: "🌙",
                         myName: "我",
+                        myAvatar: "",
                         cards: [
                             "我在呢。",
                             "今天想我了吗？",
@@ -495,7 +621,8 @@
                         ],
                         chatHistory: [],
                         hasCompletedOnboarding: false,
-                        bgColor: "#12111f",
+                        themeMode: "auto",
+                        bgColor: "",
                         bgImageUrl: "",
                         config: {
                             replyDelayMin: 800,
@@ -509,7 +636,10 @@
                         if (raw) {
                             const data = JSON.parse(raw);
                             const defaults = this.getDefaultData();
-                            return { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                            const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                            // 迁移：旧版本默认深色背景，改为空（跟随主题）
+                            if (merged.bgColor === "#12111f") merged.bgColor = "";
+                            return merged;
                         }
                     } catch (e) {
                         console.warn("数据读取失败，使用默认数据", e);
@@ -540,6 +670,7 @@
                     }
                 },
             };
+
             const AppState = {
                 data: null,
                 isSettingsOpen: false,
@@ -606,9 +737,7 @@
                     const myMsg = this.addMessage("me", trimmed);
                     const reply = this.getRandomCard();
                     let taMsg = null;
-                    if (reply) {
-                        taMsg = this.addMessage("ta", reply);
-                    }
+                    if (reply) taMsg = this.addMessage("ta", reply);
                     return { myMsg, taMsg, reply };
                 },
                 clearChat() { this.updateData({ chatHistory: [] }); },
@@ -617,6 +746,7 @@
                     Storage.save(this.data);
                 },
             };
+
             const Renderer = {
                 elements: {},
                 init() {
@@ -634,11 +764,15 @@
                         inputTaName: document.getElementById("inputTaName"),
                         inputTaAvatar: document.getElementById("inputTaAvatar"),
                         inputMyName: document.getElementById("inputMyName"),
+                        inputMyAvatar: document.getElementById("inputMyAvatar"),
+                        btnUploadTaAvatar: document.getElementById("btnUploadTaAvatar"),
+                        btnUploadMyAvatar: document.getElementById("btnUploadMyAvatar"),
+                        fileTaAvatar: document.getElementById("fileTaAvatar"),
+                        fileMyAvatar: document.getElementById("fileMyAvatar"),
+                        selectThemeMode: document.getElementById("selectThemeMode"),
                         inputBgColor: document.getElementById("inputBgColor"),
                         inputBgImageUrl: document.getElementById("inputBgImageUrl"),
-                        btnUploadTaAvatar: document.getElementById("btnUploadTaAvatar"),
                         btnUploadBgImage: document.getElementById("btnUploadBgImage"),
-                        fileTaAvatar: document.getElementById("fileTaAvatar"),
                         fileBgImage: document.getElementById("fileBgImage"),
                         inputNewCard: document.getElementById("inputNewCard"),
                         btnAddCard: document.getElementById("btnAddCard"),
@@ -691,10 +825,23 @@
                         container.appendChild(star);
                     }
                 },
+                applyTheme() {
+                    const data = AppState.getData();
+                    const mode = data.themeMode || "auto";
+                    let theme = mode;
+                    if (mode === "auto") {
+                        theme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? "dark" : "light";
+                    }
+                    document.documentElement.setAttribute("data-theme", theme);
+                    return theme;
+                },
                 applyBackground() {
+                    const theme = this.applyTheme();
                     const data = AppState.getData();
                     const root = document.documentElement;
-                    root.style.setProperty('--chat-bg-color', data.bgColor || '#12111f');
+                    const defaultBg = theme === "dark" ? "#000000" : "#f5f5f7";
+                    const bgColor = data.bgColor || defaultBg;
+                    root.style.setProperty('--chat-bg-color', bgColor);
                     root.style.setProperty('--chat-bg-image', data.bgImageUrl ? 'url("' + data.bgImageUrl + '")' : 'none');
                 },
                 renderChat() {
@@ -706,8 +853,15 @@
                         return;
                     }
                     let html = "";
-                    for (const msg of history) {
+                    let lastTs = null;
+                    for (let i = 0; i < history.length; i++) {
+                        const msg = history[i];
+                        const t = new Date(msg.time);
+                        if (this._shouldShowTimestamp(t, lastTs, i)) {
+                            html += this._renderTimestamp(t);
+                        }
                         html += this._renderMessage(msg, data);
+                        lastTs = t;
                     }
                     if (AppState.isTyping) {
                         html += this._renderTypingIndicator(data);
@@ -715,16 +869,38 @@
                     container.innerHTML = html;
                     this._scrollToBottom();
                 },
+                _shouldShowTimestamp(t, lastTs, index) {
+                    if (index === 0) return true;
+                    if (!lastTs) return true;
+                    if (t.toDateString() !== lastTs.toDateString()) return true;
+                    if (t.getTime() - lastTs.getTime() >= 5 * 60 * 1000) return true;
+                    return false;
+                },
+                _renderTimestamp(t) {
+                    return '<div class="chat-timestamp">' + this._formatTimestamp(t) + '</div>';
+                },
+                _formatTimestamp(t) {
+                    const now = new Date();
+                    const isToday = t.toDateString() === now.toDateString();
+                    const h = t.getHours();
+                    const mm = String(t.getMinutes()).padStart(2, '0');
+                    let period = '上午';
+                    if (h >= 18) period = '晚上';
+                    else if (h >= 12) period = '下午';
+                    let h12 = h % 12;
+                    if (h12 === 0) h12 = 12;
+                    const timeStr = period + ' ' + h12 + ':' + mm;
+                    if (isToday) return timeStr;
+                    return (t.getMonth() + 1) + '月' + t.getDate() + '日 ' + timeStr;
+                },
                 _renderMessage(msg, data) {
                     const isMe = msg.from === "me";
                     const avatar = isMe ?
-                        (data.myName ? data.myName.charAt(0) : "我") :
+                        (data.myAvatar ? this._avatarHTML(data.myAvatar) : (data.myName ? this._escapeHTML(data.myName.charAt(0)) : "我")) :
                         this._avatarHTML(data.taAvatar);
-                    const time = this._formatTime(msg.time);
                     return '<div class="message ' + (isMe ? 'me' : 'ta') + '">' +
                         '<div class="msg-avatar">' + avatar + '</div>' +
-                        '<div class="msg-content"><div class="msg-bubble">' + this._escapeHTML(msg.text) + '</div>' +
-                        '<div class="msg-time">' + time + '</div></div></div>';
+                        '<div class="msg-content"><div class="msg-bubble">' + this._escapeHTML(msg.text) + '</div></div></div>';
                 },
                 _renderTypingIndicator(data) {
                     return '<div class="typing-indicator">' +
@@ -739,18 +915,10 @@
                         '<div class="empty-text">' +
                         (hasCards ?
                         '和「' + this._escapeHTML(data.taName) + '」打个招呼吧~' :
-                        '还没有添加字卡。<br>点击下方按钮，去添加一些TA会说的话吧。') +
+                        '还没有添加字卡。<br>点击下方按钮，去添加一些他会说的话吧。') +
                         '</div>' +
                         (!hasCards ? '<button class="empty-btn" id="btnEmptyGoSettings">去添加字卡 →</button>' : "") +
                         '</div>';
-                },
-                _formatTime(isoStr) {
-                    try {
-                        const d = new Date(isoStr);
-                        const hh = String(d.getHours()).padStart(2, "0");
-                        const mm = String(d.getMinutes()).padStart(2, "0");
-                        return hh + ":" + mm;
-                    } catch (e) { return ""; }
                 },
                 _escapeHTML(str) {
                     const div = document.createElement("div");
@@ -770,7 +938,7 @@
                 },
                 updateHeader() {
                     const data = AppState.getData();
-                    this.elements.headerName.textContent = data.taName || "TA";
+                    this.elements.headerName.textContent = data.taName || "他";
                     this.elements.headerAvatar.innerHTML = this._avatarHTML(data.taAvatar);
                     this.elements.headerStatus.textContent = (data.cards || []).length > 0 ? "在等你说话" : "去添加字卡吧";
                 },
@@ -779,7 +947,9 @@
                     this.elements.inputTaName.value = data.taName || "";
                     this.elements.inputTaAvatar.value = data.taAvatar || "";
                     this.elements.inputMyName.value = data.myName || "";
-                    this.elements.inputBgColor.value = data.bgColor || "#12111f";
+                    this.elements.inputMyAvatar.value = data.myAvatar || "";
+                    this.elements.selectThemeMode.value = data.themeMode || "auto";
+                    this.elements.inputBgColor.value = data.bgColor || "#f5f5f7";
                     this.elements.inputBgImageUrl.value = data.bgImageUrl || "";
                     this._renderCardsList();
                 },
@@ -818,12 +988,14 @@
                     this.renderChat();
                 },
                 _saveSettingsFromPanel() {
-                    const taName = this.elements.inputTaName.value.trim() || "TA";
+                    const taName = this.elements.inputTaName.value.trim() || "他";
                     const taAvatar = this.elements.inputTaAvatar.value.trim() || "🌙";
                     const myName = this.elements.inputMyName.value.trim() || "我";
-                    const bgColor = this.elements.inputBgColor.value || "#12111f";
+                    const myAvatar = this.elements.inputMyAvatar.value.trim() || "";
+                    const themeMode = this.elements.selectThemeMode.value || "auto";
+                    const bgColor = this.elements.inputBgColor.value || "";
                     const bgImageUrl = this.elements.inputBgImageUrl.value.trim() || "";
-                    AppState.updateData({ taName, taAvatar, myName, bgColor, bgImageUrl });
+                    AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl });
                 },
                 showWelcome() { this.elements.welcomeModal.classList.add("active"); },
                 hideWelcome() { this.elements.welcomeModal.classList.remove("active"); },
@@ -833,6 +1005,7 @@
                     input.style.height = Math.min(input.scrollHeight, 120) + "px";
                 },
             };
+
             const Events = {
                 init() {
                     const el = Renderer.elements;
@@ -851,10 +1024,19 @@
                     el.btnCloseSettings.addEventListener("click", () => Renderer.closeSettings());
                     el.panelOverlay.addEventListener("click", () => Renderer.closeSettings());
                     el.headerAvatar.addEventListener("click", () => Renderer.openSettings());
+
                     el.btnUploadTaAvatar.addEventListener("click", () => el.fileTaAvatar.click());
-                    el.fileTaAvatar.addEventListener("change", (e) => this.handleUploadAvatar(e));
+                    el.fileTaAvatar.addEventListener("change", (e) => this.handleUploadAvatar(e, "ta"));
+                    el.btnUploadMyAvatar.addEventListener("click", () => el.fileMyAvatar.click());
+                    el.fileMyAvatar.addEventListener("change", (e) => this.handleUploadAvatar(e, "my"));
                     el.btnUploadBgImage.addEventListener("click", () => el.fileBgImage.click());
                     el.fileBgImage.addEventListener("change", (e) => this.handleUploadBg(e));
+
+                    el.selectThemeMode.addEventListener("change", () => {
+                        AppState.updateData({ themeMode: el.selectThemeMode.value });
+                        Renderer.applyBackground();
+                    });
+
                     el.btnAddCard.addEventListener("click", () => this.handleAddCard());
                     el.inputNewCard.addEventListener("keydown", (e) => {
                         if (e.key === "Enter") { e.preventDefault(); this.handleAddCard(); }
@@ -887,16 +1069,31 @@
                     document.addEventListener("keydown", (e) => {
                         if (e.key === "Escape" && AppState.isSettingsOpen) Renderer.closeSettings();
                     });
+
+                    if (window.matchMedia) {
+                        window.matchMedia('(prefers-color-scheme: dark)').addEventListener("change", () => {
+                            if (AppState.getData().themeMode === "auto") {
+                                Renderer.applyBackground();
+                            }
+                        });
+                    }
                 },
-                handleUploadAvatar(e) {
+
+                handleUploadAvatar(e, who) {
                     const file = e.target.files[0];
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (ev) => {
                         const dataUrl = ev.target.result;
-                        Renderer.elements.inputTaAvatar.value = dataUrl;
-                        AppState.updateData({ taAvatar: dataUrl });
-                        Renderer.updateHeader();
+                        if (who === "ta") {
+                            Renderer.elements.inputTaAvatar.value = dataUrl;
+                            AppState.updateData({ taAvatar: dataUrl });
+                            Renderer.updateHeader();
+                        } else {
+                            Renderer.elements.inputMyAvatar.value = dataUrl;
+                            AppState.updateData({ myAvatar: dataUrl });
+                        }
+                        Renderer.renderChat();
                         Renderer.showToast("头像已更新 ✨");
                     };
                     reader.readAsDataURL(file);
@@ -921,12 +1118,12 @@
                     const text = input.value.trim();
                     if (!text) return;
                     if (AppState.isTyping) {
-                        Renderer.showToast("TA正在输入中，请稍等...");
+                        Renderer.showToast("他正在输入中，请稍等...");
                         return;
                     }
                     const data = AppState.getData();
                     if ((data.cards || []).length === 0) {
-                        Renderer.showToast("字卡库为空，先去添加一些TA会说的话吧");
+                        Renderer.showToast("字卡库为空，先去添加一些他会说的话吧");
                         Renderer.openSettings();
                         return;
                     }
@@ -1073,7 +1270,7 @@
                     }
                 },
                 handleWelcomeDone() {
-                    const taName = Renderer.elements.welcomeTaName.value.trim() || "TA";
+                    const taName = Renderer.elements.welcomeTaName.value.trim() || "他";
                     const myName = Renderer.elements.welcomeMyName.value.trim() || "我";
                     const cardsText = Renderer.elements.welcomeCards.value.trim();
                     AppState.updateData({ taName, myName, hasCompletedOnboarding: true });
@@ -1101,6 +1298,7 @@
                     URL.revokeObjectURL(url);
                 },
             };
+
             function bootstrap() {
                 AppState.init();
                 Renderer.init();
