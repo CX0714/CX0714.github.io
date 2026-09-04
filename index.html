@@ -117,12 +117,34 @@
             position: relative;
             height: 220px;
             border-radius: var(--border-radius-lg);
-            background: rgba(255,255,255,0.32);
-            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
             border: 1px solid rgba(255,255,255,0.5);
             box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+            overflow: hidden;
             margin-bottom: 30px;
         }
+        .widget-top {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 130px;
+            background-color: rgba(255,255,255,0.32);
+            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            background-size: cover; background-position: center; background-repeat: no-repeat;
+        }
+        .widget-bottom {
+            position: absolute;
+            top: 130px; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.32);
+            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+        }
+        .widget-divider {
+            position: absolute;
+            top: 130px;
+            height: 1px;
+            background: rgba(255,255,255,0.6);
+            z-index: 2;
+        }
+        .widget-divider-left { left: 0; right: calc(50% + 42px); }
+        .widget-divider-right { left: calc(50% + 42px); right: 0; }
         .widget-avatar {
             position: absolute;
             left: 50%;
@@ -132,6 +154,7 @@
             background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.7);
             display: flex; align-items: center; justify-content: center; font-size: 42px;
             overflow: hidden;
+            z-index: 3;
         }
         .widget-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
         .widget-message {
@@ -144,6 +167,7 @@
             font-size: 12px; color: rgba(255,255,255,0.95); text-shadow: 0 1px 2px rgba(0,0,0,0.35);
             line-height: 1.5; letter-spacing: 0.3px;
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+            z-index: 3;
         }
 
         .app-grid { display: flex; gap: 22px; justify-content: center; margin-bottom: 30px; }
@@ -689,6 +713,10 @@
         <div class="desktop-wallpaper" id="desktopWallpaper"></div>
         <div class="desktop-content">
             <div class="widget" id="desktopWidget">
+                <div class="widget-top" id="widgetTop"></div>
+                <div class="widget-bottom" id="widgetBottom"></div>
+                <div class="widget-divider widget-divider-left"></div>
+                <div class="widget-divider widget-divider-right"></div>
                 <div class="widget-avatar" id="widgetAvatar">🌙</div>
                 <div class="widget-message" id="widgetMessage">我在等你哦</div>
             </div>
@@ -1474,6 +1502,8 @@
                         chatView: document.getElementById("chatView"),
                         desktopWallpaper: document.getElementById("desktopWallpaper"),
                         desktopWidget: document.getElementById("desktopWidget"),
+                        widgetTop: document.getElementById("widgetTop"),
+                        widgetBottom: document.getElementById("widgetBottom"),
                         widgetAvatar: document.getElementById("widgetAvatar"),
                         widgetMessage: document.getElementById("widgetMessage"),
                         appChat: document.getElementById("appChat"),
@@ -1638,23 +1668,38 @@
                 },
                 applyWidgetBg() {
                     const data = AppState.getData();
-                    const el = this.elements.desktopWidget;
-                    el.style.backgroundColor = '';
-                    el.style.backgroundImage = '';
-                    el.style.backgroundSize = '';
-                    el.style.backgroundPosition = '';
-                    el.style.backdropFilter = '';
-                    el.style.webkitBackdropFilter = '';
+                    const top = this.elements.widgetTop;
+                    const bottom = this.elements.widgetBottom;
                     const type = data.widgetBgType || "auto";
+
+                    top.style.backgroundColor = '';
+                    top.style.backgroundImage = '';
+                    top.style.backgroundSize = '';
+                    top.style.backgroundPosition = '';
+                    top.style.backdropFilter = '';
+                    top.style.webkitBackdropFilter = '';
+                    bottom.style.backgroundColor = '';
+                    bottom.style.backdropFilter = '';
+                    bottom.style.webkitBackdropFilter = '';
+
                     if (type === "color") {
-                        el.style.backgroundColor = data.widgetBgColor || "#ffffff";
+                        const color = data.widgetBgColor || "#ffffff";
+                        top.style.backgroundColor = color;
+                        bottom.style.backgroundColor = color;
                     } else if (type === "image" && data.widgetBgImageUrl) {
-                        el.style.backgroundImage = 'url("' + data.widgetBgImageUrl + '")';
-                        el.style.backgroundSize = 'cover';
-                        el.style.backgroundPosition = 'center';
+                        top.style.backgroundImage = 'url("' + data.widgetBgImageUrl + '")';
+                        top.style.backgroundSize = 'cover';
+                        top.style.backgroundPosition = 'center';
+                        bottom.style.backgroundColor = 'rgba(255,255,255,0.32)';
+                        bottom.style.backdropFilter = 'blur(20px) saturate(1.4)';
+                        bottom.style.webkitBackdropFilter = 'blur(20px) saturate(1.4)';
                     } else {
-                        el.style.backdropFilter = 'blur(20px) saturate(1.4)';
-                        el.style.webkitBackdropFilter = 'blur(20px) saturate(1.4)';
+                        top.style.backgroundColor = 'rgba(255,255,255,0.32)';
+                        top.style.backdropFilter = 'blur(20px) saturate(1.4)';
+                        top.style.webkitBackdropFilter = 'blur(20px) saturate(1.4)';
+                        bottom.style.backgroundColor = 'rgba(255,255,255,0.32)';
+                        bottom.style.backdropFilter = 'blur(20px) saturate(1.4)';
+                        bottom.style.webkitBackdropFilter = 'blur(20px) saturate(1.4)';
                     }
                 },
                 renderDesktop() {
@@ -2312,6 +2357,7 @@
                                 ctx.drawImage(img, 0, 0, w, h);
                                 const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
                                 Renderer.elements.inputWidgetBgUrl.value = dataUrl;
+                                Renderer.elements.selectWidgetBg.value = "image";
                                 AppState.updateData({ widgetBgImageUrl: dataUrl, widgetBgType: "image" });
                                 Renderer.applyWidgetBg();
                                 Renderer.showToast("小组件背景已更新 ✨");
