@@ -113,6 +113,19 @@
             display: flex; flex-direction: column;
             padding: calc(48px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom));
         }
+        .desktop-status-row {
+            display: flex; align-items: center; gap: 14px;
+            margin-bottom: 20px; padding: 0 6px; min-height: 50px;
+        }
+        .desktop-time {
+            font-size: 50px; font-weight: 700; line-height: 1; letter-spacing: 0.5px;
+            color: rgba(255,255,255,0.6); text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+        .desktop-countdown {
+            font-size: 14px; font-weight: 500; white-space: nowrap;
+            color: rgba(255,255,255,0.8); text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            padding-top: 4px;
+        }
         .widget {
             position: relative;
             height: 220px;
@@ -143,8 +156,8 @@
             background: rgba(255,255,255,0.6);
             z-index: 2;
         }
-        .widget-divider-left { left: 0; right: calc(50% + 42px); }
-        .widget-divider-right { left: calc(50% + 42px); right: 0; }
+        .widget-divider-left { left: 0; right: calc(50% + 40px); }
+        .widget-divider-right { left: calc(50% + 40px); right: 0; }
         .widget-avatar {
             position: absolute;
             left: 50%;
@@ -454,6 +467,46 @@
         }
         .settings-panel.active { display: flex; }
 
+        /* ===== 纪念日视图 ===== */
+        .anniversary-view {
+            position: relative; height: 100%; width: 100%;
+            background: var(--bg-secondary);
+            display: flex; flex-direction: column;
+        }
+        .anniversary-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 20px 16px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        .anniversary-header h2 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+        .anniversary-close {
+            width: 36px; height: 36px; border-radius: var(--border-radius-square); border: none; background: var(--surface);
+            color: var(--text-secondary); font-size: 18px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: all var(--transition-fast);
+        }
+        .anniversary-close:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .anniversary-body {
+            flex: 1; overflow-y: auto; padding: 36px 24px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+        }
+        .anniversary-big {
+            font-size: 44px; font-weight: 700; letter-spacing: 0.5px; color: var(--text-primary);
+            text-align: center;
+        }
+        .anniversary-title {
+            font-size: 16px; color: var(--text-secondary); margin-bottom: 28px; text-align: center;
+        }
+        .anniversary-form {
+            width: 100%; max-width: 320px;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .anniversary-form label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .anniversary-form input {
+            padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 16px; outline: none; font-family: inherit;
+        }
+        .anniversary-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .anniversary-form .btn { margin-top: 6px; }
+
         .panel-header {
             padding: 20px 20px 16px; display: flex; align-items: center; justify-content: space-between;
             border-bottom: 1px solid var(--border-color); flex-shrink: 0;
@@ -712,6 +765,10 @@
     <div class="desktop-view" id="desktopView">
         <div class="desktop-wallpaper" id="desktopWallpaper"></div>
         <div class="desktop-content">
+            <div class="desktop-status-row">
+                <div class="desktop-time" id="desktopTime">--:--</div>
+                <div class="desktop-countdown" id="desktopCountdown"></div>
+            </div>
             <div class="widget" id="desktopWidget">
                 <div class="widget-top" id="widgetTop"></div>
                 <div class="widget-bottom" id="widgetBottom"></div>
@@ -747,6 +804,20 @@
                         </svg>
                     </span>
                     <span class="app-label">设置</span>
+                </button>
+                <button class="app-icon" id="appAnniversary" aria-label="纪念日">
+                    <span class="app-icon-box">
+                        <svg viewBox="0 0 60 60" aria-hidden="true">
+                            <path d="M30 49 C15 36 10 26.5 14.5 18.5 C17.5 13 23.5 11.5 28 15 C29.4 16.2 30.6 16.2 32 15 C36.5 11.5 42.5 13 45.5 18.5 C50 26.5 45 36 30 49 Z"
+                                  fill="none" stroke="#fff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
+                            <g fill="#fff">
+                                <ellipse cx="18.5" cy="9.5" rx="6.5" ry="4" transform="rotate(-22 18.5 9.5)"/>
+                                <ellipse cx="41.5" cy="9.5" rx="6.5" ry="4" transform="rotate(22 41.5 9.5)"/>
+                                <rect x="27" y="6.5" width="6" height="8.5" rx="2.5"/>
+                            </g>
+                        </svg>
+                    </span>
+                    <span class="app-label">纪念日</span>
                 </button>
             </div>
             <div class="dock">
@@ -816,6 +887,26 @@
                 <div class="home-bar" id="homeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
             </div>
         </div>
+    </div>
+
+    <!-- 纪念日视图 -->
+    <div class="anniversary-view" id="anniversaryView" style="display:none;">
+        <div class="anniversary-header">
+            <h2>💝 纪念日</h2>
+            <button class="anniversary-close" id="btnCloseAnniversary" aria-label="关闭">✕</button>
+        </div>
+        <div class="anniversary-body">
+            <div class="anniversary-big" id="anniversaryBig">未设置</div>
+            <div class="anniversary-title" id="anniversaryTitle"></div>
+            <div class="anniversary-form">
+                <label for="inputAnniversaryDate">日期</label>
+                <input type="date" id="inputAnniversaryDate">
+                <label for="inputAnniversaryTitle">标题（如：认识）</label>
+                <input type="text" id="inputAnniversaryTitle" placeholder="认识 / 在一起 / ..." maxlength="20">
+                <button class="btn btn-primary" id="btnSaveAnniversary">保存</button>
+            </div>
+        </div>
+        <div class="home-bar" id="anniversaryHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
     </div>
 
     <div class="panel-overlay" id="panelOverlay"></div>
@@ -1269,6 +1360,8 @@
                         widgetBgType: "auto",
                         widgetBgColor: "#ffffff",
                         widgetBgImageUrl: "",
+                        anniversaryDate: "",
+                        anniversaryTitle: "",
                         config: {
                             replyMaxDelay: 3,
                             autoMessageEnabled: false,
@@ -1500,18 +1593,29 @@
                     this.elements = {
                         desktopView: document.getElementById("desktopView"),
                         chatView: document.getElementById("chatView"),
+                        anniversaryView: document.getElementById("anniversaryView"),
                         desktopWallpaper: document.getElementById("desktopWallpaper"),
                         desktopWidget: document.getElementById("desktopWidget"),
                         widgetTop: document.getElementById("widgetTop"),
                         widgetBottom: document.getElementById("widgetBottom"),
                         widgetAvatar: document.getElementById("widgetAvatar"),
                         widgetMessage: document.getElementById("widgetMessage"),
+                        desktopTime: document.getElementById("desktopTime"),
+                        desktopCountdown: document.getElementById("desktopCountdown"),
                         appChat: document.getElementById("appChat"),
                         appSettings: document.getElementById("appSettings"),
+                        appAnniversary: document.getElementById("appAnniversary"),
                         appCards: document.getElementById("appCards"),
                         appAppearance: document.getElementById("appAppearance"),
                         homeBar: document.getElementById("homeBar"),
                         settingsHomeBar: document.getElementById("settingsHomeBar"),
+                        anniversaryHomeBar: document.getElementById("anniversaryHomeBar"),
+                        anniversaryBig: document.getElementById("anniversaryBig"),
+                        anniversaryTitle: document.getElementById("anniversaryTitle"),
+                        inputAnniversaryDate: document.getElementById("inputAnniversaryDate"),
+                        inputAnniversaryTitle: document.getElementById("inputAnniversaryTitle"),
+                        btnSaveAnniversary: document.getElementById("btnSaveAnniversary"),
+                        btnCloseAnniversary: document.getElementById("btnCloseAnniversary"),
                         inputWallpaperColor: document.getElementById("inputWallpaperColor"),
                         inputWallpaperUrl: document.getElementById("inputWallpaperUrl"),
                         btnUploadWallpaper: document.getElementById("btnUploadWallpaper"),
@@ -1702,6 +1806,33 @@
                         bottom.style.webkitBackdropFilter = 'blur(20px) saturate(1.4)';
                     }
                 },
+                updateDesktopTime() {
+                    const now = new Date();
+                    const h = now.getHours();
+                    const m = String(now.getMinutes()).padStart(2, '0');
+                    this.elements.desktopTime.textContent = h + ":" + m;
+                },
+                _calcAnniversary(dateStr) {
+                    const target = new Date(dateStr + "T00:00:00");
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+                    const diff = Math.round((today - targetDay) / 86400000);
+                    if (diff >= 0) {
+                        return { text: "第 " + (diff + 1) + " 天" };
+                    } else {
+                        return { text: "还有 " + Math.abs(diff) + " 天" };
+                    }
+                },
+                updateDesktopCountdown() {
+                    const data = AppState.getData();
+                    const el = this.elements.desktopCountdown;
+                    if (!data.anniversaryDate) {
+                        el.textContent = "";
+                        return;
+                    }
+                    el.textContent = this._calcAnniversary(data.anniversaryDate).text;
+                },
                 renderDesktop() {
                     const data = AppState.getData();
                     this.applyWallpaper();
@@ -1715,16 +1846,45 @@
                         if (t) msg = t;
                     }
                     this.elements.widgetMessage.textContent = msg;
+                    this.updateDesktopTime();
+                    this.updateDesktopCountdown();
+                },
+                renderAnniversary() {
+                    const data = AppState.getData();
+                    const bigEl = this.elements.anniversaryBig;
+                    const titleEl = this.elements.anniversaryTitle;
+                    if (!data.anniversaryDate) {
+                        bigEl.textContent = "未设置";
+                        titleEl.textContent = "";
+                    } else {
+                        bigEl.textContent = this._calcAnniversary(data.anniversaryDate).text;
+                        titleEl.textContent = data.anniversaryTitle || "";
+                    }
+                    this.elements.inputAnniversaryDate.value = data.anniversaryDate || "";
+                    this.elements.inputAnniversaryTitle.value = data.anniversaryTitle || "";
+                },
+                _hideAllViews() {
+                    this.elements.desktopView.style.display = 'none';
+                    this.elements.chatView.style.display = 'none';
+                    this.elements.anniversaryView.style.display = 'none';
                 },
                 showDesktop() {
+                    this._hideAllViews();
                     this.elements.desktopView.style.display = 'block';
-                    this.elements.chatView.style.display = 'none';
                     this.renderDesktop();
                 },
                 showChat() {
-                    this.elements.desktopView.style.display = 'none';
+                    this._hideAllViews();
                     this.elements.chatView.style.display = 'block';
                     this.renderChat();
+                },
+                showAnniversary() {
+                    this._hideAllViews();
+                    this.elements.anniversaryView.style.display = 'block';
+                    this.renderAnniversary();
+                },
+                closeAnniversary() {
+                    this.showDesktop();
                 },
                 applyBubbleHeight(value) {
                     const v = parseFloat(value);
@@ -2113,10 +2273,14 @@
                     const el = Renderer.elements;
                     el.appChat.addEventListener("click", () => Renderer.showChat());
                     el.appSettings.addEventListener("click", () => Renderer.openSettings());
+                    el.appAnniversary.addEventListener("click", () => Renderer.showAnniversary());
                     el.appCards.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('cards'); });
                     el.appAppearance.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('appearance'); });
                     el.homeBar.addEventListener("click", () => Renderer.showDesktop());
                     el.settingsHomeBar.addEventListener("click", () => Renderer.closeSettings());
+                    el.anniversaryHomeBar.addEventListener("click", () => Renderer.closeAnniversary());
+                    el.btnCloseAnniversary.addEventListener("click", () => Renderer.closeAnniversary());
+                    el.btnSaveAnniversary.addEventListener("click", () => this.handleSaveAnniversary());
                     el.btnUploadWallpaper.addEventListener("click", () => el.fileWallpaper.click());
                     el.fileWallpaper.addEventListener("change", (e) => this.handleUploadWallpaper(e));
                     el.btnUploadWidgetBg.addEventListener("click", () => el.fileWidgetBg.click());
@@ -2301,6 +2465,15 @@
                             }
                         });
                     }
+                },
+
+                handleSaveAnniversary() {
+                    const date = Renderer.elements.inputAnniversaryDate.value || "";
+                    const title = Renderer.elements.inputAnniversaryTitle.value.trim() || "";
+                    AppState.updateData({ anniversaryDate: date, anniversaryTitle: title });
+                    Renderer.renderAnniversary();
+                    Renderer.renderDesktop();
+                    Renderer.showToast("纪念日已保存 ✨");
                 },
 
                 handleUploadWallpaper(e) {
@@ -3134,6 +3307,10 @@
                 const keepAliveOn = !!(AppState.getData().config && AppState.getData().config.keepAliveEnabled);
                 KeepAlive.toggle(keepAliveOn);
                 Renderer.openMenu();
+                setInterval(() => {
+                    Renderer.updateDesktopTime();
+                    Renderer.updateDesktopCountdown();
+                }, 10000);
                 if (!AppState.getData().hasCompletedOnboarding) {
                     setTimeout(() => Renderer.showWelcome(), 300);
                 }
