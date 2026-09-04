@@ -76,7 +76,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
             background: var(--bg-primary); color: var(--text-primary);
             -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
-            touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
             transition: background 0.3s ease, color 0.3s ease;
         }
         ::-webkit-scrollbar { width: 4px; }
@@ -425,6 +425,47 @@
         .action-sheet .sheet-item:hover { background: var(--surface-hover); }
         .action-sheet .sheet-item:active { background: var(--surface-hover); }
         .action-sheet .sheet-cancel { color: #e07a5f; font-weight: 500; border-top: 1px solid var(--border-color); margin-top: 4px; }
+        .action-sheet .sheet-danger { color: #e07a5f; }
+
+        .quote-bar {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 14px; background: var(--input-bg);
+            border-top: 1px solid var(--border-color);
+            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            flex-shrink: 0;
+        }
+        .quote-bar-info {
+            flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px;
+            padding: 6px 12px; border-left: 3px solid var(--accent);
+            background: var(--accent-soft); border-radius: 8px; overflow: hidden;
+        }
+        .quote-bar-name {
+            font-size: 12px; font-weight: 600; color: var(--accent); flex-shrink: 0;
+        }
+        .quote-bar-text {
+            font-size: 13px; color: var(--text-secondary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .quote-bar-close {
+            width: 32px; height: 32px; border-radius: var(--border-radius-sm);
+            border: none; background: var(--surface); color: var(--text-muted);
+            font-size: 16px; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        .quote-bar-close:hover { background: var(--surface-hover); color: var(--text-primary); }
+
+        .message .msg-quote {
+            margin-bottom: 4px; padding: 5px 10px;
+            background: var(--accent-soft); border-left: 3px solid var(--accent);
+            border-radius: 8px; max-width: 100%; overflow: hidden;
+            font-size: 12px; line-height: 1.4; display: flex; flex-direction: column; gap: 1px;
+        }
+        .message .msg-quote .msg-quote-name { color: var(--accent); font-weight: 600; font-size: 11px; }
+        .message .msg-quote .msg-quote-text {
+            color: var(--text-secondary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
 
         .call-screen {
             position: fixed; inset: 0; z-index: 250; display: none;
@@ -901,6 +942,13 @@
                         <div class="sticker-picker-grid" id="stickerPickerGrid"></div>
                     </div>
                 </div>
+                <div class="quote-bar" id="quoteBar" style="display:none;">
+                    <div class="quote-bar-info">
+                        <span class="quote-bar-name" id="quoteBarName"></span>
+                        <span class="quote-bar-text" id="quoteBarText"></span>
+                    </div>
+                    <button class="quote-bar-close" id="quoteBarClose" aria-label="取消引用">✕</button>
+                </div>
                 <div class="chat-input-area">
                     <textarea class="chat-input" id="chatInput" rows="1" placeholder="说点什么..." maxlength="2000" autocomplete="off"></textarea>
                     <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">➤</button>
@@ -1321,6 +1369,13 @@
         <button class="sheet-item sheet-cancel" id="btnSheetCancel">取消</button>
     </div>
 
+    <div class="sheet-overlay" id="msgSheetOverlay"></div>
+    <div class="action-sheet" id="msgActionSheet">
+        <button class="sheet-item" id="btnQuote">💬 引用</button>
+        <button class="sheet-item sheet-danger" id="btnDeleteMsg">🗑️ 删除</button>
+        <button class="sheet-item sheet-cancel" id="btnMsgSheetCancel">取消</button>
+    </div>
+
     <div class="call-screen" id="callScreen">
         <div class="call-avatar" id="callAvatar">🌙</div>
         <div class="call-name" id="callName">他</div>
@@ -1464,6 +1519,7 @@
                 isSettingsOpen: false,
                 isTyping: false,
                 typingTimer: null,
+                quoteId: null,
                 init() {
                     this.data = Storage.load();
                     if (this.typingTimer) clearTimeout(this.typingTimer);
@@ -1602,7 +1658,7 @@
                     this.updateData({ stickers });
                     return true;
                 },
-                addMessage(from, text, type) {
+                addMessage(from, text, type, quoteId) {
                     const msg = {
                         id: genId(),
                         from: from,
@@ -1610,9 +1666,15 @@
                         type: type || "text",
                         time: new Date().toISOString(),
                     };
+                    if (quoteId) msg.quoteId = quoteId;
                     const chatHistory = [...(this.data.chatHistory || []), msg];
                     this.updateData({ chatHistory });
                     return msg;
+                },
+                removeMessage(id) {
+                    const chatHistory = (this.data.chatHistory || []).filter(m => m.id !== id);
+                    this.updateData({ chatHistory });
+                    return true;
                 },
                 clearChat() { this.updateData({ chatHistory: [] }); },
                 resetAll() {
@@ -1746,6 +1808,15 @@
                         btnWelcomeSkip: document.getElementById("btnWelcomeSkip"),
                         toast: document.getElementById("toast"),
                         bgDecor: document.getElementById("bgDecor"),
+                        quoteBar: document.getElementById("quoteBar"),
+                        quoteBarName: document.getElementById("quoteBarName"),
+                        quoteBarText: document.getElementById("quoteBarText"),
+                        quoteBarClose: document.getElementById("quoteBarClose"),
+                        msgSheetOverlay: document.getElementById("msgSheetOverlay"),
+                        msgActionSheet: document.getElementById("msgActionSheet"),
+                        btnQuote: document.getElementById("btnQuote"),
+                        btnDeleteMsg: document.getElementById("btnDeleteMsg"),
+                        btnMsgSheetCancel: document.getElementById("btnMsgSheetCancel"),
                     };
                 },
                 showToast(message, duration = 2200) {
@@ -2069,6 +2140,39 @@
                     if (isToday) return timeStr;
                     return (t.getMonth() + 1) + '月' + t.getDate() + '日 ' + timeStr;
                 },
+                _findMessage(id) {
+                    const history = AppState.getData().chatHistory || [];
+                    for (let i = 0; i < history.length; i++) {
+                        if (history[i].id === id) return history[i];
+                    }
+                    return null;
+                },
+                _quotePreview(msg, data) {
+                    const name = msg.from === "me" ? (data.myName || "我") : (data.taName || "他");
+                    let text;
+                    if (msg.type === "image") text = "[图片]";
+                    else if (msg.type === "sticker") text = "[表情包]";
+                    else text = msg.text || "";
+                    if (text.length > 30) text = text.slice(0, 30) + "…";
+                    return { name: name, text: text };
+                },
+                renderQuoteBar() {
+                    const el = this.elements.quoteBar;
+                    const msg = this._findMessage(AppState.quoteId);
+                    if (!msg) {
+                        AppState.quoteId = null;
+                        el.style.display = "none";
+                        return;
+                    }
+                    const prev = this._quotePreview(msg, AppState.getData());
+                    this.elements.quoteBarName.textContent = prev.name;
+                    this.elements.quoteBarText.textContent = prev.text;
+                    el.style.display = "flex";
+                },
+                clearQuote() {
+                    AppState.quoteId = null;
+                    this.elements.quoteBar.style.display = "none";
+                },
                 _renderMessage(msg, data) {
                     if (msg.type === "call") {
                         return '<div class="msg-call">' + this._escapeHTML(msg.text) + '</div>';
@@ -2088,9 +2192,20 @@
                     } else {
                         content = this._escapeHTML(msg.text);
                     }
-                    return '<div class="message ' + (isMe ? 'me' : 'ta') + '">' +
+                    let quoteHTML = "";
+                    if (msg.quoteId) {
+                        const quoted = this._findMessage(msg.quoteId);
+                        if (quoted) {
+                            const prev = this._quotePreview(quoted, data);
+                            quoteHTML = '<div class="msg-quote">' +
+                                '<div class="msg-quote-name">' + this._escapeHTML(prev.name) + '</div>' +
+                                '<div class="msg-quote-text">' + this._escapeHTML(prev.text) + '</div>' +
+                                '</div>';
+                        }
+                    }
+                    return '<div class="message ' + (isMe ? 'me' : 'ta') + '" data-id="' + msg.id + '">' +
                         '<div class="msg-avatar">' + avatar + '</div>' +
-                        '<div class="msg-content"><div class="' + bubbleClass + '">' + content + '</div></div></div>';
+                        '<div class="msg-content">' + quoteHTML + '<div class="' + bubbleClass + '">' + content + '</div></div></div>';
                 },
                 _renderTypingIndicator(data) {
                     return '<div class="typing-indicator">' +
@@ -2312,6 +2427,11 @@
             };
 
             const Events = {
+                longPressTimer: null,
+                longPressTriggered: false,
+                longPressStartX: 0,
+                longPressStartY: 0,
+                longPressMsgId: null,
                 init() {
                     const el = Renderer.elements;
                     el.appChat.addEventListener("click", () => Renderer.showChat());
@@ -2353,6 +2473,16 @@
                     el.fileTakePhoto.addEventListener("change", (e) => this.handleSendImage(e));
                     el.filePickImage.addEventListener("change", (e) => this.handleSendImage(e));
                     el.btnCloseSettings.addEventListener("click", () => Renderer.closeSettings());
+
+                    el.chatMessages.addEventListener("touchstart", (e) => this.handleTouchStart(e), { passive: true });
+                    el.chatMessages.addEventListener("touchmove", (e) => this.handleTouchMove(e), { passive: true });
+                    el.chatMessages.addEventListener("touchend", (e) => this.handleTouchEnd(e), { passive: true });
+                    el.chatMessages.addEventListener("touchcancel", () => this.cancelLongPress(), { passive: true });
+                    el.btnQuote.addEventListener("click", () => this.handleQuote());
+                    el.btnDeleteMsg.addEventListener("click", () => this.handleDeleteMsg());
+                    el.btnMsgSheetCancel.addEventListener("click", () => this.closeMsgSheet());
+                    el.msgSheetOverlay.addEventListener("click", () => this.closeMsgSheet());
+                    el.quoteBarClose.addEventListener("click", () => Renderer.clearQuote());
 
                     document.querySelectorAll('.menu-item').forEach(item => {
                         item.addEventListener('click', () => Renderer.openSubPage(item.dataset.page));
@@ -2509,6 +2639,71 @@
                             }
                         });
                     }
+                },
+
+                handleTouchStart(e) {
+                    const touch = e.touches[0];
+                    if (!touch) return;
+                    const msgEl = e.target.closest(".message");
+                    if (!msgEl) return;
+                    this.cancelLongPress();
+                    this.longPressStartX = touch.clientX;
+                    this.longPressStartY = touch.clientY;
+                    this.longPressTriggered = false;
+                    const id = msgEl.dataset.id;
+                    this.longPressTimer = setTimeout(() => {
+                        this.longPressTimer = null;
+                        this.longPressTriggered = true;
+                        this.openMsgSheet(id);
+                    }, 600);
+                },
+                handleTouchMove(e) {
+                    if (!this.longPressTimer) return;
+                    const touch = e.touches[0];
+                    if (!touch) return;
+                    const dx = touch.clientX - this.longPressStartX;
+                    const dy = touch.clientY - this.longPressStartY;
+                    if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+                        this.cancelLongPress();
+                    }
+                },
+                handleTouchEnd() {
+                    this.cancelLongPress();
+                },
+                cancelLongPress() {
+                    if (this.longPressTimer) {
+                        clearTimeout(this.longPressTimer);
+                        this.longPressTimer = null;
+                    }
+                },
+                openMsgSheet(id) {
+                    this.longPressMsgId = id;
+                    const el = Renderer.elements;
+                    el.msgSheetOverlay.classList.add("active");
+                    el.msgActionSheet.classList.add("active");
+                },
+                closeMsgSheet() {
+                    const el = Renderer.elements;
+                    el.msgSheetOverlay.classList.remove("active");
+                    el.msgActionSheet.classList.remove("active");
+                    this.longPressMsgId = null;
+                },
+                handleQuote() {
+                    const id = this.longPressMsgId;
+                    this.closeMsgSheet();
+                    if (!id) return;
+                    AppState.quoteId = id;
+                    Renderer.renderQuoteBar();
+                    Renderer.elements.chatInput.focus();
+                },
+                handleDeleteMsg() {
+                    const id = this.longPressMsgId;
+                    this.closeMsgSheet();
+                    if (!id) return;
+                    AppState.removeMessage(id);
+                    if (AppState.quoteId === id) Renderer.clearQuote();
+                    Renderer.renderChat();
+                    Renderer.showToast("已删除");
                 },
 
                 handleAddAnniversary() {
@@ -2673,7 +2868,9 @@
                     input.style.height = "auto";
                     Renderer.elements.btnSend.disabled = true;
                     input.focus();
-                    AppState.addMessage("me", text);
+                    const quoteId = AppState.quoteId;
+                    AppState.addMessage("me", text, "text", quoteId);
+                    if (quoteId) Renderer.clearQuote();
                     Renderer.renderChat();
                     const messages = AppState.buildReplyMessages();
                     if (messages.length > 0) {
@@ -2754,7 +2951,9 @@
                     e.target.value = "";
                 },
                 sendMediaMessage(type, src) {
-                    AppState.addMessage("me", src, type);
+                    const quoteId = AppState.quoteId;
+                    AppState.addMessage("me", src, type, quoteId);
+                    if (quoteId) Renderer.clearQuote();
                     Renderer.renderChat();
                     this.closeMorePanel();
                     const messages = AppState.buildReplyMessages();
@@ -3003,6 +3202,7 @@
                 handleClearChat() {
                     if (confirm("确定清空所有聊天记录吗？此操作不可撤销。")) {
                         AppState.clearChat();
+                        Renderer.clearQuote();
                         Renderer.renderChat();
                         Renderer.showToast("聊天记录已清空");
                     }
@@ -3020,6 +3220,7 @@
                             ReplyQueue.clear();
                             AppState.isTyping = false;
                             if (AppState.typingTimer) { clearTimeout(AppState.typingTimer); AppState.typingTimer = null; }
+                            Renderer.clearQuote();
                             Renderer.applyBackground();
                             Renderer.applyWallpaper();
                             Renderer.applyWidgetBg();
