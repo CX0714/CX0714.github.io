@@ -190,8 +190,15 @@
         .message .msg-bubble .msg-sticker {
             max-width: 170px; max-height: 170px; border-radius: 8px; display: block;
         }
+        .message .msg-bubble .msg-image {
+            max-width: 200px; max-height: 200px; border-radius: 10px; display: block;
+        }
         .message .msg-bubble.sticker-bubble {
             background: transparent; box-shadow: none; padding: 2px;
+        }
+        .msg-call {
+            text-align: center; font-size: 12px; color: var(--text-muted);
+            margin: 4px 0; opacity: 0.9; letter-spacing: 0.3px;
         }
 
         .typing-indicator { display: flex; align-items: center; gap: 10px; animation: msgIn 0.3s ease-out forwards; opacity: 0; }
@@ -233,6 +240,100 @@
         .send-btn:hover { transform: scale(1.06); box-shadow: 0 6px 20px rgba(120,150,185,0.45); }
         .send-btn:active { transform: scale(0.9); }
         .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+        .send-btn.plus-btn { font-size: 22px; }
+        .send-btn.plus-btn:hover { transform: none; box-shadow: 0 4px 14px rgba(120,150,185,0.35); }
+        .send-btn.plus-btn:active { transform: scale(0.9); }
+        .send-btn.plus-btn.active { transform: rotate(45deg); }
+        .send-btn.plus-btn.active:active { transform: rotate(45deg) scale(0.9); }
+
+        .bottom-panel {
+            max-height: 0; overflow: hidden;
+            background: var(--input-bg);
+            backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+            transition: max-height var(--transition-smooth);
+            flex-shrink: 0;
+        }
+        .bottom-panel.active { max-height: 280px; border-top: 1px solid var(--border-color); }
+        .more-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+            padding: 16px 16px 18px;
+        }
+        .bottom-panel.picker-mode .more-grid { display: none; }
+        .more-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            border: none; background: transparent; cursor: pointer; padding: 4px 0;
+            font-family: inherit; color: var(--text-secondary);
+            transition: transform var(--transition-fast);
+        }
+        .more-btn:active { transform: scale(0.92); }
+        .more-btn .more-icon {
+            width: 54px; height: 54px; border-radius: var(--border-radius-square);
+            background: var(--surface); border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center; font-size: 26px;
+            transition: all var(--transition-fast);
+        }
+        .more-btn .more-label { font-size: 12px; color: var(--text-secondary); letter-spacing: 0.3px; }
+
+        .sticker-picker { display: none; padding: 12px 16px 16px; max-height: 250px; overflow-y: auto; }
+        .bottom-panel.picker-mode .sticker-picker { display: block; }
+        .sticker-picker .sticker-picker-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .sticker-picker .sticker-picker-item {
+            position: relative; aspect-ratio: 1; border-radius: var(--border-radius-sm);
+            overflow: hidden; border: 1px solid var(--border-color); background: var(--surface); cursor: pointer;
+        }
+        .sticker-picker .sticker-picker-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .sticker-picker .sticker-picker-empty {
+            text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; grid-column: 1/-1;
+        }
+
+        .sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 150;
+            opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
+        }
+        .sheet-overlay.active { opacity: 1; pointer-events: auto; }
+        .action-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0; z-index: 151;
+            background: var(--bg-secondary); border-radius: 16px 16px 0 0;
+            transform: translateY(100%); transition: transform var(--transition-smooth);
+            padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+            display: flex; flex-direction: column; gap: 4px;
+        }
+        .action-sheet.active { transform: translateY(0); }
+        .action-sheet .sheet-item {
+            padding: 15px 16px; border: none; background: transparent; color: var(--text-primary);
+            font-size: 16px; cursor: pointer; text-align: center; border-radius: 12px;
+            font-family: inherit; letter-spacing: 0.3px; transition: background var(--transition-fast);
+        }
+        .action-sheet .sheet-item:hover { background: var(--surface-hover); }
+        .action-sheet .sheet-item:active { background: var(--surface-hover); }
+        .action-sheet .sheet-cancel { color: #e07a5f; font-weight: 500; border-top: 1px solid var(--border-color); margin-top: 4px; }
+
+        .call-screen {
+            position: fixed; inset: 0; z-index: 250; display: none;
+            flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+            background: linear-gradient(180deg, #2b2b33, #1a1a20); color: #fff;
+        }
+        .call-screen.active { display: flex; }
+        .call-screen .call-avatar {
+            width: 96px; height: 96px; border-radius: var(--border-radius-square);
+            display: flex; align-items: center; justify-content: center; font-size: 48px;
+            background: rgba(255,255,255,0.12); border: 1.5px solid rgba(255,255,255,0.2);
+            overflow: hidden; flex-shrink: 0;
+        }
+        .call-screen .call-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .call-screen .call-name { font-size: 22px; font-weight: 600; letter-spacing: 0.5px; }
+        .call-screen .call-status { font-size: 14px; color: rgba(255,255,255,0.7); letter-spacing: 0.3px; }
+        .call-screen .call-timer { font-size: 26px; font-weight: 300; letter-spacing: 1px; color: rgba(255,255,255,0.9); min-height: 34px; }
+        .call-screen .call-actions { display: flex; gap: 40px; margin-top: 20px; }
+        .call-screen .call-btn {
+            width: 64px; height: 64px; border-radius: var(--border-radius-square); border: none; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+            font-size: 26px; color: #fff; transition: all var(--transition-fast); font-family: inherit;
+        }
+        .call-screen .call-btn span { font-size: 11px; }
+        .call-screen .call-btn:active { transform: scale(0.9); }
+        .call-screen .call-end { background: #e04f4f; }
+        .call-screen .call-accept { background: #34c759; }
 
         .panel-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
@@ -519,9 +620,20 @@
                 <button class="header-btn" id="btnOpenSettings" title="设置" aria-label="打开设置">⚙️</button>
             </header>
             <div class="chat-messages" id="chatMessages"></div>
+            <div class="bottom-panel" id="bottomPanel">
+                <div class="more-grid" id="moreGrid">
+                    <button class="more-btn" id="btnMoreSticker"><span class="more-icon">😊</span><span class="more-label">表情包</span></button>
+                    <button class="more-btn" id="btnMoreImage"><span class="more-icon">📷</span><span class="more-label">图片</span></button>
+                    <button class="more-btn" id="btnMoreCall"><span class="more-icon">📞</span><span class="more-label">语音电话</span></button>
+                </div>
+                <div class="sticker-picker" id="stickerPicker">
+                    <div class="sticker-picker-grid" id="stickerPickerGrid"></div>
+                </div>
+            </div>
             <div class="chat-input-area">
                 <textarea class="chat-input" id="chatInput" rows="1" placeholder="说点什么..." maxlength="2000" autocomplete="off"></textarea>
                 <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">➤</button>
+                <button class="send-btn plus-btn" id="btnPlus" title="更多" aria-label="更多功能">＋</button>
             </div>
         </div>
     </div>
@@ -540,7 +652,7 @@
                     <div class="menu-item" data-page="me"><span>👤 我的信息</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="appearance"><span>🎨 外观</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="bubble"><span>💬 气泡</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="time"><span>⏱️ 时间</span><span class="arrow">›</span></div>
+                    <div class="menu-item" data-page="time"><span>🩶 权限</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="cards"><span>💌 字卡库</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="data"><span>💾 数据管理</span><span class="arrow">›</span></div>
                     <div class="menu-item" data-page="about"><span>ℹ️ 关于</span><span class="arrow">›</span></div>
@@ -647,7 +759,7 @@
             <div class="sub-view" id="sub-time">
                 <div class="sub-header">
                     <button class="back-btn">‹</button>
-                    <span class="sub-title">时间</span>
+                    <span class="sub-title">权限</span>
                     <span class="back-spacer"></span>
                 </div>
                 <div class="sub-content">
@@ -678,6 +790,28 @@
                             <label for="rangeAutoMax">最长间隔 <span id="autoMaxLabel" style="color:var(--accent);">2 小时</span></label>
                             <input type="range" id="rangeAutoMax" min="1" max="1440" step="1" value="120">
                             <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点主动发消息。你不在页面时不会发，回到页面后会自动补发（最多 3 条）。</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card" style="margin-top:16px;">
+                        <div class="settings-field">
+                            <div class="field-row">
+                                <span class="field-title">他也会主动打电话</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggleCallIncoming">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="hint">开启后，他会不定时主动给你打语音电话（需要页面开着）。</div>
+                        </div>
+                        <div class="settings-field">
+                            <label for="rangeCallMin">最短间隔 <span id="callMinLabel" style="color:var(--accent);">20 分钟</span></label>
+                            <input type="range" id="rangeCallMin" min="1" max="1440" step="1" value="20">
+                        </div>
+                        <div class="settings-field">
+                            <label for="rangeCallMax">最长间隔 <span id="callMaxLabel" style="color:var(--accent);">90 分钟</span></label>
+                            <input type="range" id="rangeCallMax" min="1" max="1440" step="1" value="90">
+                            <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点打来。</div>
                         </div>
                     </div>
 
@@ -841,6 +975,24 @@
         </div>
     </div>
 
+    <div class="sheet-overlay" id="sheetOverlay"></div>
+    <div class="action-sheet" id="actionSheet">
+        <button class="sheet-item" id="btnTakePhoto">📷 拍照</button>
+        <button class="sheet-item" id="btnPickImage">🖼️ 从照片中选择</button>
+        <button class="sheet-item sheet-cancel" id="btnSheetCancel">取消</button>
+    </div>
+
+    <div class="call-screen" id="callScreen">
+        <div class="call-avatar" id="callAvatar">🌙</div>
+        <div class="call-name" id="callName">他</div>
+        <div class="call-status" id="callStatus">正在呼叫…</div>
+        <div class="call-timer" id="callTimer"></div>
+        <div class="call-actions" id="callActions"></div>
+    </div>
+
+    <input type="file" id="fileTakePhoto" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="filePickImage" accept="image/*" style="display:none;">
+
     <div id="toast" style="
         position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
         background: rgba(30,28,48,0.95); color: #f0eae0; padding: 10px 20px;
@@ -893,6 +1045,9 @@
                             autoMessageMinMinutes: 5,
                             autoMessageMaxMinutes: 120,
                             keepAliveEnabled: false,
+                            callIncomingEnabled: false,
+                            callIncomingMinMinutes: 20,
+                            callIncomingMaxMinutes: 90,
                         },
                     };
                 },
@@ -1116,6 +1271,27 @@
                         chatMessages: document.getElementById("chatMessages"),
                         chatInput: document.getElementById("chatInput"),
                         btnSend: document.getElementById("btnSend"),
+                        btnPlus: document.getElementById("btnPlus"),
+                        bottomPanel: document.getElementById("bottomPanel"),
+                        moreGrid: document.getElementById("moreGrid"),
+                        btnMoreSticker: document.getElementById("btnMoreSticker"),
+                        btnMoreImage: document.getElementById("btnMoreImage"),
+                        btnMoreCall: document.getElementById("btnMoreCall"),
+                        stickerPicker: document.getElementById("stickerPicker"),
+                        stickerPickerGrid: document.getElementById("stickerPickerGrid"),
+                        sheetOverlay: document.getElementById("sheetOverlay"),
+                        actionSheet: document.getElementById("actionSheet"),
+                        btnTakePhoto: document.getElementById("btnTakePhoto"),
+                        btnPickImage: document.getElementById("btnPickImage"),
+                        btnSheetCancel: document.getElementById("btnSheetCancel"),
+                        callScreen: document.getElementById("callScreen"),
+                        callAvatar: document.getElementById("callAvatar"),
+                        callName: document.getElementById("callName"),
+                        callStatus: document.getElementById("callStatus"),
+                        callTimer: document.getElementById("callTimer"),
+                        callActions: document.getElementById("callActions"),
+                        fileTakePhoto: document.getElementById("fileTakePhoto"),
+                        filePickImage: document.getElementById("filePickImage"),
                         headerAvatar: document.getElementById("headerAvatar"),
                         headerName: document.getElementById("headerName"),
                         headerStatus: document.getElementById("headerStatus"),
@@ -1148,6 +1324,11 @@
                         autoMinLabel: document.getElementById("autoMinLabel"),
                         rangeAutoMax: document.getElementById("rangeAutoMax"),
                         autoMaxLabel: document.getElementById("autoMaxLabel"),
+                        toggleCallIncoming: document.getElementById("toggleCallIncoming"),
+                        rangeCallMin: document.getElementById("rangeCallMin"),
+                        callMinLabel: document.getElementById("callMinLabel"),
+                        rangeCallMax: document.getElementById("rangeCallMax"),
+                        callMaxLabel: document.getElementById("callMaxLabel"),
                         toggleKeepAlive: document.getElementById("toggleKeepAlive"),
                         inputBatchCards: document.getElementById("inputBatchCards"),
                         inputBatchCategory: document.getElementById("inputBatchCategory"),
@@ -1274,6 +1455,25 @@
                 updateAutoMaxLabel(value) {
                     if (this.elements.autoMaxLabel) this.elements.autoMaxLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
                 },
+                updateCallMinLabel(value) {
+                    if (this.elements.callMinLabel) this.elements.callMinLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
+                },
+                updateCallMaxLabel(value) {
+                    if (this.elements.callMaxLabel) this.elements.callMaxLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
+                },
+                renderStickerPicker() {
+                    const stickers = AppState.getData().stickers || [];
+                    const container = this.elements.stickerPickerGrid;
+                    if (stickers.length === 0) {
+                        container.innerHTML = '<div class="sticker-picker-empty">还没有表情包，去「字卡库 → 表情包」导入吧~</div>';
+                        return;
+                    }
+                    let html = "";
+                    stickers.forEach((s, index) => {
+                        html += '<div class="sticker-picker-item" data-index="' + index + '"><img src="' + this._escapeHTML(s) + '" alt="表情包" loading="lazy"></div>';
+                    });
+                    container.innerHTML = html;
+                },
                 openMenu() {
                     this.elements.menuView.style.display = 'block';
                     this.elements.panelHeader.style.display = 'flex';
@@ -1344,15 +1544,24 @@
                     return (t.getMonth() + 1) + '月' + t.getDate() + '日 ' + timeStr;
                 },
                 _renderMessage(msg, data) {
+                    if (msg.type === "call") {
+                        return '<div class="msg-call">' + this._escapeHTML(msg.text) + '</div>';
+                    }
                     const isMe = msg.from === "me";
                     const avatar = isMe ?
                         (data.myAvatar ? this._avatarHTML(data.myAvatar) : (data.myName ? this._escapeHTML(data.myName.charAt(0)) : "我")) :
                         this._avatarHTML(data.taAvatar);
                     const isSticker = msg.type === "sticker";
-                    const bubbleClass = isSticker ? "msg-bubble sticker-bubble" : "msg-bubble";
-                    const content = isSticker ?
-                        '<img src="' + this._escapeHTML(msg.text) + '" class="msg-sticker" alt="表情包">' :
-                        this._escapeHTML(msg.text);
+                    const isImage = msg.type === "image";
+                    const bubbleClass = (isSticker || isImage) ? "msg-bubble sticker-bubble" : "msg-bubble";
+                    let content;
+                    if (isSticker) {
+                        content = '<img src="' + this._escapeHTML(msg.text) + '" class="msg-sticker" alt="表情包">';
+                    } else if (isImage) {
+                        content = '<img src="' + this._escapeHTML(msg.text) + '" class="msg-image" alt="图片">';
+                    } else {
+                        content = this._escapeHTML(msg.text);
+                    }
                     return '<div class="message ' + (isMe ? 'me' : 'ta') + '">' +
                         '<div class="msg-avatar">' + avatar + '</div>' +
                         '<div class="msg-content"><div class="' + bubbleClass + '">' + content + '</div></div></div>';
@@ -1422,6 +1631,13 @@
                     this.elements.rangeAutoMax.value = autoMax;
                     this.updateAutoMinLabel(autoMin);
                     this.updateAutoMaxLabel(autoMax);
+                    this.elements.toggleCallIncoming.checked = !!cfg.callIncomingEnabled;
+                    const callMin = cfg.callIncomingMinMinutes != null ? cfg.callIncomingMinMinutes : 20;
+                    const callMax = cfg.callIncomingMaxMinutes != null ? cfg.callIncomingMaxMinutes : 90;
+                    this.elements.rangeCallMin.value = callMin;
+                    this.elements.rangeCallMax.value = callMax;
+                    this.updateCallMinLabel(callMin);
+                    this.updateCallMaxLabel(callMax);
                     this.elements.toggleKeepAlive.checked = !!cfg.keepAliveEnabled;
                     this._renderCardsList();
                     this._renderEmojiList();
@@ -1545,6 +1761,9 @@
                         autoMessageEnabled: this.elements.toggleAutoMessage.checked,
                         autoMessageMinMinutes: parseFloat(this.elements.rangeAutoMin.value) || 5,
                         autoMessageMaxMinutes: parseFloat(this.elements.rangeAutoMax.value) || 120,
+                        callIncomingEnabled: this.elements.toggleCallIncoming.checked,
+                        callIncomingMinMinutes: parseFloat(this.elements.rangeCallMin.value) || 20,
+                        callIncomingMaxMinutes: parseFloat(this.elements.rangeCallMax.value) || 90,
                         keepAliveEnabled: this.elements.toggleKeepAlive.checked,
                     };
                     AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl, bubbleHeight, bubbleCustomCSS, config });
@@ -1572,6 +1791,17 @@
                         Renderer.autoResizeInput();
                         el.btnSend.disabled = !el.chatInput.value.trim();
                     });
+                    el.btnPlus.addEventListener("click", () => this.toggleMorePanel());
+                    el.btnMoreSticker.addEventListener("click", () => this.handleOpenStickerPicker());
+                    el.btnMoreImage.addEventListener("click", () => this.handleOpenImageSheet());
+                    el.btnMoreCall.addEventListener("click", () => Call.startOutgoing());
+                    el.stickerPickerGrid.addEventListener("click", (e) => this.handlePickSticker(e));
+                    el.sheetOverlay.addEventListener("click", () => this.closeImageSheet());
+                    el.btnSheetCancel.addEventListener("click", () => this.closeImageSheet());
+                    el.btnTakePhoto.addEventListener("click", () => { this.closeImageSheet(); el.fileTakePhoto.click(); });
+                    el.btnPickImage.addEventListener("click", () => { this.closeImageSheet(); el.filePickImage.click(); });
+                    el.fileTakePhoto.addEventListener("change", (e) => this.handleSendImage(e));
+                    el.filePickImage.addEventListener("change", (e) => this.handleSendImage(e));
                     el.btnOpenSettings.addEventListener("click", () => Renderer.openSettings());
                     el.btnCloseSettings.addEventListener("click", () => Renderer.closeSettings());
                     el.panelOverlay.addEventListener("click", () => Renderer.closeSettings());
@@ -1636,6 +1866,24 @@
                     el.rangeAutoMax.addEventListener("change", (e) => {
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), autoMessageMaxMinutes: parseFloat(e.target.value) || 120 } });
                         AutoMessage.start();
+                    });
+                    el.toggleCallIncoming.addEventListener("change", () => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), callIncomingEnabled: el.toggleCallIncoming.checked } });
+                        CallIncoming.start();
+                    });
+                    el.rangeCallMin.addEventListener("input", (e) => {
+                        Renderer.updateCallMinLabel(e.target.value);
+                    });
+                    el.rangeCallMin.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), callIncomingMinMinutes: parseFloat(e.target.value) || 20 } });
+                        CallIncoming.start();
+                    });
+                    el.rangeCallMax.addEventListener("input", (e) => {
+                        Renderer.updateCallMaxLabel(e.target.value);
+                    });
+                    el.rangeCallMax.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), callIncomingMaxMinutes: parseFloat(e.target.value) || 90 } });
+                        CallIncoming.start();
                     });
                     el.toggleKeepAlive.addEventListener("change", () => {
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), keepAliveEnabled: el.toggleKeepAlive.checked } });
@@ -1770,6 +2018,86 @@
                     if (messages.length > 0) {
                         ReplyQueue.push(messages);
                     }
+                },
+                toggleMorePanel() {
+                    const el = Renderer.elements;
+                    const isOpen = el.bottomPanel.classList.contains("active");
+                    if (isOpen) {
+                        this.closeMorePanel();
+                    } else {
+                        el.bottomPanel.classList.add("active");
+                        el.bottomPanel.classList.remove("picker-mode");
+                        el.btnPlus.classList.add("active");
+                    }
+                },
+                closeMorePanel() {
+                    const el = Renderer.elements;
+                    el.bottomPanel.classList.remove("active");
+                    el.bottomPanel.classList.remove("picker-mode");
+                    el.btnPlus.classList.remove("active");
+                },
+                handleOpenStickerPicker() {
+                    const el = Renderer.elements;
+                    el.bottomPanel.classList.add("active");
+                    el.bottomPanel.classList.add("picker-mode");
+                    el.btnPlus.classList.add("active");
+                    Renderer.renderStickerPicker();
+                },
+                handlePickSticker(e) {
+                    const item = e.target.closest(".sticker-picker-item");
+                    if (!item) return;
+                    const index = parseInt(item.dataset.index, 10);
+                    const stickers = AppState.getData().stickers || [];
+                    const src = stickers[index];
+                    if (!src) return;
+                    this.sendMediaMessage("sticker", src);
+                },
+                handleOpenImageSheet() {
+                    const el = Renderer.elements;
+                    el.sheetOverlay.classList.add("active");
+                    el.actionSheet.classList.add("active");
+                },
+                closeImageSheet() {
+                    const el = Renderer.elements;
+                    el.sheetOverlay.classList.remove("active");
+                    el.actionSheet.classList.remove("active");
+                },
+                handleSendImage(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            try {
+                                const maxSide = 1024;
+                                let w = img.naturalWidth || img.width;
+                                let h = img.naturalHeight || img.height;
+                                const scale = Math.min(1, maxSide / Math.max(w, h));
+                                w = Math.max(1, Math.round(w * scale));
+                                h = Math.max(1, Math.round(h * scale));
+                                const canvas = document.createElement("canvas");
+                                canvas.width = w; canvas.height = h;
+                                const ctx = canvas.getContext("2d");
+                                ctx.drawImage(img, 0, 0, w, h);
+                                const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+                                this.sendMediaMessage("image", dataUrl);
+                            } catch (err) {
+                                Renderer.showToast("图片处理失败");
+                            }
+                        };
+                        img.onerror = () => Renderer.showToast("图片处理失败");
+                        img.src = ev.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                    e.target.value = "";
+                },
+                sendMediaMessage(type, src) {
+                    AppState.addMessage("me", src, type);
+                    Renderer.renderChat();
+                    this.closeMorePanel();
+                    const messages = AppState.buildReplyMessages();
+                    if (messages.length > 0) ReplyQueue.push(messages);
                 },
                 handleBatchAdd() {
                     const textarea = Renderer.elements.inputBatchCards;
@@ -1997,6 +2325,8 @@
                             Renderer.renderChat();
                             AutoMessage.stop();
                             AutoMessage.start();
+                            CallIncoming.stop();
+                            CallIncoming.start();
                             KeepAlive.toggle(!!(imported.config && imported.config.keepAliveEnabled));
                             Renderer.showToast("数据导入成功 ✨");
                         } else {
@@ -2019,6 +2349,10 @@
                             AppState.resetAll();
                             AutoMessage.stop();
                             KeepAlive.stop();
+                            CallIncoming.stop();
+                            Call._cleanup();
+                            Call.state = "idle";
+                            Renderer.elements.callScreen.classList.remove("active");
                             ReplyQueue.clear();
                             AppState.isTyping = false;
                             if (AppState.typingTimer) { clearTimeout(AppState.typingTimer); AppState.typingTimer = null; }
@@ -2199,6 +2533,127 @@
                 },
             };
 
+            const Call = {
+                state: "idle",
+                timer: null,
+                incomingTimer: null,
+                seconds: 0,
+                startOutgoing() {
+                    if (this.state !== "idle") return;
+                    this.state = "calling";
+                    this._closeMorePanel();
+                    const data = AppState.getData();
+                    Renderer.elements.callAvatar.innerHTML = Renderer._avatarHTML(data.taAvatar);
+                    Renderer.elements.callName.textContent = data.taName || "他";
+                    Renderer.elements.callStatus.textContent = "正在呼叫…";
+                    Renderer.elements.callTimer.textContent = "";
+                    Renderer.elements.callActions.innerHTML = '<button class="call-btn call-end" id="btnCallEnd">📵<span>挂断</span></button>';
+                    Renderer.elements.callActions.querySelector("#btnCallEnd").addEventListener("click", () => this.hangup());
+                    Renderer.elements.callScreen.classList.add("active");
+                    const delay = 2000 + Math.random() * 3000;
+                    this.timer = setTimeout(() => {
+                        if (this.state !== "calling") return;
+                        if (Math.random() < 0.2) {
+                            this._finish("📞 已取消");
+                        } else {
+                            this._beginActive();
+                        }
+                    }, delay);
+                },
+                startIncoming() {
+                    if (this.state !== "idle") return;
+                    this.state = "incoming";
+                    const data = AppState.getData();
+                    Renderer.elements.callAvatar.innerHTML = Renderer._avatarHTML(data.taAvatar);
+                    Renderer.elements.callName.textContent = data.taName || "他";
+                    Renderer.elements.callStatus.textContent = "邀请你语音通话…";
+                    Renderer.elements.callTimer.textContent = "";
+                    Renderer.elements.callActions.innerHTML =
+                        '<button class="call-btn call-end" id="btnCallReject">📵<span>挂断</span></button>' +
+                        '<button class="call-btn call-accept" id="btnCallAccept">📞<span>接听</span></button>';
+                    Renderer.elements.callActions.querySelector("#btnCallReject").addEventListener("click", () => this._finish("📞 已拒绝"));
+                    Renderer.elements.callActions.querySelector("#btnCallAccept").addEventListener("click", () => this._beginActive());
+                    Renderer.elements.callScreen.classList.add("active");
+                    this.incomingTimer = setTimeout(() => {
+                        if (this.state === "incoming") this._finish("📞 未接听");
+                    }, 30000);
+                },
+                hangup() {
+                    if (this.state === "calling") this._finish("📞 已取消");
+                    else if (this.state === "active") this._finish("📞 通话时长 " + this._fmt(this.seconds));
+                },
+                _beginActive() {
+                    this.state = "active";
+                    this.seconds = 0;
+                    Renderer.elements.callStatus.textContent = "通话中";
+                    Renderer.elements.callTimer.textContent = "00:00";
+                    Renderer.elements.callActions.innerHTML = '<button class="call-btn call-end" id="btnCallEnd">📵<span>挂断</span></button>';
+                    Renderer.elements.callActions.querySelector("#btnCallEnd").addEventListener("click", () => this.hangup());
+                    if (this.timer) { clearTimeout(this.timer); clearInterval(this.timer); this.timer = null; }
+                    if (this.incomingTimer) { clearTimeout(this.incomingTimer); this.incomingTimer = null; }
+                    this.timer = setInterval(() => {
+                        this.seconds++;
+                        Renderer.elements.callTimer.textContent = this._fmt(this.seconds);
+                    }, 1000);
+                },
+                _fmt(s) {
+                    const m = Math.floor(s / 60);
+                    const sec = s % 60;
+                    return String(m).padStart(2, '0') + ":" + String(sec).padStart(2, '0');
+                },
+                _finish(message) {
+                    this._cleanup();
+                    this.state = "idle";
+                    Renderer.elements.callScreen.classList.remove("active");
+                    if (message) {
+                        AppState.addMessage("me", message, "call");
+                        Renderer.renderChat();
+                    }
+                },
+                _cleanup() {
+                    if (this.timer) { clearTimeout(this.timer); clearInterval(this.timer); this.timer = null; }
+                    if (this.incomingTimer) { clearTimeout(this.incomingTimer); this.incomingTimer = null; }
+                },
+                _closeMorePanel() {
+                    const el = Renderer.elements;
+                    el.bottomPanel.classList.remove("active");
+                    el.bottomPanel.classList.remove("picker-mode");
+                    el.btnPlus.classList.remove("active");
+                },
+            };
+
+            const CallIncoming = {
+                timer: null,
+                start() {
+                    this.stop();
+                    const cfg = AppState.getData().config || {};
+                    if (!cfg.callIncomingEnabled) return;
+                    this.scheduleNext();
+                },
+                stop() {
+                    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+                },
+                scheduleNext() {
+                    if (this.timer) clearTimeout(this.timer);
+                    this.timer = null;
+                    const cfg = AppState.getData().config || {};
+                    if (!cfg.callIncomingEnabled) return;
+                    const minMin = Math.max(1, Number(cfg.callIncomingMinMinutes) || 20);
+                    const maxMin = Math.max(minMin, Number(cfg.callIncomingMaxMinutes) || 90);
+                    const delay = (minMin + Math.random() * (maxMin - minMin)) * 60000;
+                    this.timer = setTimeout(() => this.fire(), delay);
+                },
+                fire() {
+                    const cfg = AppState.getData().config || {};
+                    if (!cfg.callIncomingEnabled) return;
+                    if (document.visibilityState !== 'visible') { this.scheduleNext(); return; }
+                    if (Call.state !== "idle") { this.scheduleNext(); return; }
+                    if (ReplyQueue.hasPending()) { this.scheduleNext(); return; }
+                    Call.startIncoming();
+                    this.scheduleNext();
+                },
+            };
+
             const KeepAlive = {
                 audioCtx: null,
                 source: null,
@@ -2257,6 +2712,7 @@
                 Renderer.updateSettingsPanel();
                 Events.init();
                 AutoMessage.start();
+                CallIncoming.start();
                 const keepAliveOn = !!(AppState.getData().config && AppState.getData().config.keepAliveEnabled);
                 KeepAlive.toggle(keepAliveOn);
                 Renderer.openMenu();
