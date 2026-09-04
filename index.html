@@ -425,7 +425,60 @@
         .action-sheet .sheet-item:hover { background: var(--surface-hover); }
         .action-sheet .sheet-item:active { background: var(--surface-hover); }
         .action-sheet .sheet-cancel { color: #e07a5f; font-weight: 500; border-top: 1px solid var(--border-color); margin-top: 4px; }
-        .action-sheet .sheet-danger { color: #e07a5f; }
+
+        .msg-menu {
+            position: fixed;
+            z-index: 260;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 4px;
+            border-radius: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-modal);
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.92);
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        .msg-menu.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+        .msg-menu-item {
+            padding: 8px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: inherit;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            transition: background var(--transition-fast);
+        }
+        .msg-menu-item:hover { background: var(--surface-hover); }
+        .msg-menu-item:active { background: var(--surface-hover); }
+        .msg-menu-item.msg-menu-danger { color: #e07a5f; }
+        .msg-menu-arrow {
+            position: absolute;
+            left: 50%;
+            bottom: -6px;
+            width: 12px;
+            height: 12px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+            transform: translateX(-50%) rotate(45deg);
+        }
+        .msg-menu.below .msg-menu-arrow {
+            bottom: auto;
+            top: -6px;
+            transform: translateX(-50%) rotate(-135deg);
+        }
 
         .quote-bar {
             display: flex; align-items: center; gap: 10px;
@@ -1369,11 +1422,10 @@
         <button class="sheet-item sheet-cancel" id="btnSheetCancel">取消</button>
     </div>
 
-    <div class="sheet-overlay" id="msgSheetOverlay"></div>
-    <div class="action-sheet" id="msgActionSheet">
-        <button class="sheet-item" id="btnQuote">💬 引用</button>
-        <button class="sheet-item sheet-danger" id="btnDeleteMsg">🗑️ 删除</button>
-        <button class="sheet-item sheet-cancel" id="btnMsgSheetCancel">取消</button>
+    <div class="msg-menu" id="msgMenu">
+        <button class="msg-menu-item" id="btnQuote">💬 引用</button>
+        <button class="msg-menu-item msg-menu-danger" id="btnDeleteMsg">🗑️ 删除</button>
+        <span class="msg-menu-arrow"></span>
     </div>
 
     <div class="call-screen" id="callScreen">
@@ -1812,11 +1864,9 @@
                         quoteBarName: document.getElementById("quoteBarName"),
                         quoteBarText: document.getElementById("quoteBarText"),
                         quoteBarClose: document.getElementById("quoteBarClose"),
-                        msgSheetOverlay: document.getElementById("msgSheetOverlay"),
-                        msgActionSheet: document.getElementById("msgActionSheet"),
+                        msgMenu: document.getElementById("msgMenu"),
                         btnQuote: document.getElementById("btnQuote"),
                         btnDeleteMsg: document.getElementById("btnDeleteMsg"),
-                        btnMsgSheetCancel: document.getElementById("btnMsgSheetCancel"),
                     };
                 },
                 showToast(message, duration = 2200) {
@@ -2480,9 +2530,13 @@
                     el.chatMessages.addEventListener("touchcancel", () => this.cancelLongPress(), { passive: true });
                     el.btnQuote.addEventListener("click", () => this.handleQuote());
                     el.btnDeleteMsg.addEventListener("click", () => this.handleDeleteMsg());
-                    el.btnMsgSheetCancel.addEventListener("click", () => this.closeMsgSheet());
-                    el.msgSheetOverlay.addEventListener("click", () => this.closeMsgSheet());
                     el.quoteBarClose.addEventListener("click", () => Renderer.clearQuote());
+                    document.addEventListener("touchstart", (e) => {
+                        if (Renderer.elements.msgMenu.classList.contains("active") && !Renderer.elements.msgMenu.contains(e.target)) {
+                            this.closeMsgMenu();
+                        }
+                    }, { passive: true });
+                    el.chatMessages.addEventListener("scroll", () => this.closeMsgMenu(), { passive: true });
 
                     document.querySelectorAll('.menu-item').forEach(item => {
                         item.addEventListener('click', () => Renderer.openSubPage(item.dataset.page));
@@ -2654,7 +2708,7 @@
                     this.longPressTimer = setTimeout(() => {
                         this.longPressTimer = null;
                         this.longPressTriggered = true;
-                        this.openMsgSheet(id);
+                        this.openMsgMenu(id);
                     }, 600);
                 },
                 handleTouchMove(e) {
@@ -2676,21 +2730,37 @@
                         this.longPressTimer = null;
                     }
                 },
-                openMsgSheet(id) {
+                openMsgMenu(id) {
                     this.longPressMsgId = id;
-                    const el = Renderer.elements;
-                    el.msgSheetOverlay.classList.add("active");
-                    el.msgActionSheet.classList.add("active");
+                    const menu = Renderer.elements.msgMenu;
+                    const anchor = document.querySelector('.message[data-id="' + id + '"]');
+                    if (!anchor) return;
+                    menu.classList.remove("active");
+                    menu.classList.remove("below");
+                    menu.style.left = "0px";
+                    menu.style.top = "0px";
+                    const mw = menu.offsetWidth;
+                    const mh = menu.offsetHeight;
+                    const rect = anchor.getBoundingClientRect();
+                    const vw = window.innerWidth;
+                    let x = rect.left + rect.width / 2 - mw / 2;
+                    x = Math.max(8, Math.min(x, vw - mw - 8));
+                    let y = rect.top - mh - 12;
+                    if (y < 8) {
+                        y = rect.bottom + 12;
+                        menu.classList.add("below");
+                    }
+                    menu.style.left = x + "px";
+                    menu.style.top = y + "px";
+                    requestAnimationFrame(() => menu.classList.add("active"));
                 },
-                closeMsgSheet() {
-                    const el = Renderer.elements;
-                    el.msgSheetOverlay.classList.remove("active");
-                    el.msgActionSheet.classList.remove("active");
+                closeMsgMenu() {
+                    Renderer.elements.msgMenu.classList.remove("active");
                     this.longPressMsgId = null;
                 },
                 handleQuote() {
                     const id = this.longPressMsgId;
-                    this.closeMsgSheet();
+                    this.closeMsgMenu();
                     if (!id) return;
                     AppState.quoteId = id;
                     Renderer.renderQuoteBar();
@@ -2698,7 +2768,7 @@
                 },
                 handleDeleteMsg() {
                     const id = this.longPressMsgId;
-                    this.closeMsgSheet();
+                    this.closeMsgMenu();
                     if (!id) return;
                     AppState.removeMessage(id);
                     if (AppState.quoteId === id) Renderer.clearQuote();
