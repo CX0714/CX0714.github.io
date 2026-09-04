@@ -467,7 +467,7 @@
         }
         .settings-panel.active { display: flex; }
 
-        /* ===== 纪念日视图 ===== */
+        /* ===== 倒数日视图 ===== */
         .anniversary-view {
             position: relative; height: 100%; width: 100%;
             background: var(--bg-secondary);
@@ -485,27 +485,54 @@
         }
         .anniversary-close:hover { background: var(--surface-hover); color: var(--text-primary); }
         .anniversary-body {
-            flex: 1; overflow-y: auto; padding: 36px 24px;
-            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 16px;
         }
-        .anniversary-big {
-            font-size: 44px; font-weight: 700; letter-spacing: 0.5px; color: var(--text-primary);
-            text-align: center;
+        .anniversary-add {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 14px; border-radius: var(--border-radius-md);
+            background: var(--surface); border: 1px solid var(--border-color);
+            flex-shrink: 0;
         }
-        .anniversary-title {
-            font-size: 16px; color: var(--text-secondary); margin-bottom: 28px; text-align: center;
+        .anniversary-add-row { display: flex; gap: 10px; }
+        .anniversary-add-row input {
+            flex: 1; min-width: 0; padding: 10px 14px; border-radius: var(--border-radius-sm);
+            border: 1.5px solid var(--border-color); background: var(--surface);
+            color: var(--text-primary); font-size: 16px; outline: none; font-family: inherit;
         }
-        .anniversary-form {
-            width: 100%; max-width: 320px;
-            display: flex; flex-direction: column; gap: 12px;
+        .anniversary-add-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .anniversary-add-row .btn { white-space: nowrap; flex-shrink: 0; }
+        .anniversary-list { display: flex; flex-direction: column; gap: 10px; }
+        .anniversary-empty {
+            text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 13px;
         }
-        .anniversary-form label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
-        .anniversary-form input {
-            padding: 11px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
-            background: var(--surface); color: var(--text-primary); font-size: 16px; outline: none; font-family: inherit;
+        .anniversary-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px; border-radius: var(--border-radius-md);
+            background: var(--surface); border: 1.5px solid var(--border-color);
+            cursor: pointer; transition: all var(--transition-fast);
         }
-        .anniversary-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-        .anniversary-form .btn { margin-top: 6px; }
+        .anniversary-item:active { background: var(--surface-hover); }
+        .anniversary-item.active {
+            border-color: var(--accent); background: var(--accent-soft);
+        }
+        .anniversary-item-info { flex: 1; min-width: 0; }
+        .anniversary-item-title {
+            font-size: 16px; font-weight: 600; color: var(--text-primary);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .anniversary-item-days { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+        .anniversary-item-active {
+            font-size: 12px; color: var(--accent); font-weight: 600; flex-shrink: 0;
+        }
+        .anniversary-item-delete {
+            width: 32px; height: 32px; border-radius: var(--border-radius-sm);
+            border: none; background: transparent; color: var(--text-muted);
+            font-size: 15px; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: all var(--transition-fast);
+        }
+        .anniversary-item-delete:hover { color: #e07a5f; background: var(--surface-hover); }
 
         .panel-header {
             padding: 20px 20px 16px; display: flex; align-items: center; justify-content: space-between;
@@ -805,19 +832,14 @@
                     </span>
                     <span class="app-label">设置</span>
                 </button>
-                <button class="app-icon" id="appAnniversary" aria-label="纪念日">
+                <button class="app-icon" id="appAnniversary" aria-label="倒数日">
                     <span class="app-icon-box">
                         <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <path d="M30 49 C15 36 10 26.5 14.5 18.5 C17.5 13 23.5 11.5 28 15 C29.4 16.2 30.6 16.2 32 15 C36.5 11.5 42.5 13 45.5 18.5 C50 26.5 45 36 30 49 Z"
-                                  fill="none" stroke="#fff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round"/>
-                            <g fill="#fff">
-                                <ellipse cx="18.5" cy="9.5" rx="6.5" ry="4" transform="rotate(-22 18.5 9.5)"/>
-                                <ellipse cx="41.5" cy="9.5" rx="6.5" ry="4" transform="rotate(22 41.5 9.5)"/>
-                                <rect x="27" y="6.5" width="6" height="8.5" rx="2.5"/>
-                            </g>
+                            <path d="M30 47 C15 34 10 25 14.5 17.5 C17.5 12 23.5 10.5 28 14 C29.4 15.2 30.6 15.2 32 14 C36.5 10.5 42.5 12 45.5 17.5 C50 25 45 34 30 47 Z"
+                                  fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
                         </svg>
                     </span>
-                    <span class="app-label">纪念日</span>
+                    <span class="app-label">倒数日</span>
                 </button>
             </div>
             <div class="dock">
@@ -889,22 +911,23 @@
         </div>
     </div>
 
-    <!-- 纪念日视图 -->
+    <!-- 倒数日视图 -->
     <div class="anniversary-view" id="anniversaryView" style="display:none;">
         <div class="anniversary-header">
-            <h2>💝 纪念日</h2>
+            <h2>💝 倒数日</h2>
             <button class="anniversary-close" id="btnCloseAnniversary" aria-label="关闭">✕</button>
         </div>
         <div class="anniversary-body">
-            <div class="anniversary-big" id="anniversaryBig">未设置</div>
-            <div class="anniversary-title" id="anniversaryTitle"></div>
-            <div class="anniversary-form">
-                <label for="inputAnniversaryDate">日期</label>
-                <input type="date" id="inputAnniversaryDate">
-                <label for="inputAnniversaryTitle">标题（如：认识）</label>
-                <input type="text" id="inputAnniversaryTitle" placeholder="认识 / 在一起 / ..." maxlength="20">
-                <button class="btn btn-primary" id="btnSaveAnniversary">保存</button>
+            <div class="anniversary-add">
+                <div class="anniversary-add-row">
+                    <input type="text" id="inputAnniversaryTitle" placeholder="标题（如：认识）" maxlength="20">
+                </div>
+                <div class="anniversary-add-row">
+                    <input type="date" id="inputAnniversaryDate">
+                    <button class="btn btn-primary" id="btnAddAnniversary">添加</button>
+                </div>
             </div>
+            <div class="anniversary-list" id="anniversaryList"></div>
         </div>
         <div class="home-bar" id="anniversaryHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
     </div>
@@ -1321,6 +1344,10 @@
         (function() {
             "use strict";
 
+            function genId() {
+                return Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+            }
+
             const Storage = {
                 KEY: "private_chat_app_v1",
                 getDefaultData() {
@@ -1360,8 +1387,8 @@
                         widgetBgType: "auto",
                         widgetBgColor: "#ffffff",
                         widgetBgImageUrl: "",
-                        anniversaryDate: "",
-                        anniversaryTitle: "",
+                        anniversaries: [],
+                        activeAnniversaryId: "",
                         config: {
                             replyMaxDelay: 3,
                             autoMessageEnabled: false,
@@ -1374,20 +1401,34 @@
                         },
                     };
                 },
+                normalize(data) {
+                    const defaults = this.getDefaultData();
+                    const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
+                    if (merged.bgColor === "#12111f") merged.bgColor = "";
+                    // 迁移旧的单个纪念日数据
+                    if (!Array.isArray(merged.anniversaries)) {
+                        merged.anniversaries = [];
+                        if (merged.anniversaryDate) {
+                            const id = genId();
+                            merged.anniversaries = [{ id, title: merged.anniversaryTitle || "纪念日", date: merged.anniversaryDate }];
+                            merged.activeAnniversaryId = id;
+                        }
+                    }
+                    if (!merged.activeAnniversaryId && merged.anniversaries.length > 0) {
+                        merged.activeAnniversaryId = merged.anniversaries[0].id;
+                    }
+                    if (Array.isArray(merged.cards) && merged.cards.length > 0 && typeof merged.cards[0] === "string") {
+                        merged.cards = merged.cards.map(t => ({ text: t, category: "未分类" }));
+                    }
+                    if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
+                    if (!Array.isArray(merged.stickers)) merged.stickers = [];
+                    return merged;
+                },
                 load() {
                     try {
                         const raw = localStorage.getItem(this.KEY);
                         if (raw) {
-                            const data = JSON.parse(raw);
-                            const defaults = this.getDefaultData();
-                            const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
-                            if (merged.bgColor === "#12111f") merged.bgColor = "";
-                            if (Array.isArray(merged.cards) && merged.cards.length > 0 && typeof merged.cards[0] === "string") {
-                                merged.cards = merged.cards.map(t => ({ text: t, category: "未分类" }));
-                            }
-                            if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
-                            if (!Array.isArray(merged.stickers)) merged.stickers = [];
-                            return merged;
+                            return this.normalize(JSON.parse(raw));
                         }
                     } catch (e) {
                         console.warn("数据读取失败，使用默认数据", e);
@@ -1410,14 +1451,7 @@
                         if (typeof data !== "object" || data === null) return null;
                         if (!Array.isArray(data.cards)) return null;
                         if (!Array.isArray(data.chatHistory)) return null;
-                        const defaults = this.getDefaultData();
-                        const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
-                        if (Array.isArray(merged.cards) && merged.cards.length > 0 && typeof merged.cards[0] === "string") {
-                            merged.cards = merged.cards.map(t => ({ text: t, category: "未分类" }));
-                        }
-                        if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
-                        if (!Array.isArray(merged.stickers)) merged.stickers = [];
-                        return merged;
+                        return this.normalize(data);
                     } catch (e) {
                         console.error("数据导入失败", e);
                         return null;
@@ -1570,7 +1604,7 @@
                 },
                 addMessage(from, text, type) {
                     const msg = {
-                        id: Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+                        id: genId(),
                         from: from,
                         text: text,
                         type: type || "text",
@@ -1610,11 +1644,10 @@
                         homeBar: document.getElementById("homeBar"),
                         settingsHomeBar: document.getElementById("settingsHomeBar"),
                         anniversaryHomeBar: document.getElementById("anniversaryHomeBar"),
-                        anniversaryBig: document.getElementById("anniversaryBig"),
-                        anniversaryTitle: document.getElementById("anniversaryTitle"),
+                        anniversaryList: document.getElementById("anniversaryList"),
                         inputAnniversaryDate: document.getElementById("inputAnniversaryDate"),
                         inputAnniversaryTitle: document.getElementById("inputAnniversaryTitle"),
-                        btnSaveAnniversary: document.getElementById("btnSaveAnniversary"),
+                        btnAddAnniversary: document.getElementById("btnAddAnniversary"),
                         btnCloseAnniversary: document.getElementById("btnCloseAnniversary"),
                         inputWallpaperColor: document.getElementById("inputWallpaperColor"),
                         inputWallpaperUrl: document.getElementById("inputWallpaperUrl"),
@@ -1812,26 +1845,26 @@
                     const m = String(now.getMinutes()).padStart(2, '0');
                     this.elements.desktopTime.textContent = h + ":" + m;
                 },
-                _calcAnniversary(dateStr) {
+                _calcAnniversaryText(dateStr) {
                     const target = new Date(dateStr + "T00:00:00");
                     const now = new Date();
                     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                     const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
                     const diff = Math.round((today - targetDay) / 86400000);
-                    if (diff >= 0) {
-                        return { text: "第 " + (diff + 1) + " 天" };
-                    } else {
-                        return { text: "还有 " + Math.abs(diff) + " 天" };
-                    }
+                    if (diff >= 0) return "第 " + (diff + 1) + " 天";
+                    return "还有 " + Math.abs(diff) + " 天";
                 },
                 updateDesktopCountdown() {
                     const data = AppState.getData();
                     const el = this.elements.desktopCountdown;
-                    if (!data.anniversaryDate) {
+                    const list = data.anniversaries || [];
+                    const active = list.find(a => a.id === data.activeAnniversaryId);
+                    if (!active) {
                         el.textContent = "";
                         return;
                     }
-                    el.textContent = this._calcAnniversary(data.anniversaryDate).text;
+                    const daysText = this._calcAnniversaryText(active.date);
+                    el.textContent = (active.title ? active.title + " " : "") + daysText;
                 },
                 renderDesktop() {
                     const data = AppState.getData();
@@ -1851,17 +1884,27 @@
                 },
                 renderAnniversary() {
                     const data = AppState.getData();
-                    const bigEl = this.elements.anniversaryBig;
-                    const titleEl = this.elements.anniversaryTitle;
-                    if (!data.anniversaryDate) {
-                        bigEl.textContent = "未设置";
-                        titleEl.textContent = "";
-                    } else {
-                        bigEl.textContent = this._calcAnniversary(data.anniversaryDate).text;
-                        titleEl.textContent = data.anniversaryTitle || "";
+                    const list = data.anniversaries || [];
+                    const container = this.elements.anniversaryList;
+                    if (list.length === 0) {
+                        container.innerHTML = '<div class="anniversary-empty">还没有倒数日，添加一个吧~</div>';
+                        return;
                     }
-                    this.elements.inputAnniversaryDate.value = data.anniversaryDate || "";
-                    this.elements.inputAnniversaryTitle.value = data.anniversaryTitle || "";
+                    let html = "";
+                    list.forEach(item => {
+                        const active = item.id === data.activeAnniversaryId;
+                        const daysText = this._calcAnniversaryText(item.date);
+                        html += '<div class="anniversary-item' + (active ? ' active' : '') + '" data-id="' + item.id + '">' +
+                            '<div class="anniversary-item-info">' +
+                            '<div class="anniversary-item-title">' + this._escapeHTML(item.title || '未命名') + '</div>' +
+                            '<div class="anniversary-item-days">' + daysText + '</div>' +
+                            '</div>' +
+                            '<div class="anniversary-item-actions">' +
+                            (active ? '<span class="anniversary-item-active">显示中</span>' : '') +
+                            '<button class="anniversary-item-delete" data-id="' + item.id + '">✕</button>' +
+                            '</div></div>';
+                    });
+                    container.innerHTML = html;
                 },
                 _hideAllViews() {
                     this.elements.desktopView.style.display = 'none';
@@ -2280,7 +2323,8 @@
                     el.settingsHomeBar.addEventListener("click", () => Renderer.closeSettings());
                     el.anniversaryHomeBar.addEventListener("click", () => Renderer.closeAnniversary());
                     el.btnCloseAnniversary.addEventListener("click", () => Renderer.closeAnniversary());
-                    el.btnSaveAnniversary.addEventListener("click", () => this.handleSaveAnniversary());
+                    el.btnAddAnniversary.addEventListener("click", () => this.handleAddAnniversary());
+                    el.anniversaryList.addEventListener("click", (e) => this.handleAnniversaryListClick(e));
                     el.btnUploadWallpaper.addEventListener("click", () => el.fileWallpaper.click());
                     el.fileWallpaper.addEventListener("change", (e) => this.handleUploadWallpaper(e));
                     el.btnUploadWidgetBg.addEventListener("click", () => el.fileWidgetBg.click());
@@ -2467,13 +2511,49 @@
                     }
                 },
 
-                handleSaveAnniversary() {
-                    const date = Renderer.elements.inputAnniversaryDate.value || "";
+                handleAddAnniversary() {
                     const title = Renderer.elements.inputAnniversaryTitle.value.trim() || "";
-                    AppState.updateData({ anniversaryDate: date, anniversaryTitle: title });
+                    const date = Renderer.elements.inputAnniversaryDate.value || "";
+                    if (!date) { Renderer.showToast("请先选择日期"); return; }
+                    const id = genId();
+                    const anniversaries = [...(AppState.getData().anniversaries || []), { id, title, date }];
+                    const activeId = AppState.getData().activeAnniversaryId || id;
+                    AppState.updateData({ anniversaries, activeAnniversaryId: activeId });
+                    Renderer.elements.inputAnniversaryTitle.value = "";
+                    Renderer.elements.inputAnniversaryDate.value = "";
                     Renderer.renderAnniversary();
                     Renderer.renderDesktop();
-                    Renderer.showToast("纪念日已保存 ✨");
+                    Renderer.showToast("已添加 ✨");
+                },
+                handleAnniversaryListClick(e) {
+                    const deleteBtn = e.target.closest(".anniversary-item-delete");
+                    if (deleteBtn) {
+                        this.handleDeleteAnniversary(deleteBtn.dataset.id);
+                        return;
+                    }
+                    const item = e.target.closest(".anniversary-item");
+                    if (item) {
+                        this.handleSelectAnniversary(item.dataset.id);
+                    }
+                },
+                handleSelectAnniversary(id) {
+                    AppState.updateData({ activeAnniversaryId: id });
+                    Renderer.renderAnniversary();
+                    Renderer.renderDesktop();
+                    Renderer.showToast("已设为桌面显示 ✨");
+                },
+                handleDeleteAnniversary(id) {
+                    if (!confirm("确定删除这个倒数日吗？")) return;
+                    const data = AppState.getData();
+                    let anniversaries = (data.anniversaries || []).filter(a => a.id !== id);
+                    let activeId = data.activeAnniversaryId;
+                    if (activeId === id) {
+                        activeId = anniversaries.length > 0 ? anniversaries[0].id : "";
+                    }
+                    AppState.updateData({ anniversaries, activeAnniversaryId: activeId });
+                    Renderer.renderAnniversary();
+                    Renderer.renderDesktop();
+                    Renderer.showToast("已删除");
                 },
 
                 handleUploadWallpaper(e) {
