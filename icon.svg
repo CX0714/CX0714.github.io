@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Philos icon: white bg + star bottom-right -->
   <rect width="512" height="512" fill="#ffffff"/>
   <path d="M256 106 L290 210 L399 210 L310 274 L344 377 L256 313 L168 377 L202 274 L113 210 L223 210 Z" fill="#cfc6e1" transform="translate(384 384) scale(0.55) translate(-256 -241.5)"/>
 </svg>

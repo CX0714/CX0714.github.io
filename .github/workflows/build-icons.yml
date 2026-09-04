@@ -13,23 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install sharp
-        run: npm install sharp
+      - name: Install librsvg
+        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
       - name: Generate PNG icons
         run: |
-          cat > /tmp/gen.js << 'EOF'
-          const sharp = require('sharp');
-          (async () => {
-            for (const s of [180, 192, 512]) {
-              await sharp('icon.svg', { density: 384 }).resize(s, s).png().toFile('icon-' + s + '.png');
-            }
-            await sharp('icon.svg', { density: 384 }).resize(180, 180).png().toFile('apple-touch-icon.png');
-          })();
-          EOF
-          node /tmp/gen.js
+          rsvg-convert -w 180 -h 180 icon.svg -o icon-180.png
+          rsvg-convert -w 192 -h 192 icon.svg -o icon-192.png
+          rsvg-convert -w 512 -h 512 icon.svg -o icon-512.png
+          rsvg-convert -w 180 -h 180 icon.svg -o apple-touch-icon.png
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
