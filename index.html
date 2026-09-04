@@ -114,8 +114,11 @@
             padding: calc(48px + env(safe-area-inset-top)) 24px calc(20px + env(safe-area-inset-bottom));
         }
         .widget {
-            display: flex; align-items: center; gap: 14px;
-            padding: 16px; border-radius: var(--border-radius-lg);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 12px;
+            min-height: 220px;
+            padding: 24px 16px;
+            border-radius: var(--border-radius-lg);
             background: rgba(255,255,255,0.32);
             backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
             border: 1px solid rgba(255,255,255,0.5);
@@ -123,17 +126,16 @@
             margin-bottom: 30px;
         }
         .widget-avatar {
-            width: 56px; height: 56px; border-radius: var(--border-radius-square);
+            width: 78px; height: 78px; border-radius: var(--border-radius-square);
             background: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.7);
-            display: flex; align-items: center; justify-content: center; font-size: 30px;
+            display: flex; align-items: center; justify-content: center; font-size: 42px;
             flex-shrink: 0; overflow: hidden;
+            margin-top: 18px;
         }
         .widget-avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .widget-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-        .widget-name { font-size: 14px; font-weight: 600; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.4); letter-spacing: 0.5px; }
         .widget-message {
-            font-size: 13px; color: rgba(255,255,255,0.95); text-shadow: 0 1px 2px rgba(0,0,0,0.35);
-            line-height: 1.5; letter-spacing: 0.3px;
+            font-size: 12px; color: rgba(255,255,255,0.95); text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+            line-height: 1.5; letter-spacing: 0.3px; text-align: center; max-width: 92%;
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
 
@@ -190,7 +192,7 @@
             width: var(--avatar-size); height: var(--avatar-size); border-radius: var(--border-radius-square);
             display: flex; align-items: center; justify-content: center; font-size: 24px;
             background: var(--surface); border: 1.5px solid var(--accent-soft);
-            transition: transform var(--transition-fast); flex-shrink: 0; overflow: hidden; cursor: pointer;
+            transition: transform var(--transition-fast); flex-shrink: 0; overflow: hidden;
         }
         .chat-header .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .chat-header .header-info { flex: 1; min-width: 0; }
@@ -421,10 +423,10 @@
         }
         .panel-overlay.active { opacity: 1; pointer-events: auto; }
         .settings-panel {
-            position: fixed; top: 0; right: 0; bottom: 0; width: 100%; max-width: var(--panel-width);
+            position: fixed; inset: 0; width: 100%; max-width: none;
             background: var(--bg-secondary); z-index: 101; transform: translateX(100%);
             transition: transform var(--transition-smooth); display: flex; flex-direction: column;
-            box-shadow: var(--shadow-panel); border-left: 1px solid var(--border-color); overflow: hidden;
+            box-shadow: var(--shadow-panel); overflow: hidden;
         }
         .settings-panel.active { transform: translateX(0); }
 
@@ -670,7 +672,6 @@
             .chat-header { padding: 0 22px; }
             .chat-messages { padding: 24px 20px; }
             .chat-input-area { padding: 14px 20px 14px; }
-            .settings-panel { max-width: 400px; }
         }
         @media (max-width: 380px) {
             .message { max-width: 90%; }
@@ -689,10 +690,7 @@
         <div class="desktop-content">
             <div class="widget" id="desktopWidget">
                 <div class="widget-avatar" id="widgetAvatar">🌙</div>
-                <div class="widget-info">
-                    <div class="widget-name" id="widgetName">他</div>
-                    <div class="widget-message" id="widgetMessage">我在等你哦</div>
-                </div>
+                <div class="widget-message" id="widgetMessage">我在等你哦</div>
             </div>
             <div class="app-grid">
                 <button class="app-icon" id="appChat" aria-label="聊天">
@@ -702,7 +700,7 @@
                             <path d="M17 42 L17 52 L26.5 44 Z" fill="#fff"/>
                         </svg>
                     </span>
-                    <span class="app-label" id="appChatLabel">他</span>
+                    <span class="app-label">聊天</span>
                 </button>
                 <button class="app-icon" id="appSettings" aria-label="设置">
                     <span class="app-icon-box">
@@ -720,7 +718,6 @@
                             </g>
                         </svg>
                     </span>
-                    <span class="app-label">设置</span>
                 </button>
             </div>
             <div class="dock">
@@ -737,7 +734,6 @@
                             <rect x="11" y="13" width="38" height="34" rx="7" fill="#fff" mask="url(#cardLineMask)"/>
                         </svg>
                     </span>
-                    <span class="app-label">字卡库</span>
                 </button>
                 <button class="app-icon" id="appAppearance" aria-label="外观">
                     <span class="app-icon-box">
@@ -756,7 +752,6 @@
                             <circle cx="30" cy="33" r="19" fill="#fff" mask="url(#paletteMask)"/>
                         </svg>
                     </span>
-                    <span class="app-label">外观</span>
                 </button>
             </div>
         </div>
@@ -767,12 +762,11 @@
         <div class="app">
             <div class="chat-container" id="chatContainer">
                 <header class="chat-header">
-                    <div class="avatar" id="headerAvatar" title="点击打开设置">🌙</div>
+                    <div class="avatar" id="headerAvatar">🌙</div>
                     <div class="header-info">
                         <div class="name" id="headerName">他</div>
                         <div class="status"><span class="dot"></span><span id="headerStatus">在等你说话</span></div>
                     </div>
-                    <button class="header-btn" id="btnOpenSettings" title="设置" aria-label="打开设置">⚙️</button>
                 </header>
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="bottom-panel" id="bottomPanel">
@@ -1140,6 +1134,7 @@
             </div>
 
         </div>
+        <div class="home-bar" id="settingsHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
     </div>
 
     <input type="file" id="fileTaAvatar" accept="image/*" style="display:none;">
@@ -1479,14 +1474,13 @@
                         desktopWallpaper: document.getElementById("desktopWallpaper"),
                         desktopWidget: document.getElementById("desktopWidget"),
                         widgetAvatar: document.getElementById("widgetAvatar"),
-                        widgetName: document.getElementById("widgetName"),
                         widgetMessage: document.getElementById("widgetMessage"),
                         appChat: document.getElementById("appChat"),
-                        appChatLabel: document.getElementById("appChatLabel"),
                         appSettings: document.getElementById("appSettings"),
                         appCards: document.getElementById("appCards"),
                         appAppearance: document.getElementById("appAppearance"),
                         homeBar: document.getElementById("homeBar"),
+                        settingsHomeBar: document.getElementById("settingsHomeBar"),
                         inputWallpaperColor: document.getElementById("inputWallpaperColor"),
                         inputWallpaperUrl: document.getElementById("inputWallpaperUrl"),
                         btnUploadWallpaper: document.getElementById("btnUploadWallpaper"),
@@ -1527,7 +1521,6 @@
                         panelOverlay: document.getElementById("panelOverlay"),
                         panelHeader: document.getElementById("panelHeader"),
                         menuView: document.getElementById("menuView"),
-                        btnOpenSettings: document.getElementById("btnOpenSettings"),
                         btnCloseSettings: document.getElementById("btnCloseSettings"),
                         inputTaName: document.getElementById("inputTaName"),
                         inputTaAvatar: document.getElementById("inputTaAvatar"),
@@ -1668,8 +1661,6 @@
                     this.applyWallpaper();
                     this.applyWidgetBg();
                     this.elements.widgetAvatar.innerHTML = this._avatarHTML(data.taAvatar);
-                    this.elements.widgetName.textContent = data.taName || "他";
-                    this.elements.appChatLabel.textContent = data.taName || "他";
                     const cards = data.cards || [];
                     let msg = "我在等你哦";
                     if (cards.length > 0) {
@@ -2081,6 +2072,7 @@
                     el.appCards.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('cards'); });
                     el.appAppearance.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('appearance'); });
                     el.homeBar.addEventListener("click", () => Renderer.showDesktop());
+                    el.settingsHomeBar.addEventListener("click", () => Renderer.closeSettings());
                     el.btnUploadWallpaper.addEventListener("click", () => el.fileWallpaper.click());
                     el.fileWallpaper.addEventListener("change", (e) => this.handleUploadWallpaper(e));
                     el.btnUploadWidgetBg.addEventListener("click", () => el.fileWidgetBg.click());
@@ -2108,10 +2100,8 @@
                     el.btnPickImage.addEventListener("click", () => { this.closeImageSheet(); el.filePickImage.click(); });
                     el.fileTakePhoto.addEventListener("change", (e) => this.handleSendImage(e));
                     el.filePickImage.addEventListener("change", (e) => this.handleSendImage(e));
-                    el.btnOpenSettings.addEventListener("click", () => Renderer.openSettings());
                     el.btnCloseSettings.addEventListener("click", () => Renderer.closeSettings());
                     el.panelOverlay.addEventListener("click", () => Renderer.closeSettings());
-                    el.headerAvatar.addEventListener("click", () => Renderer.openSettings());
 
                     document.querySelectorAll('.menu-item').forEach(item => {
                         item.addEventListener('click', () => Renderer.openSubPage(item.dataset.page));
@@ -2340,7 +2330,6 @@
                     const data = AppState.getData();
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) {
                         Renderer.showToast("字卡库为空，先去添加一些他会说的话吧");
-                        Renderer.openSettings();
                         return;
                     }
                     input.value = "";
