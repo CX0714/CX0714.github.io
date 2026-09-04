@@ -1,0 +1,38 @@
+name: Build Icons
+on:
+  push:
+    paths:
+      - 'icon.svg'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install sharp
+        run: npm install sharp
+      - name: Generate PNG icons
+        run: |
+          cat > /tmp/gen.js << 'EOF'
+          const sharp = require('sharp');
+          (async () => {
+            for (const s of [180, 192, 512]) {
+              await sharp('icon.svg', { density: 384 }).resize(s, s).png().toFile('icon-' + s + '.png');
+            }
+            await sharp('icon.svg', { density: 384 }).resize(180, 180).png().toFile('apple-touch-icon.png');
+          })();
+          EOF
+          node /tmp/gen.js
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add icon-180.png icon-192.png icon-512.png apple-touch-icon.png
+          if git diff --cached --quiet; then echo "no changes"; else git commit -m "chore: generate icon PNGs" && git push; fi

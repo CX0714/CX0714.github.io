@@ -5,7 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>☆Philos</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg">
-    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#93a7bb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="☆Philos">
+    <meta name="mobile-web-app-capable" content="yes">
     <style>
         :root {
             --on-accent: #ffffff;
@@ -3689,6 +3695,9 @@
                     setTimeout(() => Renderer.showWelcome(), 300);
                 }
                 console.log("💌 私人对话空间已启动");
+                if ("serviceWorker" in navigator) {
+                    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+                }
             }
             if (document.readyState === "loading") {
                 document.addEventListener("DOMContentLoaded", bootstrap);
