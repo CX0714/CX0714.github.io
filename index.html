@@ -1636,7 +1636,30 @@
                             if (sticker) messages.push({ type: "sticker", src: sticker });
                         }
                     }
+                    if (Math.random() < 0.3) {
+                        const quoteMsg = this.pickQuoteMessage();
+                        if (quoteMsg) {
+                            for (let i = 0; i < messages.length; i++) {
+                                if (messages[i].type === "text") {
+                                    messages[i].quoteId = quoteMsg.id;
+                                    break;
+                                }
+                            }
+                        }
+                    }
                     return messages;
+                },
+                pickQuoteMessage() {
+                    const history = this.data.chatHistory || [];
+                    if (history.length === 0) return null;
+                    const recent = history.slice(-20);
+                    const preferMe = Math.random() < 0.75;
+                    let candidates = recent.filter(m => m.type !== "call" && (preferMe ? m.from === "me" : m.from === "ta"));
+                    if (candidates.length === 0) {
+                        candidates = recent.filter(m => m.type !== "call");
+                    }
+                    if (candidates.length === 0) return null;
+                    return candidates[Math.floor(Math.random() * candidates.length)];
                 },
                 addCard(text, category) {
                     const trimmed = text.trim();
@@ -3452,7 +3475,7 @@
                         if (msg.type === "sticker") {
                             AppState.addMessage("ta", msg.src, "sticker");
                         } else {
-                            AppState.addMessage("ta", msg.text);
+                            AppState.addMessage("ta", msg.text, "text", msg.quoteId);
                         }
                         Renderer.renderChat();
                         if (idx >= messages.length) {
