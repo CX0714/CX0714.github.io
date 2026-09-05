@@ -50,19 +50,33 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("push", (event) => {
   let body = "他给你发消息了";
+  let msgId = null;
   try {
     if (event.data) {
-      const text = event.data.text();
-      if (text) body = text;
+      const raw = event.data.text();
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.text) body = String(parsed.text);
+        if (parsed && parsed.id) msgId = String(parsed.id);
+      } catch (e) {
+        if (raw) body = raw;
+      }
     }
   } catch (e) {}
-  event.waitUntil(
-    self.registration.showNotification("☆Philos", {
+
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    const visible = clients.find((c) => c.visibilityState === "visible");
+    if (visible) {
+      visible.postMessage({ type: "push-msg", id: msgId, text: body });
+      return;
+    }
+    return self.registration.showNotification("☆Philos", {
       body: body,
       icon: "icon-192.png",
       badge: "icon-192.png",
-    })
-  );
+    });
+  })());
 });
 
 self.addEventListener("notificationclick", (event) => {
