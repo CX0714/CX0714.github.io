@@ -1601,28 +1601,51 @@
             };
 
             const Push = {
+                vapidKey: null,
+                async preload() {
+                    try {
+                        const resp = await fetch(PUSH_SERVER + "/vapid-public-key");
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (data && data.publicKey) {
+                                this.vapidKey = urlBase64ToUint8Array(data.publicKey);
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("preload vapid key failed", e);
+                    }
+                },
                 async setup() {
                     try {
-                        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
+                        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+                            return { ok: false, error: "浏览器不支持推送" };
+                        }
                         const permission = await Notification.requestPermission();
-                        if (permission !== "granted") return false;
+                        if (permission !== "granted") {
+                            return { ok: false, error: "系统权限未允许" };
+                        }
                         const reg = await navigator.serviceWorker.ready;
-                        const resp = await fetch(PUSH_SERVER + "/vapid-public-key");
-                        const data = await resp.json();
-                        const keyBytes = urlBase64ToUint8Array(data.publicKey);
+                        if (!this.vapidKey) {
+                            const resp = await fetch(PUSH_SERVER + "/vapid-public-key");
+                            if (!resp.ok) return { ok: false, error: "连接推送服务失败" };
+                            const data = await resp.json();
+                            if (!data || !data.publicKey) return { ok: false, error: "推送服务返回异常" };
+                            this.vapidKey = urlBase64ToUint8Array(data.publicKey);
+                        }
                         let subscription = await reg.pushManager.getSubscription();
                         if (!subscription) {
-                            subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes });
+                            subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.vapidKey });
                         }
-                        await fetch(PUSH_SERVER + "/subscribe", {
+                        const subResp = await fetch(PUSH_SERVER + "/subscribe", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({ subscription: subscription.toJSON() }),
                         });
-                        return true;
+                        if (!subResp.ok) return { ok: false, error: "上报订阅失败" };
+                        return { ok: true };
                     } catch (e) {
                         console.warn("push setup failed", e);
-                        return false;
+                        return { ok: false, error: (e && e.message) ? e.message : "未知错误" };
                     }
                 },
                 async notify(message) {
@@ -2593,6 +2616,7 @@
                 longPressStartX: 0,
                 longPressStartY: 0,
                 longPressMsgId: null,
+                _suppressPushToggle: false,
                 init() {
                     const el = Renderer.elements;
                     el.appChat.addEventListener("click", () => Renderer.showChat());
@@ -2808,19 +2832,18 @@
                 },
 
                 handleTogglePush() {
+                    if (this._suppressPushToggle) return;
                     const checked = Renderer.elements.togglePush.checked;
                     if (checked) {
-                        Push.setup().then((ok) => {
-                            if (ok) {
+                        Push.setup().then((res) => {
+                            if (res && res.ok) {
                                 AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
                                 Renderer.showToast("通知已开启 ✨");
                             } else {
+                                this._suppressPushToggle = true;
                                 Renderer.elements.togglePush.checked = false;
-                                if ("Notification" in window && Notification.permission === "denied") {
-                                    Renderer.showToast("通知被拒绝，请在系统设置里允许");
-                                } else {
-                                    Renderer.showToast("开启失败，请重试");
-                                }
+                                this._suppressPushToggle = false;
+                                Renderer.showToast("开启失败：" + (res && res.error ? res.error : "未知错误"));
                             }
                         });
                     } else {
@@ -3817,9 +3840,10 @@
                 console.log("💌 私人对话空间已启动");
                 if ("serviceWorker" in navigator) {
                     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+                    Push.preload();
                     if ("Notification" in window && Notification.permission === "granted") {
-                        Push.setup().then((ok) => {
-                            if (ok) AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
+                        Push.setup().then((res) => {
+                            if (res && res.ok) AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
                         });
                     }
                 }
