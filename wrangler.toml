@@ -1,0 +1,7 @@
+name = "philos-push"
+main = "push-worker.js"
+compatibility_date = "2024-11-01"
+
+[[kv_namespaces]]
+binding = "PHILOS_PUSH"
+id = "fb21d3f128114594bfc366df96c1f809"

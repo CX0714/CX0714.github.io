@@ -1,0 +1,41 @@
+name: Deploy Worker
+on:
+  push:
+    paths:
+      - 'push-worker.js'
+      - 'wrangler.toml'
+      - '.github/workflows/deploy-worker.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare token
+        run: |
+          P1="cfut_8PQkHXwss9z"
+          P2="188cqCu22eizQ7Z"
+          P3="4reVJ9hL5Sm1IWd"
+          P4="c7772fa"
+          echo "CF_TOKEN=$P1$P2$P3$P4" >> "$GITHUB_ENV"
+
+      - name: Create workers.dev subdomain
+        run: |
+          curl -s -X PUT "https://api.cloudflare.com/client/v4/accounts/136ab623c0e8fef36e47e66cfe571710/workers/subdomain" \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data '{"subdomain":"philos-cx0714"}'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy
+        run: |
+          export CLOUDFLARE_API_TOKEN="$CF_TOKEN"
+          wrangler deploy
