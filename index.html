@@ -1477,6 +1477,8 @@
 
             const PUSH_SERVER = "https://philos-push.philos-cx0714.workers.dev";
 
+            const seenCloudIds = new Set();
+
             function urlBase64ToUint8Array(base64String) {
                 const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
                 const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -1515,6 +1517,7 @@
                         stickers: [],
                         chatHistory: [],
                         unreadCount: 0,
+                        deviceId: "",
                         hasCompletedOnboarding: false,
                         themeMode: "auto",
                         bgColor: "",
@@ -1563,6 +1566,7 @@
                     }
                     if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
                     if (!Array.isArray(merged.stickers)) merged.stickers = [];
+                    if (!merged.deviceId) merged.deviceId = "d_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
                     return merged;
                 },
                 load() {
@@ -1615,6 +1619,18 @@
                         console.warn("preload vapid key failed", e);
                     }
                 },
+                _buildProfileBody(enabled) {
+                    const data = AppState.getData();
+                    const cfg = data.config || {};
+                    const cards = (data.cards || []).map(c => (typeof c === "string" ? c : c.text)).filter(t => t && String(t).trim());
+                    return {
+                        deviceId: data.deviceId,
+                        cards: cards,
+                        minMinutes: cfg.autoMessageMinMinutes != null ? cfg.autoMessageMinMinutes : 5,
+                        maxMinutes: cfg.autoMessageMaxMinutes != null ? cfg.autoMessageMaxMinutes : 120,
+                        enabled: enabled,
+                    };
+                },
                 async setup() {
                     try {
                         if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
@@ -1636,16 +1652,54 @@
                         if (!subscription) {
                             subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.vapidKey });
                         }
+                        const body = this._buildProfileBody(true);
+                        body.subscription = subscription.toJSON();
                         const subResp = await fetch(PUSH_SERVER + "/subscribe", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ subscription: subscription.toJSON() }),
+                            body: JSON.stringify(body),
                         });
                         if (!subResp.ok) return { ok: false, error: "上报订阅失败" };
                         return { ok: true };
                     } catch (e) {
                         console.warn("push setup failed", e);
                         return { ok: false, error: (e && e.message) ? e.message : "未知错误" };
+                    }
+                },
+                async syncProfile(enabled) {
+                    try {
+                        const body = this._buildProfileBody(enabled);
+                        await fetch(PUSH_SERVER + "/profile", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(body),
+                        });
+                    } catch (e) {
+                        console.warn("push syncProfile failed", e);
+                    }
+                },
+                async syncMessages() {
+                    try {
+                        const deviceId = AppState.getData().deviceId;
+                        if (!deviceId) return;
+                        const resp = await fetch(PUSH_SERVER + "/messages?deviceId=" + encodeURIComponent(deviceId));
+                        if (!resp.ok) return;
+                        const data = await resp.json();
+                        const msgs = Array.isArray(data.messages) ? data.messages : [];
+                        let changed = false;
+                        for (const m of msgs) {
+                            if (!m || !m.text) continue;
+                            if (m.id && seenCloudIds.has(m.id)) continue;
+                            if (m.id) seenCloudIds.add(m.id);
+                            AppState.addMessage("ta", String(m.text), "text");
+                            changed = true;
+                        }
+                        if (changed) {
+                            Renderer.renderChat();
+                            Renderer.updateHeader();
+                        }
+                    } catch (e) {
+                        console.warn("push syncMessages failed", e);
                     }
                 },
                 async notify(message) {
@@ -2760,10 +2814,27 @@
                     document.addEventListener("visibilitychange", () => {
                         if (document.visibilityState === "visible") {
                             KeepAlive.resumeIfNeeded();
+                            if ((AppState.getData().config || {}).pushEnabled) Push.syncMessages();
                             AutoMessage.onVisible();
                         }
                     });
                     document.addEventListener("pointerdown", () => KeepAlive.resumeIfNeeded());
+                    if ("serviceWorker" in navigator) {
+                        navigator.serviceWorker.addEventListener("message", (event) => {
+                            const msg = event.data;
+                            if (!msg || msg.type !== "push-msg" || !msg.text) return;
+                            if (msg.id) seenCloudIds.add(msg.id);
+                            AppState.addMessage("ta", String(msg.text), "text");
+                            if (AppState.isChatViewActive) {
+                                Renderer.renderChat();
+                                Renderer.updateHeader();
+                            } else {
+                                const unread = (AppState.getData().unreadCount || 0) + 1;
+                                AppState.updateData({ unreadCount: unread });
+                                Renderer.updateUnreadBadge();
+                            }
+                        });
+                    }
 
                     document.querySelectorAll('#cardTabs .card-tab').forEach(tab => {
                         tab.addEventListener('click', () => Renderer.switchCardTab(tab.dataset.tab));
@@ -2838,6 +2909,7 @@
                         Push.setup().then((res) => {
                             if (res && res.ok) {
                                 AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
+                                AutoMessage.stop();
                                 Renderer.showToast("通知已开启 ✨");
                             } else {
                                 this._suppressPushToggle = true;
@@ -2848,6 +2920,8 @@
                         });
                     } else {
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: false } });
+                        Push.syncProfile(false);
+                        AutoMessage.start();
                         Renderer.showToast("通知已关闭");
                     }
                 },
@@ -3504,6 +3578,7 @@
                     this.stop();
                     const data = AppState.getData();
                     const cfg = data.config || {};
+                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     if (!this.lastSentAt) this.lastSentAt = Date.now();
@@ -3517,6 +3592,7 @@
                     this.timer = null;
                     const data = AppState.getData();
                     const cfg = data.config || {};
+                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
@@ -3526,6 +3602,7 @@
                 },
                 fire() {
                     const cfg = AppState.getData().config || {};
+                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if (document.visibilityState !== 'visible') {
                         this.scheduleNext();
@@ -3542,6 +3619,7 @@
                 onVisible() {
                     const data = AppState.getData();
                     const cfg = data.config || {};
+                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     if (ReplyQueue.hasPending()) { this.scheduleNext(); return; }
@@ -3825,7 +3903,7 @@
                 Renderer.updateSettingsPanel();
                 Renderer.showDesktop();
                 Events.init();
-                AutoMessage.start();
+                if (!(AppState.getData().config || {}).pushEnabled) AutoMessage.start();
                 CallIncoming.start();
                 const keepAliveOn = !!(AppState.getData().config && AppState.getData().config.keepAliveEnabled);
                 KeepAlive.toggle(keepAliveOn);
@@ -3843,10 +3921,23 @@
                     Push.preload();
                     if ("Notification" in window && Notification.permission === "granted") {
                         Push.setup().then((res) => {
-                            if (res && res.ok) AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
+                            if (res && res.ok) {
+                                AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
+                                AutoMessage.stop();
+                            }
                         });
                     }
                 }
+                if ((AppState.getData().config || {}).pushEnabled) {
+                    setTimeout(() => Push.syncMessages(), 1500);
+                }
+                setInterval(() => {
+                    const cfg = AppState.getData().config || {};
+                    if (cfg.pushEnabled && document.visibilityState === "visible") {
+                        Push.syncMessages();
+                        Push.syncProfile(true);
+                    }
+                }, 30000);
             }
             if (document.readyState === "loading") {
                 document.addEventListener("DOMContentLoaded", bootstrap);
