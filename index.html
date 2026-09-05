@@ -330,21 +330,6 @@
             margin: 4px 0; opacity: 0.9; letter-spacing: 0.3px;
         }
 
-        .typing-indicator { display: flex; align-items: center; gap: 10px; animation: msgIn 0.3s ease-out forwards; opacity: 0; }
-        .typing-indicator .msg-avatar {
-            width: var(--avatar-size-sm); height: var(--avatar-size-sm); border-radius: var(--border-radius-square);
-            background: var(--surface); display: flex; align-items: center; justify-content: center;
-            font-size: 18px; flex-shrink: 0; overflow: hidden; border: 1px solid var(--border-color);
-        }
-        .typing-indicator .typing-bubble {
-            padding: 14px 18px; background: var(--bubble-ta-bg); border-radius: var(--border-radius-lg);
-            border-bottom-left-radius: 4px; display: flex; gap: 5px; align-items: center; box-shadow: var(--shadow-bubble);
-        }
-        .typing-indicator .typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); animation: typingDot 1.3s ease-in-out infinite; }
-        .typing-indicator .typing-dot:nth-child(2) { animation-delay: 0.18s; }
-        .typing-indicator .typing-dot:nth-child(3) { animation-delay: 0.36s; }
-        @keyframes typingDot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.4; } 30% { transform: translateY(-7px); opacity: 1; } }
-
         .chat-input-area {
             padding: 12px 16px 12px; background: var(--input-bg);
             backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
@@ -1290,8 +1275,11 @@
                     <div class="settings-card" style="margin-top:16px;">
                         <div class="settings-field">
                             <div class="field-row">
-                                <span class="field-title">推送通知</span>
-                                <button class="btn btn-secondary" id="btnEnablePush">开启</button>
+                                <span class="field-title">接受通知</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="togglePush">
+                                    <span class="slider"></span>
+                                </label>
                             </div>
                             <div class="hint">开启后，他给你发消息时手机会弹通知（锁屏也能收到）。需要已把网站添加到主屏幕。</div>
                         </div>
@@ -1549,6 +1537,7 @@
                             callIncomingEnabled: false,
                             callIncomingMinMinutes: 20,
                             callIncomingMaxMinutes: 90,
+                            pushEnabled: false,
                         },
                     };
                 },
@@ -1939,6 +1928,7 @@
                         rangeCallMax: document.getElementById("rangeCallMax"),
                         callMaxLabel: document.getElementById("callMaxLabel"),
                         toggleKeepAlive: document.getElementById("toggleKeepAlive"),
+                        togglePush: document.getElementById("togglePush"),
                         inputBatchCards: document.getElementById("inputBatchCards"),
                         inputBatchCategory: document.getElementById("inputBatchCategory"),
                         btnBatchAdd: document.getElementById("btnBatchAdd"),
@@ -1958,7 +1948,6 @@
                         fileImportAll: document.getElementById("fileImportAll"),
                         btnClearChat: document.getElementById("btnClearChat"),
                         btnResetAll: document.getElementById("btnResetAll"),
-                        btnEnablePush: document.getElementById("btnEnablePush"),
                         welcomeModal: document.getElementById("welcomeModal"),
                         welcomeTaName: document.getElementById("welcomeTaName"),
                         welcomeMyName: document.getElementById("welcomeMyName"),
@@ -2286,9 +2275,6 @@
                         html += this._renderMessage(msg, data);
                         lastTs = t;
                     }
-                    if (AppState.isTyping) {
-                        html += this._renderTypingIndicator(data);
-                    }
                     container.innerHTML = html;
                     this._scrollToBottom();
                 },
@@ -2383,12 +2369,6 @@
                         '<div class="msg-avatar">' + avatar + '</div>' +
                         '<div class="msg-content">' + quoteHTML + '<div class="' + bubbleClass + '">' + content + '</div></div></div>';
                 },
-                _renderTypingIndicator(data) {
-                    return '<div class="typing-indicator">' +
-                        '<div class="msg-avatar">' + this._avatarHTML(data.taAvatar) + '</div>' +
-                        '<div class="typing-bubble"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>' +
-                        '</div>';
-                },
                 _renderEmptyState(data) {
                     const hasContent = (data.cards || []).length > 0 || (data.stickers || []).length > 0;
                     return '<div class="chat-empty">' +
@@ -2422,7 +2402,11 @@
                     this.elements.headerName.textContent = data.taName || "他";
                     this.elements.headerAvatar.innerHTML = this._avatarHTML(data.taAvatar);
                     const canReply = (data.cards || []).length > 0 || (data.stickers || []).length > 0;
-                    this.elements.headerStatus.textContent = canReply ? "在等你说话" : "去添加字卡吧";
+                    if (AppState.isTyping) {
+                        this.elements.headerStatus.textContent = "正在输入…";
+                    } else {
+                        this.elements.headerStatus.textContent = canReply ? "在等你说话" : "去添加字卡吧";
+                    }
                 },
                 updateSettingsPanel() {
                     const data = AppState.getData();
@@ -2461,6 +2445,7 @@
                     this.updateCallMinLabel(callMin);
                     this.updateCallMaxLabel(callMax);
                     this.elements.toggleKeepAlive.checked = !!cfg.keepAliveEnabled;
+                    this.elements.togglePush.checked = !!cfg.pushEnabled;
                     this._renderCardsList();
                     this._renderEmojiList();
                     this._renderStickerGrid();
@@ -2657,7 +2642,7 @@
                     el.btnQuote.addEventListener("click", () => this.handleQuote());
                     el.btnDeleteMsg.addEventListener("click", () => this.handleDeleteMsg());
                     el.quoteBarClose.addEventListener("click", () => Renderer.clearQuote());
-                    el.btnEnablePush.addEventListener("click", () => this.handleEnablePush());
+                    el.togglePush.addEventListener("change", () => this.handleTogglePush());
                     document.addEventListener("touchstart", (e) => {
                         if (Renderer.elements.msgMenu.classList.contains("active") && !Renderer.elements.msgMenu.contains(e.target)) {
                             this.closeMsgMenu();
@@ -2822,15 +2807,26 @@
                     }
                 },
 
-                handleEnablePush() {
-                    Push.setup().then((ok) => {
-                        if (ok) Renderer.showToast("通知已开启 ✨");
-                        else if ("Notification" in window && Notification.permission === "denied") {
-                            Renderer.showToast("通知被拒绝，请在系统设置里允许");
-                        } else {
-                            Renderer.showToast("开启失败，请重试");
-                        }
-                    });
+                handleTogglePush() {
+                    const checked = Renderer.elements.togglePush.checked;
+                    if (checked) {
+                        Push.setup().then((ok) => {
+                            if (ok) {
+                                AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
+                                Renderer.showToast("通知已开启 ✨");
+                            } else {
+                                Renderer.elements.togglePush.checked = false;
+                                if ("Notification" in window && Notification.permission === "denied") {
+                                    Renderer.showToast("通知被拒绝，请在系统设置里允许");
+                                } else {
+                                    Renderer.showToast("开启失败，请重试");
+                                }
+                            }
+                        });
+                    } else {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: false } });
+                        Renderer.showToast("通知已关闭");
+                    }
                 },
 
                 handleTouchStart(e) {
@@ -3571,6 +3567,7 @@
                     const delay = Math.random() * maxDelay;
                     AppState.isTyping = true;
                     Renderer.renderChat();
+                    Renderer.updateHeader();
                     if (AppState.typingTimer) clearTimeout(AppState.typingTimer);
                     AppState.typingTimer = setTimeout(() => {
                         AppState.typingTimer = null;
@@ -3608,10 +3605,13 @@
                 },
                 _onTaMessage(type, text) {
                     const message = type === "sticker" ? "他给你发了个表情包" : text;
+                    const shouldNotify = !AppState.isChatViewActive || document.visibilityState !== "visible";
+                    if (!shouldNotify) return;
                     const unread = (AppState.getData().unreadCount || 0) + 1;
                     AppState.updateData({ unreadCount: unread });
                     Renderer.updateUnreadBadge();
-                    if (!AppState.isChatViewActive || document.visibilityState !== "visible") {
+                    const cfg = AppState.getData().config || {};
+                    if (cfg.pushEnabled) {
                         Push.notify(message);
                     }
                 },
@@ -3818,7 +3818,9 @@
                 if ("serviceWorker" in navigator) {
                     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
                     if ("Notification" in window && Notification.permission === "granted") {
-                        Push.setup();
+                        Push.setup().then((ok) => {
+                            if (ok) AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
+                        });
                     }
                 }
             }
