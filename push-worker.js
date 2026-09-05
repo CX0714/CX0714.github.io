@@ -87,38 +87,143 @@ async function sendToSubscription(subscription, message, vapid, privKey) {
   return resp.status;
 }
 
+function sanitizeDeviceId(id) {
+  return String(id || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 64);
+}
+
+function clampNum(v, min, max, def) {
+  const n = Number(v);
+  if (!isFinite(n)) return def;
+  return Math.max(min, Math.min(max, Math.round(n)));
+}
+
+function randDelay(minMinutes, maxMinutes) {
+  const min = Math.max(1, minMinutes);
+  const max = Math.max(min, maxMinutes);
+  return (min + Math.random() * (max - min)) * 60000;
+}
+
+function jsonResponse(obj, status, cors) {
+  return new Response(JSON.stringify(obj), { status: status || 200, headers: { "Content-Type": "application/json", ...cors } });
+}
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+async function handleScheduled(env) {
+  const now = Date.now();
+  const list = await env.PHILOS_PUSH.list({ prefix: "profile:" });
+  const vapid = await getVapidKeys(env);
+  const privKey = await importPrivKey(vapid.privateKeyJwk);
+  for (const item of list.keys) {
+    const deviceId = item.name.slice("profile:".length);
+    let profile = await env.PHILOS_PUSH.get(item.name, "json");
+    if (!profile || !profile.enabled) continue;
+    if (!profile.nextPushAt || now < profile.nextPushAt) continue;
+
+    const cards = Array.isArray(profile.cards) ? profile.cards.map(s => String(s).trim()).filter(Boolean) : [];
+    const minMinutes = clampNum(profile.minMinutes, 1, 1440, 5);
+    const maxMinutes = clampNum(profile.maxMinutes, 1, 1440, 120);
+
+    if (cards.length === 0) {
+      profile.nextPushAt = now + randDelay(minMinutes, maxMinutes);
+      await env.PHILOS_PUSH.put(item.name, JSON.stringify(profile));
+      continue;
+    }
+
+    const count = 1 + Math.floor(Math.random() * 2);
+    const used = new Set();
+    const picked = [];
+    for (let i = 0; i < count; i++) {
+      const c = cards[Math.floor(Math.random() * cards.length)];
+      if (!used.has(c)) { used.add(c); picked.push(c); }
+    }
+    if (picked.length === 0) picked.push(cards[0]);
+
+    const sub = await env.PHILOS_PUSH.get("sub:" + deviceId, "json");
+    if (sub) {
+      try {
+        const status = await sendToSubscription(sub, picked.join("\n"), vapid, privKey);
+        if (status === 404 || status === 410) {
+          await env.PHILOS_PUSH.delete("sub:" + deviceId);
+          profile.enabled = false;
+        }
+      } catch (e) {}
+    }
+
+    const t = new Date().toISOString();
+    for (const text of picked) {
+      const key = "msg:" + deviceId + ":" + Date.now().toString(36) + ":" + Math.random().toString(36).slice(2, 8);
+      await env.PHILOS_PUSH.put(key, JSON.stringify({ text: text, time: t }));
+    }
+
+    profile.nextPushAt = now + randDelay(minMinutes, maxMinutes);
+    await env.PHILOS_PUSH.put(item.name, JSON.stringify(profile));
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const cors = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    };
-    if (request.method === "OPTIONS") return new Response(null, { headers: cors });
+    if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
     if (request.method === "GET" && url.pathname === "/vapid-public-key") {
       const vapid = await getVapidKeys(env);
-      return new Response(JSON.stringify({ publicKey: vapid.publicKey }), { headers: { "Content-Type": "application/json", ...cors } });
+      return jsonResponse({ publicKey: vapid.publicKey }, 200, corsHeaders);
     }
 
     if (request.method === "POST" && url.pathname === "/subscribe") {
-      const body = await request.json();
+      let body;
+      try { body = await request.json(); } catch (e) { body = {}; }
+      const deviceId = sanitizeDeviceId(body.deviceId);
       const subscription = body.subscription;
-      if (!subscription || !subscription.endpoint) {
-        return new Response(JSON.stringify({ error: "bad subscription" }), { status: 400, headers: { "Content-Type": "application/json", ...cors } });
+      if (!deviceId || !subscription || !subscription.endpoint) {
+        return jsonResponse({ error: "bad request" }, 400, corsHeaders);
       }
-      const key = "sub:" + b64url(new TextEncoder().encode(subscription.endpoint)).slice(0, 50);
-      await env.PHILOS_PUSH.put(key, JSON.stringify(subscription));
-      return new Response(JSON.stringify({ ok: true }), { headers: { "Content-Type": "application/json", ...cors } });
+      await env.PHILOS_PUSH.put("sub:" + deviceId, JSON.stringify(subscription));
+
+      const cards = Array.isArray(body.cards) ? body.cards.map(s => String(s).trim()).filter(Boolean).slice(0, 500) : [];
+      const minMinutes = clampNum(body.minMinutes, 1, 1440, 5);
+      const maxMinutes = clampNum(body.maxMinutes, 1, 1440, 120);
+      let profile = await env.PHILOS_PUSH.get("profile:" + deviceId, "json");
+      if (!profile) profile = { nextPushAt: 0 };
+      profile.cards = cards;
+      profile.minMinutes = minMinutes;
+      profile.maxMinutes = maxMinutes;
+      profile.enabled = !!body.enabled;
+      if (profile.enabled && !profile.nextPushAt) {
+        profile.nextPushAt = Date.now() + randDelay(minMinutes, maxMinutes);
+      }
+      await env.PHILOS_PUSH.put("profile:" + deviceId, JSON.stringify(profile));
+      return jsonResponse({ ok: true }, 200, corsHeaders);
+    }
+
+    if (request.method === "POST" && url.pathname === "/profile") {
+      let body;
+      try { body = await request.json(); } catch (e) { body = {}; }
+      const deviceId = sanitizeDeviceId(body.deviceId);
+      if (!deviceId) return jsonResponse({ error: "bad request" }, 400, corsHeaders);
+      let profile = await env.PHILOS_PUSH.get("profile:" + deviceId, "json");
+      if (!profile) profile = { nextPushAt: 0 };
+      if (Array.isArray(body.cards)) {
+        profile.cards = body.cards.map(s => String(s).trim()).filter(Boolean).slice(0, 500);
+      }
+      if (body.minMinutes != null) profile.minMinutes = clampNum(body.minMinutes, 1, 1440, 5);
+      if (body.maxMinutes != null) profile.maxMinutes = clampNum(body.maxMinutes, 1, 1440, 120);
+      if (body.enabled != null) profile.enabled = !!body.enabled;
+      if (profile.enabled && !profile.nextPushAt) {
+        profile.nextPushAt = Date.now() + randDelay(profile.minMinutes || 5, profile.maxMinutes || 120);
+      }
+      await env.PHILOS_PUSH.put("profile:" + deviceId, JSON.stringify(profile));
+      return jsonResponse({ ok: true }, 200, corsHeaders);
     }
 
     if (request.method === "POST" && url.pathname === "/notify") {
       let message = "他给你发消息了";
-      try {
-        const body = await request.json();
-        if (body.message) message = String(body.message);
-      } catch (e) {}
+      try { const b = await request.json(); if (b.message) message = String(b.message); } catch (e) {}
       const vapid = await getVapidKeys(env);
       const privKey = await importPrivKey(vapid.privateKeyJwk);
       const list = await env.PHILOS_PUSH.list({ prefix: "sub:" });
@@ -133,9 +238,27 @@ export default {
           else failed++;
         } catch (e) { failed++; }
       }
-      return new Response(JSON.stringify({ sent, failed }), { headers: { "Content-Type": "application/json", ...cors } });
+      return jsonResponse({ sent, failed }, 200, corsHeaders);
     }
 
-    return new Response("Philos push service", { headers: cors });
-  }
+    if (request.method === "GET" && url.pathname === "/messages") {
+      const deviceId = sanitizeDeviceId(url.searchParams.get("deviceId") || "");
+      if (!deviceId) return jsonResponse({ messages: [] }, 200, corsHeaders);
+      const list = await env.PHILOS_PUSH.list({ prefix: "msg:" + deviceId + ":" });
+      const messages = [];
+      for (const item of list.keys) {
+        const m = await env.PHILOS_PUSH.get(item.name, "json");
+        if (m) messages.push(m);
+        await env.PHILOS_PUSH.delete(item.name);
+      }
+      messages.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+      return jsonResponse({ messages }, 200, corsHeaders);
+    }
+
+    return new Response("Philos push service", { headers: corsHeaders });
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(handleScheduled(env));
+  },
 };
