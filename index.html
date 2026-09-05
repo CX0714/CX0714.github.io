@@ -196,6 +196,7 @@
         }
         .app-icon:active { transform: scale(0.9); }
         .app-icon-box {
+            position: relative;
             width: 62px; height: 62px; border-radius: 15px;
             background: rgba(255,255,255,0.45);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -206,6 +207,20 @@
         }
         .app-icon-box svg { width: 36px; height: 36px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
         .app-label { font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); letter-spacing: 0.3px; }
+        .app-badge {
+            position: absolute;
+            top: -5px; right: -5px;
+            min-width: 19px; height: 19px;
+            padding: 0 5px;
+            border-radius: 10px;
+            background: #e04f4f;
+            color: #fff;
+            font-size: 11px; font-weight: 600;
+            display: none;
+            align-items: center; justify-content: center;
+            box-sizing: border-box;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
 
         .dock {
             margin-top: auto; display: flex; gap: 22px; justify-content: center;
@@ -911,6 +926,7 @@
                             <rect x="9" y="12" width="42" height="34" rx="12" fill="#fff"/>
                             <path d="M17 42 L17 52 L26.5 44 Z" fill="#fff"/>
                         </svg>
+                        <span class="app-badge" id="chatBadge" style="display:none;">0</span>
                     </span>
                     <span class="app-label">聊天</span>
                 </button>
@@ -1270,6 +1286,16 @@
                             <div class="hint">像后台放音乐一样循环播放一段无声音频，尽量让手机别冻结页面，让「主动发消息」更持久。会更耗电，锁屏界面可能显示「正在播放」。</div>
                         </div>
                     </div>
+
+                    <div class="settings-card" style="margin-top:16px;">
+                        <div class="settings-field">
+                            <div class="field-row">
+                                <span class="field-title">推送通知</span>
+                                <button class="btn btn-secondary" id="btnEnablePush">开启</button>
+                            </div>
+                            <div class="hint">开启后，他给你发消息时手机会弹通知（锁屏也能收到）。需要已把网站添加到主屏幕。</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1461,6 +1487,17 @@
                 return Date.now() + "_" + Math.random().toString(36).slice(2, 8);
             }
 
+            const PUSH_SERVER = "https://philos-push.philos-cx0714.workers.dev";
+
+            function urlBase64ToUint8Array(base64String) {
+                const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+                const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+                const rawData = atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+                return outputArray;
+            }
+
             const Storage = {
                 KEY: "private_chat_app_v1",
                 getDefaultData() {
@@ -1489,6 +1526,7 @@
                         emojis: ["😊", "🥰", "😘", "💛", "✨", "🌙", "💫", "🌸", "💕", "😌", "🥺", "😴", "😆", "🤗", "🫶", "💌", "🫧", "🌷", "🐰", "☁️"],
                         stickers: [],
                         chatHistory: [],
+                        unreadCount: 0,
                         hasCompletedOnboarding: false,
                         themeMode: "auto",
                         bgColor: "",
@@ -1518,6 +1556,7 @@
                     const defaults = this.getDefaultData();
                     const merged = { ...defaults, ...data, config: { ...defaults.config, ...(data.config || {}) } };
                     if (merged.bgColor === "#12111f") merged.bgColor = "";
+                    if (typeof merged.unreadCount !== "number") merged.unreadCount = 0;
                     // 迁移旧的单个纪念日数据
                     if (!Array.isArray(merged.anniversaries)) {
                         merged.anniversaries = [];
@@ -1572,12 +1611,49 @@
                 },
             };
 
+            const Push = {
+                async setup() {
+                    try {
+                        if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return false;
+                        const permission = await Notification.requestPermission();
+                        if (permission !== "granted") return false;
+                        const reg = await navigator.serviceWorker.ready;
+                        const resp = await fetch(PUSH_SERVER + "/vapid-public-key");
+                        const data = await resp.json();
+                        const keyBytes = urlBase64ToUint8Array(data.publicKey);
+                        let subscription = await reg.pushManager.getSubscription();
+                        if (!subscription) {
+                            subscription = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes });
+                        }
+                        await fetch(PUSH_SERVER + "/subscribe", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ subscription: subscription.toJSON() }),
+                        });
+                        return true;
+                    } catch (e) {
+                        console.warn("push setup failed", e);
+                        return false;
+                    }
+                },
+                async notify(message) {
+                    try {
+                        await fetch(PUSH_SERVER + "/notify", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ message: message }),
+                        });
+                    } catch (e) {}
+                },
+            };
+
             const AppState = {
                 data: null,
                 isSettingsOpen: false,
                 isTyping: false,
                 typingTimer: null,
                 quoteId: null,
+                isChatViewActive: false,
                 init() {
                     this.data = Storage.load();
                     if (this.typingTimer) clearTimeout(this.typingTimer);
@@ -1784,6 +1860,7 @@
                         appAnniversary: document.getElementById("appAnniversary"),
                         appCards: document.getElementById("appCards"),
                         appAppearance: document.getElementById("appAppearance"),
+                        chatBadge: document.getElementById("chatBadge"),
                         homeBar: document.getElementById("homeBar"),
                         settingsHomeBar: document.getElementById("settingsHomeBar"),
                         anniversaryHomeBar: document.getElementById("anniversaryHomeBar"),
@@ -1881,6 +1958,7 @@
                         fileImportAll: document.getElementById("fileImportAll"),
                         btnClearChat: document.getElementById("btnClearChat"),
                         btnResetAll: document.getElementById("btnResetAll"),
+                        btnEnablePush: document.getElementById("btnEnablePush"),
                         welcomeModal: document.getElementById("welcomeModal"),
                         welcomeTaName: document.getElementById("welcomeTaName"),
                         welcomeMyName: document.getElementById("welcomeMyName"),
@@ -2016,6 +2094,17 @@
                     const daysText = this._calcAnniversaryText(active.date);
                     el.textContent = (active.title ? active.title + " " : "") + daysText;
                 },
+                updateUnreadBadge() {
+                    const count = AppState.getData().unreadCount || 0;
+                    const badge = this.elements.chatBadge;
+                    if (!badge) return;
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? "99+" : String(count);
+                        badge.style.display = "flex";
+                    } else {
+                        badge.style.display = "none";
+                    }
+                },
                 renderDesktop() {
                     const data = AppState.getData();
                     this.applyWallpaper();
@@ -2031,6 +2120,7 @@
                     this.elements.widgetMessage.textContent = msg;
                     this.updateDesktopTime();
                     this.updateDesktopCountdown();
+                    this.updateUnreadBadge();
                 },
                 renderAnniversary() {
                     const data = AppState.getData();
@@ -2062,16 +2152,23 @@
                     this.elements.anniversaryView.style.display = 'none';
                 },
                 showDesktop() {
+                    AppState.isChatViewActive = false;
                     this._hideAllViews();
                     this.elements.desktopView.style.display = 'block';
                     this.renderDesktop();
                 },
                 showChat() {
+                    AppState.isChatViewActive = true;
+                    if ((AppState.getData().unreadCount || 0) > 0) {
+                        AppState.updateData({ unreadCount: 0 });
+                    }
                     this._hideAllViews();
                     this.elements.chatView.style.display = 'block';
+                    this.updateUnreadBadge();
                     this.renderChat();
                 },
                 showAnniversary() {
+                    AppState.isChatViewActive = false;
                     this._hideAllViews();
                     this.elements.anniversaryView.style.display = 'block';
                     this.renderAnniversary();
@@ -2560,6 +2657,7 @@
                     el.btnQuote.addEventListener("click", () => this.handleQuote());
                     el.btnDeleteMsg.addEventListener("click", () => this.handleDeleteMsg());
                     el.quoteBarClose.addEventListener("click", () => Renderer.clearQuote());
+                    el.btnEnablePush.addEventListener("click", () => this.handleEnablePush());
                     document.addEventListener("touchstart", (e) => {
                         if (Renderer.elements.msgMenu.classList.contains("active") && !Renderer.elements.msgMenu.contains(e.target)) {
                             this.closeMsgMenu();
@@ -2722,6 +2820,17 @@
                             }
                         });
                     }
+                },
+
+                handleEnablePush() {
+                    Push.setup().then((ok) => {
+                        if (ok) Renderer.showToast("通知已开启 ✨");
+                        else if ("Notification" in window && Notification.permission === "denied") {
+                            Renderer.showToast("通知被拒绝，请在系统设置里允许");
+                        } else {
+                            Renderer.showToast("开启失败，请重试");
+                        }
+                    });
                 },
 
                 handleTouchStart(e) {
@@ -3480,8 +3589,10 @@
                         const msg = messages[idx++];
                         if (msg.type === "sticker") {
                             AppState.addMessage("ta", msg.src, "sticker");
+                            this._onTaMessage("sticker", "");
                         } else {
                             AppState.addMessage("ta", msg.text, "text", msg.quoteId);
+                            this._onTaMessage("text", msg.text);
                         }
                         Renderer.renderChat();
                         if (idx >= messages.length) {
@@ -3494,6 +3605,15 @@
                         }
                     };
                     step();
+                },
+                _onTaMessage(type, text) {
+                    const message = type === "sticker" ? "他给你发了个表情包" : text;
+                    const unread = (AppState.getData().unreadCount || 0) + 1;
+                    AppState.updateData({ unreadCount: unread });
+                    Renderer.updateUnreadBadge();
+                    if (!AppState.isChatViewActive || document.visibilityState !== "visible") {
+                        Push.notify(message);
+                    }
                 },
                 hasPending() {
                     return this.busy || this.queue.length > 0;
@@ -3697,6 +3817,9 @@
                 console.log("💌 私人对话空间已启动");
                 if ("serviceWorker" in navigator) {
                     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+                    if ("Notification" in window && Notification.permission === "granted") {
+                        Push.setup();
+                    }
                 }
             }
             if (document.readyState === "loading") {
