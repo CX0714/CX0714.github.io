@@ -134,31 +134,28 @@ async function handleScheduled(env) {
       continue;
     }
 
-    const count = 1 + Math.floor(Math.random() * 2);
-    const used = new Set();
-    const picked = [];
-    for (let i = 0; i < count; i++) {
-      const c = cards[Math.floor(Math.random() * cards.length)];
-      if (!used.has(c)) { used.add(c); picked.push(c); }
-    }
-    if (picked.length === 0) picked.push(cards[0]);
-
     const sub = await env.PHILOS_PUSH.get("sub:" + deviceId, "json");
-    if (sub) {
-      try {
-        const status = await sendToSubscription(sub, picked.join("\n"), vapid, privKey);
-        if (status === 404 || status === 410) {
-          await env.PHILOS_PUSH.delete("sub:" + deviceId);
-          profile.enabled = false;
-        }
-      } catch (e) {}
+    if (!sub) {
+      profile.enabled = false;
+      profile.nextPushAt = now + randDelay(minMinutes, maxMinutes);
+      await env.PHILOS_PUSH.put(item.name, JSON.stringify(profile));
+      continue;
     }
+
+    const card = cards[Math.floor(Math.random() * cards.length)];
+    const cloudId = "m_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+    const payload = JSON.stringify({ id: cloudId, text: card });
+
+    try {
+      const status = await sendToSubscription(sub, payload, vapid, privKey);
+      if (status === 404 || status === 410) {
+        await env.PHILOS_PUSH.delete("sub:" + deviceId);
+        profile.enabled = false;
+      }
+    } catch (e) {}
 
     const t = new Date().toISOString();
-    for (const text of picked) {
-      const key = "msg:" + deviceId + ":" + Date.now().toString(36) + ":" + Math.random().toString(36).slice(2, 8);
-      await env.PHILOS_PUSH.put(key, JSON.stringify({ text: text, time: t }));
-    }
+    await env.PHILOS_PUSH.put("msg:" + deviceId + ":" + cloudId, JSON.stringify({ id: cloudId, text: card, time: t }));
 
     profile.nextPushAt = now + randDelay(minMinutes, maxMinutes);
     await env.PHILOS_PUSH.put(item.name, JSON.stringify(profile));
