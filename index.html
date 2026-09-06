@@ -1423,6 +1423,7 @@
                                 </label>
                             </div>
                             <div class="hint">开启后，他给你发消息时手机会弹通知（锁屏也能收到）。需要已把网站添加到主屏幕。</div>
+                            <button class="btn btn-secondary" id="btnTestPush" style="margin-top:8px;">🔔 立即测试推送</button>
                         </div>
                     </div>
                 </div>
@@ -2187,6 +2188,7 @@
                         callMaxLabel: document.getElementById("callMaxLabel"),
                         toggleKeepAlive: document.getElementById("toggleKeepAlive"),
                         togglePush: document.getElementById("togglePush"),
+                        btnTestPush: document.getElementById("btnTestPush"),
                         inputBatchCards: document.getElementById("inputBatchCards"),
                         inputBatchCategory: document.getElementById("inputBatchCategory"),
                         btnBatchAdd: document.getElementById("btnBatchAdd"),
@@ -2941,6 +2943,7 @@
                     el.btnDeleteMsg.addEventListener("click", () => this.handleDeleteMsg());
                     el.quoteBarClose.addEventListener("click", () => Renderer.clearQuote());
                     el.togglePush.addEventListener("change", () => this.handleTogglePush());
+                    el.btnTestPush.addEventListener("click", () => this.handleTestPush());
                     document.addEventListener("touchstart", (e) => {
                         if (Renderer.elements.msgMenu.classList.contains("active") && !Renderer.elements.msgMenu.contains(e.target)) {
                             this.closeMsgMenu();
@@ -3144,6 +3147,28 @@
                         AutoMessage.start();
                         Renderer.showToast("通知已关闭");
                     }
+                },
+
+                handleTestPush() {
+                    if (!("serviceWorker" in navigator) || !("Notification" in window)) {
+                        Renderer.showToast("当前浏览器不支持推送");
+                        return;
+                    }
+                    if (Notification.permission !== "granted") {
+                        Renderer.showToast("系统通知权限未开启，请到系统设置允许「☆Philos」通知");
+                        return;
+                    }
+                    navigator.serviceWorker.ready.then((reg) => {
+                        return reg.showNotification("☆Philos", {
+                            body: "测试推送 ✨ 通知功能正常",
+                            icon: "icon-192.png",
+                            badge: "icon-192.png",
+                        });
+                    }).then(() => {
+                        Renderer.showToast("已弹出测试通知，请下拉查看通知栏");
+                    }).catch((e) => {
+                        Renderer.showToast("测试失败：" + (e && e.message ? e.message : "未知错误"));
+                    });
                 },
 
                 handleTouchStart(e) {
