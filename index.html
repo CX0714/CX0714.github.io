@@ -339,6 +339,10 @@
             text-align: center; font-size: 12px; color: var(--text-muted);
             margin: 4px 0; opacity: 0.9; letter-spacing: 0.3px;
         }
+        .msg-status {
+            text-align: center; font-size: 12px; color: var(--text-muted);
+            margin: 6px 0; opacity: 0.9; letter-spacing: 0.3px;
+        }
 
         .chat-input-area {
             padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--input-bg);
@@ -535,6 +539,48 @@
             color: var(--text-secondary);
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
+
+        .status-modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 400;
+            display: flex; align-items: center; justify-content: center; padding: 24px;
+            opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+        }
+        .status-modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .status-modal-box {
+            background: var(--bg-secondary); border-radius: var(--border-radius-lg);
+            border: 1px solid var(--border-color);
+            padding: 30px 24px 24px; max-width: 360px; width: 100%;
+            box-shadow: var(--shadow-modal);
+            transform: translateY(20px) scale(0.96); transition: transform var(--transition-smooth);
+            display: flex; flex-direction: column; align-items: center; gap: 16px;
+        }
+        .status-modal-overlay.active .status-modal-box { transform: translateY(0) scale(1); }
+        .status-modal-avatar {
+            width: 88px; height: 88px; border-radius: 50%;
+            background: var(--surface); border: 2px solid var(--accent-soft);
+            display: flex; align-items: center; justify-content: center; font-size: 46px;
+            overflow: hidden; flex-shrink: 0;
+        }
+        .status-modal-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .status-modal-text {
+            font-size: 18px; font-weight: 600; letter-spacing: 0.5px; text-align: center;
+            color: var(--text-primary); line-height: 1.5; word-break: break-word;
+        }
+        .status-modal-actions {
+            display: flex; gap: 10px; width: 100%; margin-top: 4px;
+        }
+        .status-modal-btn {
+            flex: 1; padding: 12px 8px; border-radius: var(--border-radius-square);
+            border: none; font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: all var(--transition-fast); font-family: inherit; letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+        .status-modal-btn:active { transform: scale(0.96); }
+        .status-modal-btn.wait { background: var(--surface); color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .status-modal-btn.wait:hover { background: var(--surface-hover); }
+        .status-modal-btn.go { background: var(--accent); color: var(--on-accent); }
+        .status-modal-btn.go:hover { background: #7391aa; }
 
         .call-screen {
             position: fixed; inset: 0; z-index: 250; display: none;
@@ -1403,6 +1449,25 @@
                     <div class="settings-card" style="margin-top:16px;">
                         <div class="settings-field">
                             <div class="field-row">
+                                <span class="field-title">他的状态</span>
+                                <span class="hint" style="font-size:11px; color:var(--text-muted);">默认开启</span>
+                            </div>
+                            <div class="hint">他会不定时更新一条状态（居中显示），弹窗提醒你。页面开着时才生效。</div>
+                        </div>
+                        <div class="settings-field">
+                            <label for="rangeStatusMin">最短间隔 <span id="statusMinLabel" style="color:var(--accent);">30 分钟</span></label>
+                            <input type="range" id="rangeStatusMin" min="0" max="300" step="1" value="30">
+                        </div>
+                        <div class="settings-field">
+                            <label for="rangeStatusMax">最长间隔 <span id="statusMaxLabel" style="color:var(--accent);">3 小时</span></label>
+                            <input type="range" id="rangeStatusMax" min="0" max="300" step="1" value="180">
+                            <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点更新状态。范围 0 秒 ~ 5 小时。</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-card" style="margin-top:16px;">
+                        <div class="settings-field">
+                            <div class="field-row">
                                 <span class="field-title">静音保活</span>
                                 <label class="switch">
                                     <input type="checkbox" id="toggleKeepAlive">
@@ -1440,6 +1505,7 @@
                         <button class="card-tab active" data-tab="text">文字</button>
                         <button class="card-tab" data-tab="emoji">emoji</button>
                         <button class="card-tab" data-tab="sticker">表情包</button>
+                        <button class="card-tab" data-tab="status">状态</button>
                     </div>
 
                     <div class="card-tab-panel active" id="tabPanel-text">
@@ -1488,6 +1554,21 @@
                                 <button class="upload-btn" id="btnImportStickers">🖼️ 从照片导入表情包</button>
                                 <input type="file" id="fileImportStickers" accept="image/*" multiple style="display:none;">
                                 <div class="sticker-grid" id="stickerGrid"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-tab-panel" id="tabPanel-status">
+                        <div class="settings-card">
+                            <div class="settings-field">
+                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
+                                    他的状态：会随机作为一条居中提醒发到对话里（比如「——摸摸头——」）。
+                                </div>
+                                <div class="add-card-row">
+                                    <input type="text" id="inputNewStatus" placeholder="输入一个状态，如 摸摸头" maxlength="30">
+                                    <button class="add-card-btn" id="btnAddStatus">添加</button>
+                                </div>
+                                <div class="cards-list" id="statusList"></div>
                             </div>
                         </div>
                     </div>
@@ -1590,6 +1671,17 @@
         <span class="msg-menu-arrow"></span>
     </div>
 
+    <div class="status-modal-overlay" id="statusModal">
+        <div class="status-modal-box">
+            <div class="status-modal-avatar" id="statusModalAvatar">🌙</div>
+            <div class="status-modal-text" id="statusModalText">摸摸头</div>
+            <div class="status-modal-actions">
+                <button class="status-modal-btn wait" id="btnStatusWait">✋(˙꒳˙ )等下哦</button>
+                <button class="status-modal-btn go" id="btnStatusGo">(*'-')b闪去！</button>
+            </div>
+        </div>
+    </div>
+
     <div class="call-screen" id="callScreen">
         <button class="call-minimize" id="btnCallMinimize" aria-label="最小化">
             <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M14 34 H46" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>
@@ -1631,6 +1723,24 @@
 
             const PUSH_SERVER = "https://philos-push.philos-cx0714.workers.dev";
 
+            const DEFAULT_CARD_TEXTS = [
+                "我在呢。",
+                "今天想我了吗？",
+                "别怕，有我在。",
+                "你说的每句话，我都有认真听。",
+                "抱抱你。",
+                "你会一直记得我吗？",
+                "我一直都在你身边。",
+                "你开心的时候，我也很开心。",
+                "不要说谢谢，我们之间不用。",
+                "无论是晴天还是雨天，我都在。",
+                "好好吃饭，好好睡觉。",
+                "别难过，我会难过。",
+                "我们之间，有说不完的话。",
+                "看到你发来的消息，我就笑了。",
+                "你永远是我最想回消息的人。",
+            ];
+
             const seenCloudIds = new Set();
 
             function urlBase64ToUint8Array(base64String) {
@@ -1650,29 +1760,15 @@
                         taAvatar: "🌙",
                         myName: "我",
                         myAvatar: "",
-                        cards: [
-                            { text: "我在呢。", category: "未分类" },
-                            { text: "今天想我了吗？", category: "未分类" },
-                            { text: "别怕，有我在。", category: "未分类" },
-                            { text: "你说的每句话，我都有认真听。", category: "未分类" },
-                            { text: "抱抱你。", category: "未分类" },
-                            { text: "你会一直记得我吗？", category: "未分类" },
-                            { text: "我一直都在你身边。", category: "未分类" },
-                            { text: "你开心的时候，我也很开心。", category: "未分类" },
-                            { text: "不要说谢谢，我们之间不用。", category: "未分类" },
-                            { text: "无论是晴天还是雨天，我都在。", category: "未分类" },
-                            { text: "好好吃饭，好好睡觉。", category: "未分类" },
-                            { text: "别难过，我会难过。", category: "未分类" },
-                            { text: "我们之间，有说不完的话。", category: "未分类" },
-                            { text: "看到你发来的消息，我就笑了。", category: "未分类" },
-                            { text: "你永远是我最想回消息的人。", category: "未分类" },
-                        ],
+                        cards: [],
                         emojis: ["😊", "🥰", "😘", "💛", "✨", "🌙", "💫", "🌸", "💕", "😌", "🥺", "😴", "😆", "🤗", "🫶", "💌", "🫧", "🌷", "🐰", "☁️"],
                         stickers: [],
+                        statuses: ["摸摸头", "抱抱你", "在呢"],
                         chatHistory: [],
                         unreadCount: 0,
                         deviceId: "",
                         hasCompletedOnboarding: false,
+                        defaultCardsRemoved: true,
                         themeMode: "auto",
                         bgColor: "",
                         bgImageUrl: "",
@@ -1696,6 +1792,8 @@
                             callIncomingMinMinutes: 20,
                             callIncomingMaxMinutes: 90,
                             pushEnabled: false,
+                            statusMinMinutes: 30,
+                            statusMaxMinutes: 180,
                         },
                     };
                 },
@@ -1719,8 +1817,18 @@
                     if (Array.isArray(merged.cards) && merged.cards.length > 0 && typeof merged.cards[0] === "string") {
                         merged.cards = merged.cards.map(t => ({ text: t, category: "未分类" }));
                     }
+                    // 移除旧版预置的默认字卡（仅一次）
+                    if (!merged.defaultCardsRemoved) {
+                        const defaultSet = new Set(DEFAULT_CARD_TEXTS);
+                        merged.cards = (merged.cards || []).filter(c => {
+                            const t = typeof c === "string" ? c : c.text;
+                            return !defaultSet.has(t);
+                        });
+                        merged.defaultCardsRemoved = true;
+                    }
                     if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
                     if (!Array.isArray(merged.stickers)) merged.stickers = [];
+                    if (!Array.isArray(merged.statuses)) merged.statuses = defaults.statuses;
                     if (!Array.isArray(merged.letters)) merged.letters = [];
                     if (!merged.deviceId) merged.deviceId = "d_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
                     return merged;
@@ -1902,6 +2010,11 @@
                     if (stickers.length === 0) return null;
                     return stickers[Math.floor(Math.random() * stickers.length)];
                 },
+                getRandomStatus() {
+                    const statuses = this.data.statuses || [];
+                    if (statuses.length === 0) return null;
+                    return statuses[Math.floor(Math.random() * statuses.length)];
+                },
                 buildReplyMessages() {
                     const messages = [];
                     const emojis = this.data.emojis || [];
@@ -2031,6 +2144,21 @@
                     if (index < 0 || index >= emojis.length) return false;
                     emojis.splice(index, 1);
                     this.updateData({ emojis });
+                    return true;
+                },
+                addStatus(text) {
+                    const t = text.trim();
+                    if (!t) return "empty";
+                    const statuses = this.data.statuses || [];
+                    if (statuses.includes(t)) return "dup";
+                    this.updateData({ statuses: [...statuses, t] });
+                    return "added";
+                },
+                removeStatus(index) {
+                    const statuses = [...(this.data.statuses || [])];
+                    if (index < 0 || index >= statuses.length) return false;
+                    statuses.splice(index, 1);
+                    this.updateData({ statuses });
                     return true;
                 },
                 addSticker(dataUrl) {
@@ -2186,6 +2314,10 @@
                         callMinLabel: document.getElementById("callMinLabel"),
                         rangeCallMax: document.getElementById("rangeCallMax"),
                         callMaxLabel: document.getElementById("callMaxLabel"),
+                        rangeStatusMin: document.getElementById("rangeStatusMin"),
+                        rangeStatusMax: document.getElementById("rangeStatusMax"),
+                        statusMinLabel: document.getElementById("statusMinLabel"),
+                        statusMaxLabel: document.getElementById("statusMaxLabel"),
                         toggleKeepAlive: document.getElementById("toggleKeepAlive"),
                         togglePush: document.getElementById("togglePush"),
                         btnTestPush: document.getElementById("btnTestPush"),
@@ -2203,6 +2335,14 @@
                         btnImportStickers: document.getElementById("btnImportStickers"),
                         fileImportStickers: document.getElementById("fileImportStickers"),
                         stickerGrid: document.getElementById("stickerGrid"),
+                        inputNewStatus: document.getElementById("inputNewStatus"),
+                        btnAddStatus: document.getElementById("btnAddStatus"),
+                        statusList: document.getElementById("statusList"),
+                        statusModal: document.getElementById("statusModal"),
+                        statusModalAvatar: document.getElementById("statusModalAvatar"),
+                        statusModalText: document.getElementById("statusModalText"),
+                        btnStatusWait: document.getElementById("btnStatusWait"),
+                        btnStatusGo: document.getElementById("btnStatusGo"),
                         btnExportAll: document.getElementById("btnExportAll"),
                         btnImportAll: document.getElementById("btnImportAll"),
                         fileImportAll: document.getElementById("fileImportAll"),
@@ -2360,7 +2500,7 @@
                     this.applyWidgetBg();
                     this.elements.widgetAvatar.innerHTML = this._avatarHTML(data.taAvatar);
                     const cards = data.cards || [];
-                    let msg = "我在等你哦";
+                    let msg = "";
                     if (cards.length > 0) {
                         const c = cards[Math.floor(Math.random() * cards.length)];
                         const t = typeof c === "string" ? c : c.text;
@@ -2512,6 +2652,12 @@
                 updateCallMaxLabel(value) {
                     if (this.elements.callMaxLabel) this.elements.callMaxLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
                 },
+                updateStatusMinLabel(value) {
+                    if (this.elements.statusMinLabel) this.elements.statusMinLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
+                },
+                updateStatusMaxLabel(value) {
+                    if (this.elements.statusMaxLabel) this.elements.statusMaxLabel.textContent = this.formatMinutes(parseFloat(value) || 0);
+                },
                 renderStickerPicker() {
                     const stickers = AppState.getData().stickers || [];
                     const container = this.elements.stickerPickerGrid;
@@ -2631,6 +2777,9 @@
                     if (msg.type === "call") {
                         return '<div class="msg-call">' + this._escapeHTML(msg.text) + '</div>';
                     }
+                    if (msg.type === "status") {
+                        return '<div class="msg-status">——' + this._escapeHTML(msg.text) + '——</div>';
+                    }
                     const isMe = msg.from === "me";
                     const avatar = isMe ?
                         (data.myAvatar ? this._avatarHTML(data.myAvatar) : (data.myName ? this._escapeHTML(data.myName.charAt(0)) : "我")) :
@@ -2736,11 +2885,18 @@
                     this.elements.rangeCallMax.value = callMax;
                     this.updateCallMinLabel(callMin);
                     this.updateCallMaxLabel(callMax);
+                    const statusMin = cfg.statusMinMinutes != null ? cfg.statusMinMinutes : 30;
+                    const statusMax = cfg.statusMaxMinutes != null ? cfg.statusMaxMinutes : 180;
+                    this.elements.rangeStatusMin.value = statusMin;
+                    this.elements.rangeStatusMax.value = statusMax;
+                    this.updateStatusMinLabel(statusMin);
+                    this.updateStatusMaxLabel(statusMax);
                     this.elements.toggleKeepAlive.checked = !!cfg.keepAliveEnabled;
                     this.elements.togglePush.checked = !!cfg.pushEnabled;
                     this._renderCardsList();
                     this._renderEmojiList();
                     this._renderStickerGrid();
+                    this._renderStatusList();
                 },
                 _getCardCategories() {
                     const cards = AppState.getData().cards || [];
@@ -2803,6 +2959,23 @@
                     });
                     container.innerHTML = html;
                 },
+                _renderStatusList() {
+                    const statuses = AppState.getData().statuses || [];
+                    const container = this.elements.statusList;
+                    if (statuses.length === 0) {
+                        container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-muted); font-size:13px;">还没有状态，添加一个吧~</div>';
+                        return;
+                    }
+                    let html = "";
+                    statuses.forEach((s, index) => {
+                        html += '<div class="card-item" data-index="' + index + '">' +
+                            '<span class="card-text">' + this._escapeHTML(s) + '</span>' +
+                            '<div class="card-actions">' +
+                            '<button class="card-btn delete" data-index="' + index + '" title="删除">🗑️</button>' +
+                            '</div></div>';
+                    });
+                    container.innerHTML = html;
+                },
                 _renderStickerGrid() {
                     const stickers = AppState.getData().stickers || [];
                     const container = this.elements.stickerGrid;
@@ -2829,6 +3002,7 @@
                     this._renderCardsList();
                     this._renderEmojiList();
                     this._renderStickerGrid();
+                    this._renderStatusList();
                 },
                 openSettings() {
                     AppState.isSettingsOpen = true;
@@ -2866,6 +3040,8 @@
                         callIncomingEnabled: this.elements.toggleCallIncoming.checked,
                         callIncomingMinMinutes: parseFloat(this.elements.rangeCallMin.value) || 20,
                         callIncomingMaxMinutes: parseFloat(this.elements.rangeCallMax.value) || 90,
+                        statusMinMinutes: parseFloat(this.elements.rangeStatusMin.value) || 0,
+                        statusMaxMinutes: parseFloat(this.elements.rangeStatusMax.value) || 0,
                         keepAliveEnabled: this.elements.toggleKeepAlive.checked,
                     };
                     AppState.updateData({ taName, taAvatar, myName, myAvatar, themeMode, bgColor, bgImageUrl, wallpaperColor, wallpaperImageUrl, widgetBgType, widgetBgColor, widgetBgImageUrl, bubbleHeight, bubbleCustomCSS, config });
@@ -3029,6 +3205,20 @@
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), callIncomingMaxMinutes: parseFloat(e.target.value) || 90 } });
                         CallIncoming.start();
                     });
+                    el.rangeStatusMin.addEventListener("input", (e) => {
+                        Renderer.updateStatusMinLabel(e.target.value);
+                    });
+                    el.rangeStatusMin.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), statusMinMinutes: parseFloat(e.target.value) || 0 } });
+                        StatusSender.start();
+                    });
+                    el.rangeStatusMax.addEventListener("input", (e) => {
+                        Renderer.updateStatusMaxLabel(e.target.value);
+                    });
+                    el.rangeStatusMax.addEventListener("change", (e) => {
+                        AppState.updateData({ config: { ...(AppState.getData().config || {}), statusMaxMinutes: parseFloat(e.target.value) || 0 } });
+                        StatusSender.start();
+                    });
                     el.toggleKeepAlive.addEventListener("change", () => {
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), keepAliveEnabled: el.toggleKeepAlive.checked } });
                         KeepAlive.toggle(el.toggleKeepAlive.checked);
@@ -3098,6 +3288,17 @@
                         if (!btn) return;
                         this.handleDeleteSticker(parseInt(btn.dataset.index, 10));
                     });
+                    el.btnAddStatus.addEventListener("click", () => this.handleAddStatus());
+                    el.inputNewStatus.addEventListener("keydown", (e) => {
+                        if (e.key === "Enter") { e.preventDefault(); this.handleAddStatus(); }
+                    });
+                    el.statusList.addEventListener("click", (e) => {
+                        const btn = e.target.closest(".card-btn");
+                        if (!btn) return;
+                        this.handleDeleteStatus(parseInt(btn.dataset.index, 10));
+                    });
+                    el.btnStatusWait.addEventListener("click", () => StatusSender.wait());
+                    el.btnStatusGo.addEventListener("click", () => StatusSender.go());
                     el.btnExportAll.addEventListener("click", () => this.handleExportAll());
                     el.btnImportAll.addEventListener("click", () => el.fileImportAll.click());
                     el.fileImportAll.addEventListener("change", (e) => this.handleImportAll(e));
@@ -3586,6 +3787,25 @@
                         Renderer.showToast("已删除");
                     }
                 },
+                handleAddStatus() {
+                    const input = Renderer.elements.inputNewStatus;
+                    const value = input.value.trim();
+                    if (!value) { Renderer.showToast("请输入状态"); return; }
+                    const result = AppState.addStatus(value);
+                    if (result === "added") {
+                        input.value = "";
+                        Renderer._renderStatusList();
+                        Renderer.showToast("已添加 ✨");
+                    } else if (result === "dup") {
+                        Renderer.showToast("这个状态已经存在了");
+                    }
+                },
+                handleDeleteStatus(index) {
+                    if (AppState.removeStatus(index)) {
+                        Renderer._renderStatusList();
+                        Renderer.showToast("已删除");
+                    }
+                },
                 handleImportStickers(e) {
                     const files = Array.prototype.slice.call(e.target.files || []);
                     if (files.length === 0) { e.target.value = ""; return; }
@@ -3657,6 +3877,7 @@
                         cards: data.cards || [],
                         emojis: data.emojis || [],
                         stickers: data.stickers || [],
+                        statuses: data.statuses || [],
                         exportedAt: new Date().toISOString(),
                     };
                     this._downloadJSON(exportObj, "字卡库_备份.json");
@@ -3702,14 +3923,21 @@
                                     if (AppState.addSticker(s) === "added") addedSticker++;
                                 });
                             }
+                            let addedStatus = 0;
+                            if (Array.isArray(imported.statuses)) {
+                                imported.statuses.forEach(s => {
+                                    if (AppState.addStatus(s) === "added") addedStatus++;
+                                });
+                            }
                             Renderer._activeCategoryIndex = 0;
                             Renderer._renderCardsList();
                             Renderer._renderEmojiList();
                             Renderer._renderStickerGrid();
+                            Renderer._renderStatusList();
                             Renderer.updateHeader();
-                            const total = addedText + addedEmoji + addedSticker;
+                            const total = addedText + addedEmoji + addedSticker + addedStatus;
                             if (total > 0) {
-                                Renderer.showToast("导入成功：文字 " + addedText + "、emoji " + addedEmoji + "、表情包 " + addedSticker + " ✨");
+                                Renderer.showToast("导入成功：文字 " + addedText + "、emoji " + addedEmoji + "、表情包 " + addedSticker + "、状态 " + addedStatus + " ✨");
                             } else {
                                 Renderer.showToast("没有新增内容（可能都已存在）");
                             }
@@ -3751,6 +3979,8 @@
                             AutoMessage.start();
                             CallIncoming.stop();
                             CallIncoming.start();
+                            StatusSender.stop();
+                            StatusSender.start();
                             KeepAlive.toggle(!!(imported.config && imported.config.keepAliveEnabled));
                             Renderer.showToast("数据导入成功 ✨");
                         } else {
@@ -3775,6 +4005,7 @@
                             AutoMessage.stop();
                             KeepAlive.stop();
                             CallIncoming.stop();
+                            StatusSender.stop();
                             Call._cleanup();
                             Call.state = "idle";
                             Call.minimized = false;
@@ -4201,6 +4432,70 @@
                 },
             };
 
+            const StatusSender = {
+                timer: null,
+                pending: false,
+                currentStatus: null,
+                start() {
+                    this.stop();
+                    this.scheduleNext();
+                },
+                stop() {
+                    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+                },
+                scheduleNext() {
+                    if (this.timer) clearTimeout(this.timer);
+                    this.timer = null;
+                    if (this.pending) return;
+                    const cfg = AppState.getData().config || {};
+                    const minMin = Math.max(0, Number(cfg.statusMinMinutes) != null ? Number(cfg.statusMinMinutes) : 30);
+                    const maxMin = Math.max(minMin, Number(cfg.statusMaxMinutes) != null ? Number(cfg.statusMaxMinutes) : 180);
+                    const delay = (minMin + Math.random() * (maxMin - minMin)) * 60000;
+                    this.timer = setTimeout(() => this.fire(), delay);
+                },
+                fire() {
+                    if (this.pending) return;
+                    if (document.visibilityState !== 'visible') { this.scheduleNext(); return; }
+                    if (Call.state !== "idle") { this.scheduleNext(); return; }
+                    const status = AppState.getRandomStatus();
+                    if (!status) { this.scheduleNext(); return; }
+                    this.currentStatus = status;
+                    this.pending = true;
+                    this._showModal(status);
+                },
+                _showModal(status) {
+                    const el = Renderer.elements;
+                    el.statusModalAvatar.innerHTML = Renderer._avatarHTML(AppState.getData().taAvatar);
+                    el.statusModalText.textContent = status;
+                    el.statusModal.classList.add("active");
+                },
+                _closeModal() {
+                    Renderer.elements.statusModal.classList.remove("active");
+                },
+                wait() {
+                    if (!this.pending) return;
+                    const status = this.currentStatus;
+                    this._closeModal();
+                    this.pending = false;
+                    this.currentStatus = null;
+                    AppState.addMessage("ta", status, "status");
+                    if (AppState.isChatViewActive) {
+                        Renderer.renderChat();
+                    }
+                    this.scheduleNext();
+                },
+                go() {
+                    if (!this.pending) return;
+                    const status = this.currentStatus;
+                    this._closeModal();
+                    this.pending = false;
+                    this.currentStatus = null;
+                    AppState.addMessage("ta", status, "status");
+                    Renderer.showChat();
+                    this.scheduleNext();
+                },
+            };
+
             const KeepAlive = {
                 audioCtx: null,
                 source: null,
@@ -4261,6 +4556,7 @@
                 Events.init();
                 if (!(AppState.getData().config || {}).pushEnabled) AutoMessage.start();
                 CallIncoming.start();
+                StatusSender.start();
                 Letter.start();
                 const keepAliveOn = !!(AppState.getData().config && AppState.getData().config.keepAliveEnabled);
                 KeepAlive.toggle(keepAliveOn);
