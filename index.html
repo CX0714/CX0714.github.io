@@ -189,15 +189,15 @@
             z-index: 3;
         }
 
-        .app-grid { display: grid; grid-template-columns: repeat(2, auto); gap: 22px; justify-content: start; margin-bottom: 30px; }
+        .app-grid { display: grid; grid-template-columns: repeat(2, auto); gap: 26px; justify-content: start; margin-bottom: 30px; }
         .app-icon {
-            display: flex; flex-direction: column; align-items: center; gap: 7px;
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
             border: none; background: transparent; cursor: pointer; padding: 0; font-family: inherit;
         }
         .app-icon:active { transform: scale(0.9); }
         .app-icon-box {
             position: relative;
-            width: 56px; height: 56px; border-radius: 14px;
+            width: 68px; height: 68px; border-radius: 16px;
             background: rgba(255,255,255,0.45);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border: 1.5px solid rgba(255,255,255,0.75);
@@ -205,8 +205,8 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.14);
             transition: all var(--transition-fast);
         }
-        .app-icon-box svg { width: 32px; height: 32px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
-        .app-label { font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); letter-spacing: 0.3px; }
+        .app-icon-box svg { width: 40px; height: 40px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+        .app-label { font-size: 12px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); letter-spacing: 0.3px; }
         .app-badge {
             position: absolute;
             top: -5px; right: -5px;
@@ -223,8 +223,8 @@
         }
 
         .dock {
-            margin-top: auto; display: flex; gap: 22px; justify-content: space-around;
-            padding: 14px 20px; border-radius: 26px;
+            margin-top: auto; display: flex; gap: 24px; justify-content: space-around;
+            padding: 16px 22px; border-radius: 28px;
             background: rgba(255,255,255,0.38);
             backdrop-filter: blur(22px) saturate(1.4); -webkit-backdrop-filter: blur(22px) saturate(1.4);
             border: 1px solid rgba(255,255,255,0.55);
