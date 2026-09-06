@@ -3160,15 +3160,16 @@
                     }
                     navigator.serviceWorker.ready.then((reg) => {
                         return reg.showNotification("☆Philos", {
-                            body: "测试推送 ✨ 通知功能正常",
+                            body: "测试①：手机这边正常 ✨",
                             icon: "icon-192.png",
                             badge: "icon-192.png",
                         });
                     }).then(() => {
-                        Renderer.showToast("已弹出测试通知，请下拉查看通知栏");
+                        Renderer.showToast("测试①已弹出，请立刻锁屏，3 秒内看测试②");
                     }).catch((e) => {
                         Renderer.showToast("测试失败：" + (e && e.message ? e.message : "未知错误"));
                     });
+                    Push.notify("测试②：后端推送正常 ✨");
                 },
 
                 handleTouchStart(e) {
