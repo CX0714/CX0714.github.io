@@ -189,7 +189,7 @@
             z-index: 3;
         }
 
-        .app-grid { display: flex; gap: 22px; justify-content: center; margin-bottom: 30px; }
+        .app-grid { display: grid; grid-template-columns: repeat(2, auto); gap: 22px; justify-content: start; margin-bottom: 30px; }
         .app-icon {
             display: flex; flex-direction: column; align-items: center; gap: 7px;
             border: none; background: transparent; cursor: pointer; padding: 0; font-family: inherit;
@@ -197,7 +197,7 @@
         .app-icon:active { transform: scale(0.9); }
         .app-icon-box {
             position: relative;
-            width: 62px; height: 62px; border-radius: 15px;
+            width: 56px; height: 56px; border-radius: 14px;
             background: rgba(255,255,255,0.45);
             backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border: 1.5px solid rgba(255,255,255,0.75);
@@ -205,7 +205,7 @@
             box-shadow: 0 4px 14px rgba(0,0,0,0.14);
             transition: all var(--transition-fast);
         }
-        .app-icon-box svg { width: 36px; height: 36px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
+        .app-icon-box svg { width: 32px; height: 32px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.25)); }
         .app-label { font-size: 11px; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,0.5); letter-spacing: 0.3px; }
         .app-badge {
             position: absolute;
@@ -223,7 +223,7 @@
         }
 
         .dock {
-            margin-top: auto; display: flex; gap: 22px; justify-content: center;
+            margin-top: auto; display: flex; gap: 22px; justify-content: space-around;
             padding: 14px 20px; border-radius: 26px;
             background: rgba(255,255,255,0.38);
             backdrop-filter: blur(22px) saturate(1.4); -webkit-backdrop-filter: blur(22px) saturate(1.4);
@@ -273,6 +273,16 @@
             animation: statusPulse 2s ease-in-out infinite;
         }
         @keyframes statusPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .header-home-btn {
+            width: 38px; height: 38px; border-radius: var(--border-radius-square);
+            border: none; background: var(--surface); color: var(--text-secondary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: all var(--transition-fast);
+        }
+        .header-home-btn svg { width: 22px; height: 22px; }
+        .header-home-btn:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .header-home-btn:active { transform: scale(0.9); }
 
         .chat-messages {
             flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px 16px;
@@ -331,7 +341,7 @@
         }
 
         .chat-input-area {
-            padding: 12px 16px 12px; background: var(--input-bg);
+            padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: var(--input-bg);
             backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
             border-top: 1px solid var(--border-color);
             display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0;
@@ -553,6 +563,35 @@
         .call-screen .call-end { background: #e04f4f; }
         .call-screen .call-accept { background: #34c759; }
 
+        .call-minimize {
+            position: absolute; top: calc(18px + env(safe-area-inset-top)); right: 18px;
+            width: 44px; height: 44px; border-radius: var(--border-radius-square);
+            border: none; background: rgba(255,255,255,0.14); color: #fff; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);
+            z-index: 2;
+        }
+        .call-minimize:active { transform: scale(0.9); }
+        .call-minimize svg { width: 24px; height: 24px; }
+        .call-mini {
+            position: fixed; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 260;
+            display: none; align-items: center; gap: 10px;
+            padding: 10px 14px; border-radius: 20px;
+            background: rgba(32,32,42,0.92); color: #fff;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.35); cursor: pointer;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+        }
+        .call-mini:active { transform: scale(0.96); }
+        .call-mini-avatar {
+            width: 40px; height: 40px; border-radius: var(--border-radius-square);
+            background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center;
+            font-size: 22px; overflow: hidden; flex-shrink: 0;
+        }
+        .call-mini-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .call-mini-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+        .call-mini-name { font-size: 14px; font-weight: 600; letter-spacing: 0.3px; }
+        .call-mini-status { font-size: 11px; color: rgba(255,255,255,0.7); letter-spacing: 0.3px; }
+        .call-mini-timer { font-size: 14px; font-weight: 600; color: #7bc67e; letter-spacing: 0.5px; }
+
         .panel-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100;
             opacity: 0; pointer-events: none; transition: opacity var(--transition-smooth);
@@ -633,6 +672,61 @@
             transition: all var(--transition-fast);
         }
         .anniversary-item-delete:hover { color: #e07a5f; background: var(--surface-hover); }
+
+        /* ===== 信笺视图 ===== */
+        .letter-view {
+            position: relative; height: 100%; width: 100%;
+            background: var(--bg-secondary); display: flex; flex-direction: column;
+        }
+        .letter-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 20px 20px 16px; border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        .letter-header h2 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+        .letter-close {
+            width: 36px; height: 36px; border-radius: var(--border-radius-square); border: none; background: var(--surface);
+            color: var(--text-secondary); font-size: 18px; cursor: pointer; display: flex;
+            align-items: center; justify-content: center; transition: all var(--transition-fast);
+        }
+        .letter-close:hover { background: var(--surface-hover); color: var(--text-primary); }
+        .letter-body {
+            flex: 1; overflow-y: auto; padding: 16px;
+            display: flex; flex-direction: column; gap: 16px;
+        }
+        .letter-compose {
+            display: flex; flex-direction: column; gap: 10px;
+            padding: 14px; border-radius: var(--border-radius-md);
+            background: var(--surface); border: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        .letter-compose textarea {
+            padding: 10px 14px; border-radius: var(--border-radius-sm); border: 1.5px solid var(--border-color);
+            background: var(--surface); color: var(--text-primary); font-size: 16px; outline: none; font-family: inherit;
+            resize: vertical; min-height: 80px; line-height: 1.5; letter-spacing: 0.3px;
+        }
+        .letter-compose textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .letter-compose-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .letter-hint { font-size: 12px; color: var(--text-muted); }
+        .letter-list { display: flex; flex-direction: column; gap: 12px; }
+        .letter-empty { text-align: center; padding: 36px 20px; color: var(--text-muted); font-size: 13px; }
+        .letter-item {
+            display: flex; flex-direction: column; gap: 6px;
+            padding: 14px; border-radius: var(--border-radius-md);
+            background: var(--surface); border: 1px solid var(--border-color);
+        }
+        .letter-time { font-size: 11px; color: var(--text-muted); text-align: center; }
+        .letter-bubble {
+            padding: 10px 14px; border-radius: var(--border-radius-md); font-size: 14px; line-height: 1.6;
+            word-wrap: break-word; word-break: break-word; white-space: pre-wrap; letter-spacing: 0.3px;
+        }
+        .letter-bubble.me {
+            align-self: flex-end; max-width: 88%;
+            background: var(--bubble-user-bg); color: var(--bubble-user-text); border-bottom-right-radius: 4px;
+        }
+        .letter-bubble.ta {
+            align-self: flex-start; max-width: 88%;
+            background: var(--bubble-ta-bg); color: var(--bubble-ta-text); border-bottom-left-radius: 4px;
+        }
+        .letter-bubble.waiting { color: var(--text-muted); font-style: italic; }
 
         .panel-header {
             padding: 20px 20px 16px; display: flex; align-items: center; justify-content: space-between;
@@ -942,6 +1036,20 @@
                     </span>
                     <span class="app-label">倒数日</span>
                 </button>
+                <button class="app-icon" id="appLetter" aria-label="信笺">
+                    <span class="app-icon-box">
+                        <svg viewBox="0 0 60 60" aria-hidden="true">
+                            <defs>
+                                <mask id="letterVMask">
+                                    <rect x="0" y="0" width="60" height="60" fill="#fff"/>
+                                    <path d="M13 21 L30 40 L47 21" fill="none" stroke="#000" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                                </mask>
+                            </defs>
+                            <rect x="9" y="15" width="42" height="32" rx="7" fill="#fff" mask="url(#letterVMask)"/>
+                        </svg>
+                    </span>
+                    <span class="app-label">信笺</span>
+                </button>
             </div>
             <div class="dock">
                 <button class="app-icon" id="appCards" aria-label="字卡库">
@@ -976,6 +1084,18 @@
                         </svg>
                     </span>
                 </button>
+                <button class="app-icon" id="appPermission" aria-label="权限">
+                    <span class="app-icon-box">
+                        <svg viewBox="0 0 60 60" aria-hidden="true">
+                            <g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="21" cy="25" r="9"/>
+                                <path d="M28 25 H46"/>
+                                <path d="M39 25 V33"/>
+                                <path d="M45 25 V30"/>
+                            </g>
+                        </svg>
+                    </span>
+                </button>
             </div>
         </div>
     </div>
@@ -990,6 +1110,9 @@
                         <div class="name" id="headerName">他</div>
                         <div class="status"><span class="dot"></span><span id="headerStatus">在等你说话</span></div>
                     </div>
+                    <button class="header-home-btn" id="btnHomeHeader" title="返回桌面" aria-label="返回桌面">
+                        <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 11 L54 32 H46 V48 H14 V32 H6 Z" fill="currentColor"/></svg>
+                    </button>
                 </header>
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="bottom-panel" id="bottomPanel">
@@ -1014,7 +1137,6 @@
                     <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">➤</button>
                     <button class="send-btn plus-btn" id="btnPlus" title="更多" aria-label="更多功能">＋</button>
                 </div>
-                <div class="home-bar" id="homeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
             </div>
         </div>
     </div>
@@ -1038,6 +1160,25 @@
             <div class="anniversary-list" id="anniversaryList"></div>
         </div>
         <div class="home-bar" id="anniversaryHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
+    </div>
+
+    <!-- 信笺视图 -->
+    <div class="letter-view" id="letterView" style="display:none;">
+        <div class="letter-header">
+            <h2>💌 信笺</h2>
+            <button class="letter-close" id="btnCloseLetter" aria-label="关闭">✕</button>
+        </div>
+        <div class="letter-body">
+            <div class="letter-compose">
+                <textarea id="inputLetterText" placeholder="写点什么给他…" maxlength="2000"></textarea>
+                <div class="letter-compose-actions">
+                    <span class="letter-hint">他会在 48 小时内回信</span>
+                    <button class="btn btn-primary" id="btnSendLetter">寄出</button>
+                </div>
+            </div>
+            <div class="letter-list" id="letterList"></div>
+        </div>
+        <div class="home-bar" id="letterHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
     </div>
 
     <div class="panel-overlay" id="panelOverlay"></div>
@@ -1449,11 +1590,23 @@
     </div>
 
     <div class="call-screen" id="callScreen">
+        <button class="call-minimize" id="btnCallMinimize" aria-label="最小化">
+            <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M14 34 H46" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>
+        </button>
         <div class="call-avatar" id="callAvatar">🌙</div>
         <div class="call-name" id="callName">他</div>
         <div class="call-status" id="callStatus">正在呼叫…</div>
         <div class="call-timer" id="callTimer"></div>
         <div class="call-actions" id="callActions"></div>
+    </div>
+
+    <div class="call-mini" id="callMini">
+        <div class="call-mini-avatar" id="callMiniAvatar">🌙</div>
+        <div class="call-mini-info">
+            <div class="call-mini-name" id="callMiniName">他</div>
+            <div class="call-mini-status" id="callMiniStatus">通话中</div>
+        </div>
+        <div class="call-mini-timer" id="callMiniTimer">00:00</div>
     </div>
 
     <input type="file" id="fileTakePhoto" accept="image/*" capture="environment" style="display:none;">
@@ -1531,6 +1684,7 @@
                         widgetBgImageUrl: "",
                         anniversaries: [],
                         activeAnniversaryId: "",
+                        letters: [],
                         config: {
                             replyMaxDelay: 3,
                             autoMessageEnabled: false,
@@ -1566,6 +1720,7 @@
                     }
                     if (!Array.isArray(merged.emojis)) merged.emojis = defaults.emojis;
                     if (!Array.isArray(merged.stickers)) merged.stickers = [];
+                    if (!Array.isArray(merged.letters)) merged.letters = [];
                     if (!merged.deviceId) merged.deviceId = "d_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
                     return merged;
                 },
@@ -1797,6 +1952,18 @@
                     }
                     return messages;
                 },
+                buildLetterReply() {
+                    const cards = this.data.cards || [];
+                    const pool = cards.map(c => typeof c === "string" ? c.text : c.text).filter(t => t && String(t).trim());
+                    if (pool.length === 0) return "";
+                    const shuffled = [...pool];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    const count = Math.min(shuffled.length, 5 + Math.floor(Math.random() * 16));
+                    return shuffled.slice(0, count).join("。") + "。";
+                },
                 pickQuoteMessage() {
                     const history = this.data.chatHistory || [];
                     if (history.length === 0) return null;
@@ -1913,6 +2080,7 @@
                         desktopView: document.getElementById("desktopView"),
                         chatView: document.getElementById("chatView"),
                         anniversaryView: document.getElementById("anniversaryView"),
+                        letterView: document.getElementById("letterView"),
                         desktopWallpaper: document.getElementById("desktopWallpaper"),
                         desktopWidget: document.getElementById("desktopWidget"),
                         widgetTop: document.getElementById("widgetTop"),
@@ -1924,17 +2092,24 @@
                         appChat: document.getElementById("appChat"),
                         appSettings: document.getElementById("appSettings"),
                         appAnniversary: document.getElementById("appAnniversary"),
+                        appLetter: document.getElementById("appLetter"),
                         appCards: document.getElementById("appCards"),
                         appAppearance: document.getElementById("appAppearance"),
+                        appPermission: document.getElementById("appPermission"),
                         chatBadge: document.getElementById("chatBadge"),
-                        homeBar: document.getElementById("homeBar"),
+                        btnHomeHeader: document.getElementById("btnHomeHeader"),
                         settingsHomeBar: document.getElementById("settingsHomeBar"),
                         anniversaryHomeBar: document.getElementById("anniversaryHomeBar"),
+                        letterHomeBar: document.getElementById("letterHomeBar"),
                         anniversaryList: document.getElementById("anniversaryList"),
                         inputAnniversaryDate: document.getElementById("inputAnniversaryDate"),
                         inputAnniversaryTitle: document.getElementById("inputAnniversaryTitle"),
                         btnAddAnniversary: document.getElementById("btnAddAnniversary"),
                         btnCloseAnniversary: document.getElementById("btnCloseAnniversary"),
+                        btnCloseLetter: document.getElementById("btnCloseLetter"),
+                        inputLetterText: document.getElementById("inputLetterText"),
+                        btnSendLetter: document.getElementById("btnSendLetter"),
+                        letterList: document.getElementById("letterList"),
                         inputWallpaperColor: document.getElementById("inputWallpaperColor"),
                         inputWallpaperUrl: document.getElementById("inputWallpaperUrl"),
                         btnUploadWallpaper: document.getElementById("btnUploadWallpaper"),
@@ -1966,6 +2141,12 @@
                         callStatus: document.getElementById("callStatus"),
                         callTimer: document.getElementById("callTimer"),
                         callActions: document.getElementById("callActions"),
+                        btnCallMinimize: document.getElementById("btnCallMinimize"),
+                        callMini: document.getElementById("callMini"),
+                        callMiniAvatar: document.getElementById("callMiniAvatar"),
+                        callMiniName: document.getElementById("callMiniName"),
+                        callMiniStatus: document.getElementById("callMiniStatus"),
+                        callMiniTimer: document.getElementById("callMiniTimer"),
                         fileTakePhoto: document.getElementById("fileTakePhoto"),
                         filePickImage: document.getElementById("filePickImage"),
                         headerAvatar: document.getElementById("headerAvatar"),
@@ -2216,6 +2397,7 @@
                     this.elements.desktopView.style.display = 'none';
                     this.elements.chatView.style.display = 'none';
                     this.elements.anniversaryView.style.display = 'none';
+                    this.elements.letterView.style.display = 'none';
                 },
                 showDesktop() {
                     AppState.isChatViewActive = false;
@@ -2241,6 +2423,37 @@
                 },
                 closeAnniversary() {
                     this.showDesktop();
+                },
+                showLetter() {
+                    AppState.isChatViewActive = false;
+                    this._hideAllViews();
+                    this.elements.letterView.style.display = 'block';
+                    this.renderLetter();
+                },
+                closeLetter() {
+                    this.showDesktop();
+                },
+                renderLetter() {
+                    const data = AppState.getData();
+                    const letters = data.letters || [];
+                    const container = this.elements.letterList;
+                    if (letters.length === 0) {
+                        container.innerHTML = '<div class="letter-empty">还没有写过信，写下第一封信吧~</div>';
+                        return;
+                    }
+                    const sorted = [...letters].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt));
+                    let html = "";
+                    sorted.forEach(l => {
+                        const waiting = l.status === "waiting";
+                        html += '<div class="letter-item">' +
+                            '<div class="letter-time">' + this._escapeHTML(this._formatTimestamp(new Date(l.sentAt))) + '</div>' +
+                            '<div class="letter-bubble me">' + this._escapeHTML(l.myText) + '</div>' +
+                            (waiting ?
+                                '<div class="letter-bubble ta waiting">（等待回信中…）</div>' :
+                                '<div class="letter-bubble ta">' + this._escapeHTML(l.replyText) + '</div>') +
+                            '</div>';
+                    });
+                    container.innerHTML = html;
                 },
                 applyBubbleHeight(value) {
                     const v = parseFloat(value);
@@ -2676,12 +2889,19 @@
                     el.appChat.addEventListener("click", () => Renderer.showChat());
                     el.appSettings.addEventListener("click", () => Renderer.openSettings());
                     el.appAnniversary.addEventListener("click", () => Renderer.showAnniversary());
+                    el.appLetter.addEventListener("click", () => Renderer.showLetter());
                     el.appCards.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('cards'); });
                     el.appAppearance.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('appearance'); });
-                    el.homeBar.addEventListener("click", () => Renderer.showDesktop());
+                    el.appPermission.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('time'); });
+                    el.btnHomeHeader.addEventListener("click", () => Renderer.showDesktop());
                     el.settingsHomeBar.addEventListener("click", () => Renderer.closeSettings());
                     el.anniversaryHomeBar.addEventListener("click", () => Renderer.closeAnniversary());
                     el.btnCloseAnniversary.addEventListener("click", () => Renderer.closeAnniversary());
+                    el.letterHomeBar.addEventListener("click", () => Renderer.closeLetter());
+                    el.btnCloseLetter.addEventListener("click", () => Renderer.closeLetter());
+                    el.btnSendLetter.addEventListener("click", () => this.handleSendLetter());
+                    el.btnCallMinimize.addEventListener("click", () => Call.minimize());
+                    el.callMini.addEventListener("click", () => Call.restore());
                     el.btnAddAnniversary.addEventListener("click", () => this.handleAddAnniversary());
                     el.anniversaryList.addEventListener("click", (e) => this.handleAnniversaryListClick(e));
                     el.btnUploadWallpaper.addEventListener("click", () => el.fileWallpaper.click());
@@ -3050,6 +3270,20 @@
                     Renderer.renderAnniversary();
                     Renderer.renderDesktop();
                     Renderer.showToast("已删除");
+                },
+
+                handleSendLetter() {
+                    const input = Renderer.elements.inputLetterText;
+                    const text = input.value.trim();
+                    if (!text) { Renderer.showToast("先写点什么吧"); return; }
+                    if ((AppState.getData().cards || []).length === 0) {
+                        Renderer.showToast("字卡库为空，先去添加一些他会说的话吧");
+                        return;
+                    }
+                    Letter.send(text);
+                    input.value = "";
+                    Renderer.renderLetter();
+                    Renderer.showToast("信已寄出，他会在 48 小时内回信 ✨");
                 },
 
                 handleUploadWallpaper(e) {
@@ -3517,7 +3751,9 @@
                             CallIncoming.stop();
                             Call._cleanup();
                             Call.state = "idle";
+                            Call.minimized = false;
                             Renderer.elements.callScreen.classList.remove("active");
+                            Renderer.elements.callMini.style.display = "none";
                             ReplyQueue.clear();
                             AppState.isTyping = false;
                             if (AppState.typingTimer) { clearTimeout(AppState.typingTimer); AppState.typingTimer = null; }
@@ -3724,14 +3960,81 @@
                 },
             };
 
+            const Letter = {
+                timer: null,
+                start() {
+                    this.checkPending();
+                },
+                send(myText) {
+                    const now = Date.now();
+                    const delayHours = 2 + Math.random() * 4;
+                    const replyAt = new Date(now + delayHours * 3600 * 1000).toISOString();
+                    const letter = {
+                        id: genId(),
+                        myText: myText,
+                        sentAt: new Date(now).toISOString(),
+                        replyAt: replyAt,
+                        replyText: "",
+                        status: "waiting",
+                    };
+                    const letters = [...(AppState.getData().letters || []), letter];
+                    AppState.updateData({ letters });
+                    this.scheduleNext();
+                },
+                checkPending() {
+                    const letters = AppState.getData().letters || [];
+                    let changed = false;
+                    letters.forEach(l => {
+                        if (l.status === "waiting" && l.replyAt && new Date(l.replyAt).getTime() <= Date.now()) {
+                            this.deliverReply(l.id);
+                            changed = true;
+                        }
+                    });
+                    if (changed && Renderer.elements.letterView && Renderer.elements.letterView.style.display === "block") {
+                        Renderer.renderLetter();
+                    }
+                    this.scheduleNext();
+                },
+                deliverReply(id) {
+                    const data = AppState.getData();
+                    const letters = data.letters || [];
+                    const idx = letters.findIndex(l => l.id === id);
+                    if (idx < 0) return;
+                    if (letters[idx].status !== "waiting") return;
+                    const replyText = AppState.buildLetterReply();
+                    const newLetters = letters.map(l => l.id === id ? { ...l, status: "replied", replyText: replyText, repliedAt: new Date().toISOString() } : l);
+                    AppState.updateData({ letters: newLetters });
+                },
+                scheduleNext() {
+                    if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+                    const letters = AppState.getData().letters || [];
+                    let nearest = null;
+                    letters.forEach(l => {
+                        if (l.status === "waiting" && l.replyAt) {
+                            const t = new Date(l.replyAt).getTime();
+                            if (!nearest || t < nearest) nearest = t;
+                        }
+                    });
+                    if (nearest) {
+                        const delay = Math.max(1000, nearest - Date.now());
+                        this.timer = setTimeout(() => {
+                            this.timer = null;
+                            this.checkPending();
+                        }, delay);
+                    }
+                },
+            };
+
             const Call = {
                 state: "idle",
                 timer: null,
                 incomingTimer: null,
                 seconds: 0,
+                minimized: false,
                 startOutgoing() {
                     if (this.state !== "idle") return;
                     this.state = "calling";
+                    this.minimized = false;
                     this._closeMorePanel();
                     const data = AppState.getData();
                     Renderer.elements.callAvatar.innerHTML = Renderer._avatarHTML(data.taAvatar);
@@ -3740,6 +4043,7 @@
                     Renderer.elements.callTimer.textContent = "";
                     Renderer.elements.callActions.innerHTML = '<button class="call-btn call-end" id="btnCallEnd">📵<span>挂断</span></button>';
                     Renderer.elements.callActions.querySelector("#btnCallEnd").addEventListener("click", () => this.hangup());
+                    this._setMini(data, "正在呼叫…", "");
                     Renderer.elements.callScreen.classList.add("active");
                     const delay = 2000 + Math.random() * 3000;
                     this.timer = setTimeout(() => {
@@ -3754,6 +4058,7 @@
                 startIncoming() {
                     if (this.state !== "idle") return;
                     this.state = "incoming";
+                    this.minimized = false;
                     const data = AppState.getData();
                     Renderer.elements.callAvatar.innerHTML = Renderer._avatarHTML(data.taAvatar);
                     Renderer.elements.callName.textContent = data.taName || "他";
@@ -3764,10 +4069,29 @@
                         '<button class="call-btn call-accept" id="btnCallAccept">📞<span>接听</span></button>';
                     Renderer.elements.callActions.querySelector("#btnCallReject").addEventListener("click", () => this._finish("📞 已拒绝"));
                     Renderer.elements.callActions.querySelector("#btnCallAccept").addEventListener("click", () => this._beginActive());
+                    this._setMini(data, "邀请你语音通话…", "");
                     Renderer.elements.callScreen.classList.add("active");
                     this.incomingTimer = setTimeout(() => {
                         if (this.state === "incoming") this._finish("📞 未接听");
                     }, 30000);
+                },
+                _setMini(data, status, timer) {
+                    Renderer.elements.callMiniAvatar.innerHTML = Renderer._avatarHTML(data.taAvatar);
+                    Renderer.elements.callMiniName.textContent = data.taName || "他";
+                    Renderer.elements.callMiniStatus.textContent = status;
+                    Renderer.elements.callMiniTimer.textContent = timer;
+                },
+                minimize() {
+                    if (this.state === "idle") return;
+                    this.minimized = true;
+                    Renderer.elements.callScreen.classList.remove("active");
+                    Renderer.elements.callMini.style.display = "flex";
+                },
+                restore() {
+                    if (this.state === "idle") return;
+                    this.minimized = false;
+                    Renderer.elements.callMini.style.display = "none";
+                    Renderer.elements.callScreen.classList.add("active");
                 },
                 hangup() {
                     if (this.state === "calling") this._finish("📞 已取消");
@@ -3778,13 +4102,17 @@
                     this.seconds = 0;
                     Renderer.elements.callStatus.textContent = "通话中";
                     Renderer.elements.callTimer.textContent = "00:00";
+                    Renderer.elements.callMiniStatus.textContent = "通话中";
+                    Renderer.elements.callMiniTimer.textContent = "00:00";
                     Renderer.elements.callActions.innerHTML = '<button class="call-btn call-end" id="btnCallEnd">📵<span>挂断</span></button>';
                     Renderer.elements.callActions.querySelector("#btnCallEnd").addEventListener("click", () => this.hangup());
                     if (this.timer) { clearTimeout(this.timer); clearInterval(this.timer); this.timer = null; }
                     if (this.incomingTimer) { clearTimeout(this.incomingTimer); this.incomingTimer = null; }
                     this.timer = setInterval(() => {
                         this.seconds++;
-                        Renderer.elements.callTimer.textContent = this._fmt(this.seconds);
+                        const t = this._fmt(this.seconds);
+                        Renderer.elements.callTimer.textContent = t;
+                        Renderer.elements.callMiniTimer.textContent = t;
                     }, 1000);
                 },
                 _fmt(s) {
@@ -3795,7 +4123,9 @@
                 _finish(message) {
                     this._cleanup();
                     this.state = "idle";
+                    this.minimized = false;
                     Renderer.elements.callScreen.classList.remove("active");
+                    Renderer.elements.callMini.style.display = "none";
                     if (message) {
                         AppState.addMessage("me", message, "call");
                         Renderer.renderChat();
@@ -3905,6 +4235,7 @@
                 Events.init();
                 if (!(AppState.getData().config || {}).pushEnabled) AutoMessage.start();
                 CallIncoming.start();
+                Letter.start();
                 const keepAliveOn = !!(AppState.getData().config && AppState.getData().config.keepAliveEnabled);
                 KeepAlive.toggle(keepAliveOn);
                 Renderer.openMenu();
