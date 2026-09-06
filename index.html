@@ -1975,6 +1975,32 @@
                         });
                     } catch (e) {}
                 },
+                async ensurePermission() {
+                    try {
+                        if (!("Notification" in window)) {
+                            return { ok: false, error: "当前浏览器不支持通知" };
+                        }
+                        const permission = await Notification.requestPermission();
+                        if (permission !== "granted") {
+                            return { ok: false, error: "系统权限未允许" };
+                        }
+                        return { ok: true };
+                    } catch (e) {
+                        return { ok: false, error: (e && e.message) ? e.message : "未知错误" };
+                    }
+                },
+                async localNotify(message) {
+                    try {
+                        if (!("serviceWorker" in navigator) || !("Notification" in window)) return;
+                        if (Notification.permission !== "granted") return;
+                        const reg = await navigator.serviceWorker.ready;
+                        await reg.showNotification("☆Philos", {
+                            body: message,
+                            icon: "icon-192.png",
+                            badge: "icon-192.png",
+                        });
+                    } catch (e) {}
+                },
             };
 
             const AppState = {
@@ -3227,7 +3253,6 @@
                     document.addEventListener("visibilitychange", () => {
                         if (document.visibilityState === "visible") {
                             KeepAlive.resumeIfNeeded();
-                            if ((AppState.getData().config || {}).pushEnabled) Push.syncMessages();
                             AutoMessage.onVisible();
                         }
                     });
@@ -3330,10 +3355,10 @@
                     if (this._suppressPushToggle) return;
                     const checked = Renderer.elements.togglePush.checked;
                     if (checked) {
-                        Push.setup().then((res) => {
+                        Push.ensurePermission().then((res) => {
                             if (res && res.ok) {
                                 AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
-                                AutoMessage.stop();
+                                AutoMessage.start();
                                 Renderer.showToast("通知已开启 ✨");
                             } else {
                                 this._suppressPushToggle = true;
@@ -3344,7 +3369,6 @@
                         });
                     } else {
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: false } });
-                        Push.syncProfile(false);
                         AutoMessage.start();
                         Renderer.showToast("通知已关闭");
                     }
@@ -3361,16 +3385,15 @@
                     }
                     navigator.serviceWorker.ready.then((reg) => {
                         return reg.showNotification("☆Philos", {
-                            body: "测试①：手机这边正常 ✨",
+                            body: "测试推送 ✨ 通知功能正常",
                             icon: "icon-192.png",
                             badge: "icon-192.png",
                         });
                     }).then(() => {
-                        Renderer.showToast("测试①已弹出，请立刻锁屏，3 秒内看测试②");
+                        Renderer.showToast("已弹出测试通知，请查看通知栏");
                     }).catch((e) => {
                         Renderer.showToast("测试失败：" + (e && e.message ? e.message : "未知错误"));
                     });
-                    Push.notify("测试②：后端推送正常 ✨");
                 },
 
                 handleTouchStart(e) {
@@ -4071,7 +4094,6 @@
                     this.stop();
                     const data = AppState.getData();
                     const cfg = data.config || {};
-                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     if (!this.lastSentAt) this.lastSentAt = Date.now();
@@ -4085,7 +4107,6 @@
                     this.timer = null;
                     const data = AppState.getData();
                     const cfg = data.config || {};
-                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     const minMin = Math.max(1, Number(cfg.autoMessageMinMinutes) || 5);
@@ -4095,7 +4116,6 @@
                 },
                 fire() {
                     const cfg = AppState.getData().config || {};
-                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if (document.visibilityState !== 'visible') {
                         this.scheduleNext();
@@ -4112,7 +4132,6 @@
                 onVisible() {
                     const data = AppState.getData();
                     const cfg = data.config || {};
-                    if (cfg.pushEnabled) return;
                     if (!cfg.autoMessageEnabled) return;
                     if ((data.cards || []).length === 0 && (data.stickers || []).length === 0) return;
                     if (ReplyQueue.hasPending()) { this.scheduleNext(); return; }
@@ -4205,8 +4224,8 @@
                     AppState.updateData({ unreadCount: unread });
                     Renderer.updateUnreadBadge();
                     const cfg = AppState.getData().config || {};
-                    if (cfg.pushEnabled) {
-                        Push.notify(message);
+                    if (cfg.pushEnabled && document.visibilityState === "visible") {
+                        Push.localNotify(message);
                     }
                 },
                 hasPending() {
@@ -4554,7 +4573,7 @@
                 Renderer.updateSettingsPanel();
                 Renderer.showDesktop();
                 Events.init();
-                if (!(AppState.getData().config || {}).pushEnabled) AutoMessage.start();
+                AutoMessage.start();
                 CallIncoming.start();
                 StatusSender.start();
                 Letter.start();
@@ -4571,26 +4590,7 @@
                 console.log("💌 私人对话空间已启动");
                 if ("serviceWorker" in navigator) {
                     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-                    Push.preload();
-                    if ("Notification" in window && Notification.permission === "granted") {
-                        Push.setup().then((res) => {
-                            if (res && res.ok) {
-                                AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
-                                AutoMessage.stop();
-                            }
-                        });
-                    }
                 }
-                if ((AppState.getData().config || {}).pushEnabled) {
-                    setTimeout(() => Push.syncMessages(), 1500);
-                }
-                setInterval(() => {
-                    const cfg = AppState.getData().config || {};
-                    if (cfg.pushEnabled && document.visibilityState === "visible") {
-                        Push.syncMessages();
-                        Push.syncProfile(true);
-                    }
-                }, 30000);
             }
             if (document.readyState === "loading") {
                 document.addEventListener("DOMContentLoaded", bootstrap);
