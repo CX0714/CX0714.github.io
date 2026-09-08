@@ -340,8 +340,19 @@
             margin: 4px 0; opacity: 0.9; letter-spacing: 0.3px;
         }
         .msg-status {
-            text-align: center; font-size: 14px; color: #ffffff;
-            margin: 6px 0; opacity: 0.9; letter-spacing: 0.3px;
+            align-self: center;
+            width: fit-content;
+            max-width: 85%;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+            letter-spacing: 0.3px;
+            margin: 6px 0;
+            background: var(--surface);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 9px 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .chat-input-area {
