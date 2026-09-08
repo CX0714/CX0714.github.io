@@ -12,9 +12,38 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="☆Philos">
     <meta name="mobile-web-app-capable" content="yes">
+    <script>
+    (function () {
+        try {
+            var mode = "auto";
+            var raw = localStorage.getItem("private_chat_app_v1");
+            if (raw) {
+                var d = JSON.parse(raw);
+                if (d && d.themeMode) mode = d.themeMode;
+            }
+            var theme = mode;
+            if (mode === "auto") {
+                theme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+            }
+            document.documentElement.setAttribute("data-theme", theme);
+        } catch (e) {}
+    })();
+    </script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div class="splash" id="splash" aria-hidden="true">
+        <div class="splash-planet">
+            <div class="planet-glow"></div>
+            <div class="planet-ring ring-back"></div>
+            <div class="planet-body"></div>
+            <div class="planet-ring ring-front"></div>
+        </div>
+        <div class="splash-title">☆Philos</div>
+        <span class="splash-star" style="left:22%;top:28%;animation-delay:0s;"></span>
+        <span class="splash-star" style="left:74%;top:24%;animation-delay:1.1s;"></span>
+        <span class="splash-star" style="left:62%;top:68%;animation-delay:2.2s;"></span>
+    </div>
     <div class="bg-decor" id="bgDecor" aria-hidden="true"></div>
 
     <!-- 桌面（主屏） -->
