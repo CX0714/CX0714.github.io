@@ -1,5 +1,5 @@
-const CACHE_NAME = "philos-v1";
-const ASSETS = ["./", "./index.html", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
+const CACHE_NAME = "philos-v2";
+const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(ASSETS)));
