@@ -2872,6 +2872,16 @@
             setTimeout(() => Renderer.showWelcome(), 300);
         }
         console.log("💌 私人对话空间已启动");
+        const splashEl = document.getElementById("splash");
+        if (splashEl) {
+            const hideSplash = function () {
+                splashEl.classList.add("hide");
+                setTimeout(function () {
+                    if (splashEl.parentNode) splashEl.parentNode.removeChild(splashEl);
+                }, 500);
+            };
+            setTimeout(hideSplash, 600);
+        }
         if ("serviceWorker" in navigator) {
             navigator.serviceWorker.register("./service-worker.js").catch(() => {});
         }
