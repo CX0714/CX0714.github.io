@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v3";
+const CACHE_NAME = "philos-v4";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
@@ -34,17 +34,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // 静态资源（css/js/图片等）：优先用最新版，没网时才用缓存兜底
   event.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((res) => {
-        if (res.ok) {
+    fetch(req)
+      .then((res) => {
+        if (res && res.ok) {
           const copy = res.clone();
           caches.open(CACHE_NAME).then((c) => c.put(req, copy));
         }
         return res;
-      });
-    })
+      })
+      .catch(() => caches.match(req))
   );
 });
 
