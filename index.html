@@ -169,14 +169,15 @@
         <div class="app">
             <div class="chat-container" id="chatContainer">
                 <header class="chat-header">
-                    <div class="avatar" id="headerAvatar">🌙</div>
-                    <div class="header-info">
-                        <div class="name" id="headerName">他</div>
-                        <div class="status"><span class="dot"></span><span id="headerStatus">在等你说话</span></div>
-                    </div>
-                    <button class="header-home-btn" id="btnHomeHeader" title="返回桌面" aria-label="返回桌面">
-                        <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 11 L54 32 H46 V48 H14 V32 H6 Z" fill="currentColor"/></svg>
+                    <button class="header-back-btn" id="btnHomeHeader" title="返回桌面" aria-label="返回桌面">
+                        <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M34 12 L16 30 L34 48" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     </button>
+                    <button class="header-center" id="headerCenter" title="查看他的信息" aria-label="查看他的信息">
+                        <span class="header-center-avatar" id="headerAvatar">🌙</span>
+                        <span class="header-center-name" id="headerName">他</span>
+                        <span class="header-center-status"><span class="dot"></span><span id="headerStatus">在等你说话</span></span>
+                    </button>
+                    <span class="header-right-spacer" aria-hidden="true"></span>
                 </header>
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="bottom-panel" id="bottomPanel">
@@ -197,9 +198,11 @@
                     <button class="quote-bar-close" id="quoteBarClose" aria-label="取消引用">✕</button>
                 </div>
                 <div class="chat-input-area">
-                    <textarea class="chat-input" id="chatInput" rows="1" placeholder="说点什么..." maxlength="2000" autocomplete="off"></textarea>
-                    <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">➤</button>
                     <button class="send-btn plus-btn" id="btnPlus" title="更多" aria-label="更多功能">＋</button>
+                    <textarea class="chat-input" id="chatInput" rows="1" placeholder="说点什么..." maxlength="2000" autocomplete="off"></textarea>
+                    <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">
+                        <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 42 L30 20 M20 30 L30 20 L40 30" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
