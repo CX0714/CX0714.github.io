@@ -591,6 +591,7 @@
                 headerAvatar: document.getElementById("headerAvatar"),
                 headerName: document.getElementById("headerName"),
                 headerStatus: document.getElementById("headerStatus"),
+                headerCenter: document.getElementById("headerCenter"),
                 settingsPanel: document.getElementById("settingsPanel"),
                 panelOverlay: document.getElementById("panelOverlay"),
                 panelHeader: document.getElementById("panelHeader"),
@@ -1038,16 +1039,14 @@
         },
         _formatTimestamp(t) {
             const now = new Date();
-            const isToday = t.toDateString() === now.toDateString();
-            const h = t.getHours();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const thatDay = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+            const diffDays = Math.round((today - thatDay) / 86400000);
+            const hh = String(t.getHours()).padStart(2, '0');
             const mm = String(t.getMinutes()).padStart(2, '0');
-            let period = '上午';
-            if (h >= 18) period = '晚上';
-            else if (h >= 12) period = '下午';
-            let h12 = h % 12;
-            if (h12 === 0) h12 = 12;
-            const timeStr = period + ' ' + h12 + ':' + mm;
-            if (isToday) return timeStr;
+            const timeStr = hh + ':' + mm;
+            if (diffDays === 0) return '今天 ' + timeStr;
+            if (diffDays === 1) return '昨天 ' + timeStr;
             return (t.getMonth() + 1) + '月' + t.getDate() + '日 ' + timeStr;
         },
         _findMessage(id) {
@@ -1382,6 +1381,7 @@
             el.appAppearance.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('appearance'); });
             el.appPermission.addEventListener("click", () => { Renderer.openSettings(); Renderer.openSubPage('time'); });
             el.btnHomeHeader.addEventListener("click", () => Renderer.showDesktop());
+            el.headerCenter.addEventListener("click", () => Renderer.openSettings());
             el.settingsHomeBar.addEventListener("click", () => Renderer.closeSettings());
             el.anniversaryHomeBar.addEventListener("click", () => Renderer.closeAnniversary());
             el.btnCloseAnniversary.addEventListener("click", () => Renderer.closeAnniversary());
