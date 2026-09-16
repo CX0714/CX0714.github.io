@@ -285,6 +285,26 @@
                 });
             } catch (e) {}
         },
+        async unsubscribe() {
+            try {
+                if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+                const reg = await navigator.serviceWorker.ready;
+                const subscription = await reg.pushManager.getSubscription();
+                if (!subscription) return;
+                try {
+                    await fetch(PUSH_SERVER + "/unsubscribe", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ endpoint: subscription.endpoint }),
+                    });
+                } catch (e) {
+                    console.warn("push unsubscribe notify failed", e);
+                }
+                await subscription.unsubscribe();
+            } catch (e) {
+                console.warn("push unsubscribe failed", e);
+            }
+        },
     };
 
     const AppState = {
@@ -1639,7 +1659,7 @@
             if (this._suppressPushToggle) return;
             const checked = Renderer.elements.togglePush.checked;
             if (checked) {
-                Push.ensurePermission().then((res) => {
+                Push.setup().then((res) => {
                     if (res && res.ok) {
                         AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: true } });
                         AutoMessage.start();
@@ -1650,8 +1670,14 @@
                         this._suppressPushToggle = false;
                         Renderer.showToast("开启失败：" + (res && res.error ? res.error : "未知错误"));
                     }
+                }).catch((e) => {
+                    this._suppressPushToggle = true;
+                    Renderer.elements.togglePush.checked = false;
+                    this._suppressPushToggle = false;
+                    Renderer.showToast("开启失败：" + (e && e.message ? e.message : "未知错误"));
                 });
             } else {
+                Push.unsubscribe();
                 AppState.updateData({ config: { ...(AppState.getData().config || {}), pushEnabled: false } });
                 AutoMessage.start();
                 Renderer.showToast("通知已关闭");
