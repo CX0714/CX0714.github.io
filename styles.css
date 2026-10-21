@@ -5,9 +5,9 @@
     --text-primary: #1a1a1c;
     --text-secondary: #8e8e93;
     
-    /* 玻璃质感 */
-    --glass-bg: rgba(255, 255, 255, 0.45);
-    --glass-border: rgba(255, 255, 255, 0.6);
+    /* 增强毛玻璃质感 */
+    --glass-bg: rgba(255, 255, 255, 0.5);
+    --glass-border: rgba(255, 255, 255, 0.7);
     
     --radius-sm: 12px;
     --radius-md: 20px;
@@ -25,7 +25,7 @@
     --bg-surface: #1c1c1e;
     --text-primary: #ffffff;
     --text-secondary: #8e8e93;
-    --glass-bg: rgba(28, 28, 30, 0.45);
+    --glass-bg: rgba(28, 28, 30, 0.5);
     --glass-border: rgba(255, 255, 255, 0.1);
     --bubble-me-bg: #0a84ff;
     --bubble-ta-bg: #26262a;
@@ -41,8 +41,8 @@
 body, html {
     height: 100%; width: 100%; overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
-    /* 重点：给底层加一个很浅的灰蓝渐变，这样才能透出毛玻璃质感 */
-    background: linear-gradient(135deg, #e8ecf1 0%, #f4f5f8 100%);
+    /* 底层加一层色彩，毛玻璃才能透出来 */
+    background: linear-gradient(135deg, #e0e5ec 0%, #f4f5f8 100%);
     color: var(--text-primary);
 }
 
@@ -51,7 +51,6 @@ body, html {
 .screen { position: absolute; inset: 0; display: none; flex-direction: column; z-index: 10; }
 .screen.active { display: flex; }
 
-/* 毛玻璃按钮 */
 .glass-btn {
     width: 36px; height: 36px; border-radius: var(--radius-full);
     background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -74,43 +73,74 @@ body, html {
 
 /* ===== 主屏幕 ===== */
 .desktop-view { padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px); }
-.desktop-content { display: flex; flex-direction: column; height: 100%; gap: 25px; }
+.desktop-content { display: flex; flex-direction: column; height: 100%; gap: 20px; }
 
-/* 顶部大组件 (完美布局，防止重叠) */
+/* --- 顶部大组件 --- */
 .widget-large {
-    position: relative; width: 100%; height: 200px; border-radius: var(--radius-lg);
-    background: var(--glass-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-    border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    padding-bottom: 20px; flex-shrink: 0;
+    position: relative; 
+    width: 100%; 
+    height: 210px; /* 稍微加高一点，比例更接近参考图 */
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg); 
+    backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+    border: 1px solid var(--glass-border); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    display: flex; 
+    flex-direction: column; 
+    flex-shrink: 0;
+    /* 去掉原来的 padding-bottom，改由内部布局控制 */
 }
+
+/* 用绝对定位把头像卡在中间，绝不干扰文字 */
 .widget-avatar {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 76px; height: 76px; border-radius: 50%; background: #fff;
-    border: 3px solid rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center;
-    font-size: 32px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); z-index: 2;
+    position: absolute; 
+    top: 50%; 
+    left: 50%; 
+    transform: translate(-50%, -50%);
+    width: 76px; 
+    height: 76px; 
+    border-radius: 50%; 
+    background: #fff;
+    border: 3px solid rgba(255,255,255,0.9); 
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px; 
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08); 
+    z-index: 10;
 }
+
+/* 文字区域 */
 .widget-text-area { 
-    text-align: center; display: flex; flex-direction: column; gap: 4px; 
-    padding-top: 50px; /* 核心：强制文字往下走，避开头像 */
+    width: 100%;
+    height: 100%;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: flex-end; /* 文字全部沉底 */
+    padding-bottom: 20px; 
+    padding-top: 50px; /* 给头像留出空间，强制文字下移 */
+    text-align: center;
+    gap: 4px;
+    box-sizing: border-box;
 }
 .widget-line-1 { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: 1px;}
 .widget-line-2 { font-size: 12px; color: var(--text-secondary); }
 .widget-line-3 { font-size: 12px; font-style: italic; color: var(--text-secondary); margin-top: 2px; }
 .widget-line-4 { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 
-/* 中间图标区：用 Flex 强制一左一右 */
+/* --- 中间图标区 (严格对齐) --- */
 .icon-grid {
     display: flex;
     gap: 20px;
     flex: 1;
-    align-items: flex-start; /* 顶部对齐 */
+    height: 100%; /* 强制填满中间区域 */
+    align-items: flex-start;
 }
 
-/* 左侧 2x2 小组件 (严格的宽高比例，绝对不会拉伸) */
+/* 左侧 2x2 小组件 */
 .widget-small {
     width: calc(50% - 10px); 
-    aspect-ratio: 1 / 1; 
+    height: 100%; /* 高度跟右侧网格保持一致 */
+    aspect-ratio: 1 / 1; /* 严格正方形 */
     border-radius: var(--radius-lg); 
     background: var(--glass-bg);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
@@ -123,20 +153,22 @@ body, html {
 
 /* 右侧 4个 1x1 图标 */
 .app-grid-small {
-    flex: 1;
+    width: calc(50% - 10px);
+    height: 100%;
     display: grid; 
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, 1fr); 
-    gap: 15px; 
-    aspect-ratio: 1 / 1; /* 整体也是正方形 */
+    gap: 12px; 
+    aspect-ratio: 1 / 1; /* 整体正方形 */
 }
 .app-icon {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 6px; background: transparent; border: none; cursor: pointer;
+    background: transparent; border: none; cursor: pointer;
+    width: 100%; height: 100%;
 }
 .app-icon-box {
     width: 100%; 
-    aspect-ratio: 1/1; 
+    height: calc(100% - 20px); /* 减去文字高度 */
     border-radius: var(--radius-md);
     background: var(--glass-bg); 
     backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
@@ -145,9 +177,9 @@ body, html {
     transition: transform 0.2s;
 }
 .app-icon:active .app-icon-box { transform: scale(0.9); }
-.app-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.app-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; margin-top: 4px; }
 
-/* 底部 Dock 栏 (长条悬浮胶囊) */
+/* --- 底部 Dock 栏 --- */
 .dock {
     height: 80px; 
     border-radius: var(--radius-lg); 
@@ -161,7 +193,7 @@ body, html {
     padding: 0 10px; 
     box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
     flex-shrink: 0;
-    margin-top: auto; /* 推到最底部 */
+    margin-top: auto;
 }
 .dock-icon {
     width: 60px; height: 60px; border-radius: var(--radius-md); border: none;
