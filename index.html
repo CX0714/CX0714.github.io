@@ -3,736 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>☆Philos</title>
+    <title>Philos</title>
     <link rel="icon" type="image/svg+xml" href="icon.svg">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#93a7bb">
+    <meta name="theme-color" content="#f4f5f8">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="☆Philos">
-    <meta name="mobile-web-app-capable" content="yes">
-    <script>
-    (function () {
-        try {
-            var mode = "auto";
-            var raw = localStorage.getItem("private_chat_app_v1");
-            if (raw) {
-                var d = JSON.parse(raw);
-                if (d && d.themeMode) mode = d.themeMode;
-            }
-            var theme = mode;
-            if (mode === "auto") {
-                theme = (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
-            }
-            document.documentElement.setAttribute("data-theme", theme);
-        } catch (e) {}
-    })();
-    </script>
+    <meta name="apple-mobile-web-app-title" content="Philos">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="splash" id="splash" aria-hidden="true">
+    <!-- 启动页 -->
+    <div class="splash" id="splash">
         <div class="splash-planet">
             <div class="planet-glow"></div>
-            <div class="planet-ring ring-back"></div>
             <div class="planet-body"></div>
             <div class="planet-ring ring-front"></div>
         </div>
-        <div class="splash-title">☆Philos</div>
-        <span class="splash-star" style="left:22%;top:28%;animation-delay:0s;"></span>
-        <span class="splash-star" style="left:74%;top:24%;animation-delay:1.1s;"></span>
-        <span class="splash-star" style="left:62%;top:68%;animation-delay:2.2s;"></span>
+        <div class="splash-title">☆ Philos</div>
     </div>
-    <div class="bg-decor" id="bgDecor" aria-hidden="true"></div>
 
-    <!-- 桌面（主屏） -->
-    <div class="desktop-view" id="desktopView">
+    <!-- 主屏幕 -->
+    <div class="screen desktop-view active" id="desktopView">
         <div class="desktop-wallpaper" id="desktopWallpaper"></div>
         <div class="desktop-content">
-            <div class="desktop-status-row">
-                <div class="desktop-time" id="desktopTime">--:--</div>
-                <div class="desktop-countdown" id="desktopCountdown"></div>
-            </div>
-            <div class="widget" id="desktopWidget">
-                <div class="widget-top" id="widgetTop"></div>
-                <div class="widget-bottom" id="widgetBottom"></div>
-                <div class="widget-divider widget-divider-left"></div>
-                <div class="widget-divider widget-divider-right"></div>
+            
+            <!-- 顶部大组件 (4行文字) -->
+            <div class="widget-large" id="widgetLarge">
+                <div class="widget-top" id="widgetTopBg"></div>
                 <div class="widget-avatar" id="widgetAvatar">🌙</div>
-                <div class="widget-message" id="widgetMessage">我在等你哦</div>
+                <div class="widget-bottom" id="widgetBottomBg">
+                    <div class="widget-line-1" id="wLine1">______</div>
+                    <div class="widget-line-2" id="wLine2">______</div>
+                    <div class="widget-line-3" id="wLine3">______</div>
+                    <div class="widget-line-4" id="wLine4">______</div>
+                </div>
             </div>
-            <div class="app-grid">
-                <button class="app-icon" id="appChat" aria-label="聊天">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <rect x="9" y="12" width="42" height="34" rx="12" fill="#fff"/>
-                            <path d="M17 42 L17 52 L26.5 44 Z" fill="#fff"/>
-                        </svg>
-                        <span class="app-badge" id="chatBadge" style="display:none;">0</span>
-                    </span>
-                    <span class="app-label">聊天</span>
-                </button>
-                <button class="app-icon" id="appSettings" aria-label="设置">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <g fill="#fff">
-                                <rect x="26" y="6" width="8" height="13" rx="2"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(45 30 30)"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(90 30 30)"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(135 30 30)"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(180 30 30)"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(225 30 30)"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(270 30 30)"/>
-                                <rect x="26" y="6" width="8" height="13" rx="2" transform="rotate(315 30 30)"/>
-                                <circle cx="30" cy="30" r="13"/>
-                            </g>
-                        </svg>
-                    </span>
-                    <span class="app-label">设置</span>
-                </button>
-                <button class="app-icon" id="appAnniversary" aria-label="倒数日">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <path d="M30 47 C15 34 10 25 14.5 17.5 C17.5 12 23.5 10.5 28 14 C29.4 15.2 30.6 15.2 32 14 C36.5 10.5 42.5 12 45.5 17.5 C50 25 45 34 30 47 Z"
-                                  fill="none" stroke="#fff" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>
-                        </svg>
-                    </span>
-                    <span class="app-label">倒数日</span>
-                </button>
-                <button class="app-icon" id="appLetter" aria-label="信笺">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <defs>
-                                <mask id="letterVMask">
-                                    <rect x="0" y="0" width="60" height="60" fill="#fff"/>
-                                    <path d="M13 21 L30 40 L47 21" fill="none" stroke="#000" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-                                </mask>
-                            </defs>
-                            <rect x="9" y="15" width="42" height="32" rx="7" fill="#fff" mask="url(#letterVMask)"/>
-                        </svg>
-                    </span>
-                    <span class="app-label">信笺</span>
-                </button>
+
+            <!-- 中间图标区 -->
+            <div class="icon-grid">
+                <!-- 2x2 小组件区 -->
+                <div class="widget-small" id="widgetSmallArea">
+                    <div class="widget-small-inner" id="widgetSmallContent">
+                        <!-- 动态渲染内容，默认放一个占位 -->
+                        <div class="ws-placeholder">Select Widget</div>
+                    </div>
+                </div>
+                
+                <!-- 右侧 1x1 图标 -->
+                <div class="app-grid-small">
+                    <button class="app-icon btn-icon" id="appLetter">
+                        <span class="app-icon-box"></span>
+                        <span class="app-label">信箱</span>
+                    </button>
+                    <button class="app-icon btn-icon" id="appSettings">
+                        <span class="app-icon-box"></span>
+                        <span class="app-label">设置</span>
+                    </button>
+                    <button class="app-icon btn-icon" id="appCountdown">
+                        <span class="app-icon-box"></span>
+                        <span class="app-label">倒数日</span>
+                    </button>
+                    <button class="app-icon btn-icon" id="appWidgets">
+                        <span class="app-icon-box"></span>
+                        <span class="app-label">小组件</span>
+                    </button>
+                </div>
             </div>
+
+            <!-- 底部 Dock 栏 -->
             <div class="dock">
-                <button class="app-icon" id="appCards" aria-label="字卡库">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <defs>
-                                <mask id="cardLineMask">
-                                    <rect x="0" y="0" width="60" height="60" fill="#fff"/>
-                                    <rect x="18" y="21" width="24" height="3.5" rx="1.5" fill="#000"/>
-                                    <rect x="18" y="30" width="15" height="3.5" rx="1.5" fill="#000"/>
-                                </mask>
-                            </defs>
-                            <rect x="11" y="13" width="38" height="34" rx="7" fill="#fff" mask="url(#cardLineMask)"/>
-                        </svg>
-                    </span>
-                </button>
-                <button class="app-icon" id="appAppearance" aria-label="外观">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <defs>
-                                <mask id="paletteMask">
-                                    <rect x="0" y="0" width="60" height="60" fill="#fff"/>
-                                    <circle cx="24" cy="26" r="4" fill="#000"/>
-                                    <circle cx="36" cy="26" r="4" fill="#000"/>
-                                    <circle cx="20" cy="38" r="4" fill="#000"/>
-                                    <circle cx="40" cy="38" r="4" fill="#000"/>
-                                    <circle cx="30" cy="44" r="4" fill="#000"/>
-                                    <circle cx="44" cy="19" r="6" fill="#000"/>
-                                </mask>
-                            </defs>
-                            <circle cx="30" cy="33" r="19" fill="#fff" mask="url(#paletteMask)"/>
-                        </svg>
-                    </span>
-                </button>
-                <button class="app-icon" id="appPermission" aria-label="权限">
-                    <span class="app-icon-box">
-                        <svg viewBox="0 0 60 60" aria-hidden="true">
-                            <g fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="21" cy="25" r="9"/>
-                                <path d="M28 25 H46"/>
-                                <path d="M39 25 V33"/>
-                                <path d="M45 25 V30"/>
-                            </g>
-                        </svg>
-                    </span>
-                </button>
+                <button class="dock-icon" id="appChat"><span class="dock-label">聊天</span></button>
+                <button class="dock-icon" id="appCards"><span class="dock-label">字卡</span></button>
+                <button class="dock-icon" id="dockAppearance"><span class="dock-label">外观</span></button>
+                <button class="dock-icon" id="dockPermission"><span class="dock-label">权限</span></button>
             </div>
         </div>
     </div>
 
-    <!-- 聊天视图 -->
-    <div class="chat-view" id="chatView" style="display:none;">
-        <div class="app">
-            <div class="chat-container" id="chatContainer">
-                <header class="chat-header">
-                    <button class="header-back-btn" id="btnHomeHeader" title="返回桌面" aria-label="返回桌面">
-                        <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M34 12 L16 30 L34 48" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </button>
-                    <button class="header-center" id="headerCenter" title="查看他的信息" aria-label="查看他的信息">
-                        <span class="header-center-avatar" id="headerAvatar">🌙</span>
-                        <span class="header-center-name" id="headerName">他</span>
-                        <span class="header-center-status"><span class="dot"></span><span id="headerStatus">在等你说话</span></span>
-                    </button>
-                    <span class="header-right-spacer" aria-hidden="true"></span>
-                </header>
-                <div class="chat-messages" id="chatMessages"></div>
-                <div class="bottom-panel" id="bottomPanel">
-                    <div class="more-grid" id="moreGrid">
-                        <button class="more-btn" id="btnMoreSticker"><span class="more-icon">😊</span><span class="more-label">表情包</span></button>
-                        <button class="more-btn" id="btnMoreImage"><span class="more-icon">📷</span><span class="more-label">图片</span></button>
-                        <button class="more-btn" id="btnMoreCall"><span class="more-icon">📞</span><span class="more-label">语音电话</span></button>
-                    </div>
-                    <div class="sticker-picker" id="stickerPicker">
-                        <div class="sticker-picker-grid" id="stickerPickerGrid"></div>
-                    </div>
-                </div>
-                <div class="quote-bar" id="quoteBar" style="display:none;">
-                    <div class="quote-bar-info">
-                        <span class="quote-bar-name" id="quoteBarName"></span>
-                        <span class="quote-bar-text" id="quoteBarText"></span>
-                    </div>
-                    <button class="quote-bar-close" id="quoteBarClose" aria-label="取消引用">✕</button>
-                </div>
-                <div class="chat-input-area">
-                    <button class="send-btn plus-btn" id="btnPlus" title="更多" aria-label="更多功能">＋</button>
-                    <textarea class="chat-input" id="chatInput" rows="1" placeholder="说点什么..." maxlength="2000" autocomplete="off"></textarea>
-                    <button class="send-btn" id="btnSend" title="发送" aria-label="发送消息">
-                        <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M30 42 L30 20 M20 30 L30 20 L40 30" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    </button>
-                </div>
+    <!-- 聊天界面 -->
+    <div class="screen chat-view" id="chatView">
+        <header class="chat-header">
+            <button class="glass-btn" id="btnChatBack">‹</button>
+            <div class="chat-header-center">
+                <div class="chat-header-avatar" id="headerAvatar">🌙</div>
+                <div class="chat-header-name" id="headerName">他</div>
+            </div>
+            <button class="glass-btn" id="btnChatCall">📞</button>
+        </header>
+        <div class="chat-messages" id="chatMessages"></div>
+        
+        <!-- 底部悬浮输入区 -->
+        <div class="chat-input-wrapper">
+            <button class="glass-circle-btn" id="btnChatMore">+</button>
+            <div class="chat-input-box">
+                <textarea id="chatInput" rows="1" placeholder="发消息..."></textarea>
+                <button class="send-btn-inner" id="btnChatSend">↑</button>
             </div>
         </div>
     </div>
 
-    <!-- 倒数日视图 -->
-    <div class="anniversary-view" id="anniversaryView" style="display:none;">
-        <div class="anniversary-header">
-            <h2>💝 倒数日</h2>
-            <button class="anniversary-close" id="btnCloseAnniversary" aria-label="关闭">✕</button>
+    <!-- 设置系统界面 -->
+    <div class="screen settings-view" id="settingsView">
+        <div class="settings-main-page" id="settingsMainPage">
+            <h1 class="nav-large-title">设置</h1>
+            
+            <!-- Philos 账户卡片 -->
+            <div class="settings-card account-card" id="btnEditMyInfo">
+                <div class="account-avatar" id="settingsMyAvatar">👤</div>
+                <div class="account-info">
+                    <div class="account-name" id="settingsMyName">your账户名</div>
+                    <div class="account-sub">Philos 账户</div>
+                </div>
+                <div class="arrow-right">›</div>
+            </div>
+
+            <div class="settings-card group-card">
+                <div class="settings-item" data-page="ta"><span>他的信息</span><span class="arrow-right">›</span></div>
+                <div class="settings-item" data-page="bubble"><span>气泡</span><span class="arrow-right">›</span></div>
+                <div class="settings-item" data-page="permission"><span>权限</span><span class="arrow-right">›</span></div>
+            </div>
+
+            <div class="settings-card group-card">
+                <div class="settings-item" data-page="appearance"><span>外观</span><span class="arrow-right">›</span></div>
+                <div class="settings-item" data-page="data"><span>数据管理</span><span class="arrow-right">›</span></div>
+                <div class="settings-item" data-page="about"><span>关于</span><span class="arrow-right">›</span></div>
+            </div>
         </div>
-        <div class="anniversary-body">
-            <div class="anniversary-add">
-                <div class="anniversary-add-row">
-                    <input type="text" id="inputAnniversaryTitle" placeholder="标题（如：认识）" maxlength="20">
-                </div>
-                <div class="anniversary-add-row">
-                    <input type="date" id="inputAnniversaryDate">
-                    <button class="btn btn-primary" id="btnAddAnniversary">添加</button>
-                </div>
-            </div>
-            <div class="anniversary-list" id="anniversaryList"></div>
-        </div>
-        <div class="home-bar" id="anniversaryHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
-    </div>
-
-    <!-- 信笺视图 -->
-    <div class="letter-view" id="letterView" style="display:none;">
-        <div class="letter-header">
-            <h2>💌 信笺</h2>
-            <button class="letter-close" id="btnCloseLetter" aria-label="关闭">✕</button>
-        </div>
-        <div class="letter-body">
-            <div class="letter-compose">
-                <textarea id="inputLetterText" placeholder="写点什么给他…" maxlength="2000"></textarea>
-                <div class="letter-compose-actions">
-                    <span class="letter-hint">他会在 48 小时内回信</span>
-                    <button class="btn btn-primary" id="btnSendLetter">寄出</button>
-                </div>
-            </div>
-            <div class="letter-list" id="letterList"></div>
-        </div>
-        <div class="home-bar" id="letterHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
-    </div>
-
-    <div class="panel-overlay" id="panelOverlay"></div>
-
-    <div class="settings-panel" id="settingsPanel" role="dialog" aria-label="设置面板">
-        <div class="panel-header" id="panelHeader">
-            <h2>⚙️ 设置</h2>
-            <button class="panel-close" id="btnCloseSettings" aria-label="关闭设置">✕</button>
-        </div>
-        <div class="panel-body">
-
-            <div class="menu-view" id="menuView">
-                <div class="menu-card">
-                    <div class="menu-item" data-page="ta"><span>👤 他的信息</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="me"><span>👤 我的信息</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="appearance"><span>🎨 外观</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="bubble"><span>💬 气泡</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="time"><span>🩶 权限</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="cards"><span>💌 字卡库</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="data"><span>💾 数据管理</span><span class="arrow">›</span></div>
-                    <div class="menu-item" data-page="about"><span>ℹ️ 关于</span><span class="arrow">›</span></div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-ta">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">他的信息</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <label for="inputTaName">名字 / 称呼</label>
-                            <input type="text" id="inputTaName" placeholder="比如：小月亮" maxlength="20">
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputTaAvatar">头像</label>
-                            <input type="text" id="inputTaAvatar" placeholder="🌙 或 https://...jpg" maxlength="200">
-                            <div class="hint">支持 emoji、图片链接，也可以上传本地照片</div>
-                            <button class="upload-btn" id="btnUploadTaAvatar">📷 上传本地照片</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-me">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">我的信息</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <label for="inputMyName">我的名字 / 称呼</label>
-                            <input type="text" id="inputMyName" placeholder="比如：我" maxlength="20">
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputMyAvatar">我的头像</label>
-                            <input type="text" id="inputMyAvatar" placeholder="🙂 或 https://...jpg" maxlength="200">
-                            <div class="hint">支持 emoji、图片链接，也可以上传本地照片</div>
-                            <button class="upload-btn" id="btnUploadMyAvatar">📷 上传本地照片</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-appearance">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">外观</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <label for="selectThemeMode">主题模式</label>
-                            <select id="selectThemeMode">
-                                <option value="auto">跟随系统</option>
-                                <option value="light">浅色</option>
-                                <option value="dark">深色</option>
-                            </select>
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputBgColor">纯色背景（可选）</label>
-                            <input type="color" id="inputBgColor" value="#f5f5f7">
-                            <div class="hint">聊天界面的背景色，留空则使用主题默认背景</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputBgImageUrl">聊天背景图片 URL（可选）</label>
-                            <input type="text" id="inputBgImageUrl" placeholder="https://...jpg" maxlength="300">
-                            <div class="hint">粘贴图片链接，将覆盖背景色。或点击下方上传本地图片</div>
-                            <button class="upload-btn" id="btnUploadBgImage">🖼️ 上传本地图片</button>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <label style="font-size:14px; color:var(--text-primary); font-weight:600;">🏠 桌面</label>
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputWallpaperColor">桌面壁纸颜色</label>
-                            <input type="color" id="inputWallpaperColor" value="#93a7bb">
-                            <div class="hint">桌面（主屏）的背景色</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputWallpaperUrl">桌面壁纸图片 URL（可选）</label>
-                            <input type="text" id="inputWallpaperUrl" placeholder="https://...jpg" maxlength="300">
-                            <div class="hint">粘贴图片链接会覆盖壁纸色，或点下方上传</div>
-                            <button class="upload-btn" id="btnUploadWallpaper">🖼️ 上传壁纸</button>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <label style="font-size:14px; color:var(--text-primary); font-weight:600;">🧩 小组件背景</label>
-                        </div>
-                        <div class="settings-field">
-                            <label for="selectWidgetBg">背景类型</label>
-                            <select id="selectWidgetBg">
-                                <option value="auto">跟随壁纸（毛玻璃）</option>
-                                <option value="color">纯色</option>
-                                <option value="image">图片</option>
-                            </select>
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputWidgetBgColor">小组件纯色</label>
-                            <input type="color" id="inputWidgetBgColor" value="#ffffff">
-                            <div class="hint">当背景类型为「纯色」时生效</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="inputWidgetBgUrl">小组件图片 URL（可选）</label>
-                            <input type="text" id="inputWidgetBgUrl" placeholder="https://...jpg" maxlength="300">
-                            <button class="upload-btn" id="btnUploadWidgetBg">🖼️ 上传图片</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-bubble">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">气泡</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <label for="rangeBubbleHeight">气泡高度 <span id="bubbleHeightLabel" style="color:var(--accent);">2.0</span> 倍</label>
-                            <input type="range" id="rangeBubbleHeight" min="1" max="3" step="0.1" value="2">
-                            <div class="hint">1 = 最紧凑（贴合文字），3 = 最宽松</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="textareaBubbleCSS">自定义气泡样式（CSS）</label>
-                            <textarea id="textareaBubbleCSS" placeholder="例如：border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);"></textarea>
-                            <div class="hint">直接粘贴 CSS 属性，会覆盖默认样式（如背景色、圆角等）</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-time">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">权限</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <label for="rangeReplyDelay">回复延迟（最长） <span id="replyDelayLabel" style="color:var(--accent);">3 秒</span></label>
-                            <input type="range" id="rangeReplyDelay" min="0" max="3600" step="1" value="3">
-                            <div class="hint">你发消息后，他会在 0 秒 ~ 这个时长之间随机延迟，然后回复。0 = 秒回；3600 秒 = 最长等 1 小时。</div>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <div class="field-row">
-                                <span class="field-title">他主动找我说话</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="toggleAutoMessage">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="hint">开启后，他会不定时主动给你发一条字卡（需要页面开着）。</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="rangeAutoMin">最短间隔 <span id="autoMinLabel" style="color:var(--accent);">5 分钟</span></label>
-                            <input type="range" id="rangeAutoMin" min="1" max="1440" step="1" value="5">
-                        </div>
-                        <div class="settings-field">
-                            <label for="rangeAutoMax">最长间隔 <span id="autoMaxLabel" style="color:var(--accent);">2 小时</span></label>
-                            <input type="range" id="rangeAutoMax" min="1" max="1440" step="1" value="120">
-                            <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点主动发消息。你不在页面时不会发，回到页面后会自动补发（最多 3 条）。</div>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <div class="field-row">
-                                <span class="field-title">他也会主动打电话</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="toggleCallIncoming">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="hint">开启后，他会不定时主动给你打语音电话（需要页面开着）。</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="rangeCallMin">最短间隔 <span id="callMinLabel" style="color:var(--accent);">20 分钟</span></label>
-                            <input type="range" id="rangeCallMin" min="1" max="1440" step="1" value="20">
-                        </div>
-                        <div class="settings-field">
-                            <label for="rangeCallMax">最长间隔 <span id="callMaxLabel" style="color:var(--accent);">90 分钟</span></label>
-                            <input type="range" id="rangeCallMax" min="1" max="1440" step="1" value="90">
-                            <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点打来。</div>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <div class="field-row">
-                                <span class="field-title">他的状态</span>
-                                <span class="hint" style="font-size:11px; color:var(--text-muted);">默认开启</span>
-                            </div>
-                            <div class="hint">他会不定时更新一条状态（居中显示），弹窗提醒你。页面开着时才生效。</div>
-                        </div>
-                        <div class="settings-field">
-                            <label for="rangeStatusMin">最短间隔 <span id="statusMinLabel" style="color:var(--accent);">30 分钟</span></label>
-                            <input type="range" id="rangeStatusMin" min="0" max="300" step="1" value="30">
-                        </div>
-                        <div class="settings-field">
-                            <label for="rangeStatusMax">最长间隔 <span id="statusMaxLabel" style="color:var(--accent);">3 小时</span></label>
-                            <input type="range" id="rangeStatusMax" min="0" max="300" step="1" value="180">
-                            <div class="hint">他会在「最短 ~ 最长」之间随机挑一个时间点更新状态。范围 0 秒 ~ 5 小时。</div>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <div class="field-row">
-                                <span class="field-title">静音保活</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="toggleKeepAlive">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="hint">像后台放音乐一样循环播放一段无声音频，尽量让手机别冻结页面，让「主动发消息」更持久。会更耗电，锁屏界面可能显示「正在播放」。</div>
-                        </div>
-                    </div>
-
-                    <div class="settings-card" style="margin-top:16px;">
-                        <div class="settings-field">
-                            <div class="field-row">
-                                <span class="field-title">接受通知</span>
-                                <label class="switch">
-                                    <input type="checkbox" id="togglePush">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                            <div class="hint">开启后，他给你发消息时手机会弹通知（锁屏也能收到）。需要已把网站添加到主屏幕。</div>
-                            <button class="btn btn-secondary" id="btnTestPush" style="margin-top:8px;">🔔 立即测试推送</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-cards">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">字卡库</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="card-tabs" id="cardTabs">
-                        <button class="card-tab active" data-tab="text">文字</button>
-                        <button class="card-tab" data-tab="emoji">emoji</button>
-                        <button class="card-tab" data-tab="sticker">表情包</button>
-                        <button class="card-tab" data-tab="status">状态</button>
-                    </div>
-
-                    <div class="card-tab-panel active" id="tabPanel-text">
-                        <div class="settings-card">
-                            <div class="settings-field">
-                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
-                                    文字是他回复的主体。你发消息后，他会随机挑 1~2 条作为回复。
-                                </div>
-                                <div class="batch-add-area">
-                                    <textarea id="inputBatchCards" placeholder="批量添加：每行一条，例如：&#10;今天想我了吗？&#10;我在呢，一直陪着你。&#10;你发的每条消息我都会看。"></textarea>
-                                    <input type="text" id="inputBatchCategory" placeholder="批量添加的分类（留空为「未分类」）" maxlength="20">
-                                    <div class="batch-actions">
-                                        <button class="btn btn-secondary" id="btnBatchAdd">批量导入</button>
-                                        <button class="btn btn-secondary" id="btnExportCards">导出字卡</button>
-                                        <button class="btn btn-secondary" id="btnImportCards">导入字卡</button>
-                                        <input type="file" id="fileImportCards" accept=".json" style="display:none;">
-                                    </div>
-                                </div>
-                                <div class="card-category-tabs" id="cardCategoryTabs"></div>
-                                <div class="cards-list" id="cardsList"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-tab-panel" id="tabPanel-emoji">
-                        <div class="settings-card">
-                            <div class="settings-field">
-                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
-                                    emoji 会随机附加在文字前后一起发送（也可能不加）。
-                                </div>
-                                <div class="add-card-row">
-                                    <input type="text" id="inputNewEmoji" placeholder="输入一个 emoji，如 😊" maxlength="20">
-                                    <button class="add-card-btn" id="btnAddEmoji">添加</button>
-                                </div>
-                                <div class="emoji-list" id="emojiList"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-tab-panel" id="tabPanel-sticker">
-                        <div class="settings-card">
-                            <div class="settings-field">
-                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
-                                    表情包作为独立一条消息发送（约 30% 概率）。从照片导入，会自动压缩保存。
-                                </div>
-                                <button class="upload-btn" id="btnImportStickers">🖼️ 从照片导入表情包</button>
-                                <input type="file" id="fileImportStickers" accept="image/*" multiple style="display:none;">
-                                <div class="sticker-grid" id="stickerGrid"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card-tab-panel" id="tabPanel-status">
-                        <div class="settings-card">
-                            <div class="settings-field">
-                                <div class="hint" style="font-size:12px; color:var(--text-muted);">
-                                    他的状态：会随机作为一条居中提醒发到对话里（比如「——摸摸头——」）。
-                                </div>
-                                <div class="add-card-row">
-                                    <input type="text" id="inputNewStatus" placeholder="输入一个状态，如 摸摸头" maxlength="30">
-                                    <button class="add-card-btn" id="btnAddStatus">添加</button>
-                                </div>
-                                <div class="cards-list" id="statusList"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-data">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">数据管理</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <div class="batch-actions">
-                                <button class="btn btn-secondary" id="btnExportAll">导出全部数据</button>
-                                <button class="btn btn-secondary" id="btnImportAll">导入数据</button>
-                                <input type="file" id="fileImportAll" accept=".json" style="display:none;">
-                            </div>
-                            <div class="batch-actions">
-                                <button class="btn btn-danger" id="btnClearChat">清空聊天记录</button>
-                                <button class="btn btn-danger" id="btnResetAll">恢复出厂设置</button>
-                            </div>
-                            <div class="hint" style="font-size:11px; color:var(--text-muted);">
-                                恢复出厂设置会清除所有数据（包括字卡、设置、聊天记录），请谨慎操作。
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="sub-view" id="sub-about">
-                <div class="sub-header">
-                    <button class="back-btn">‹</button>
-                    <span class="sub-title">关于</span>
-                    <span class="back-spacer"></span>
-                </div>
-                <div class="sub-content">
-                    <div class="settings-card">
-                        <div class="settings-field">
-                            <p style="font-size:12px; color:var(--text-muted); line-height:1.6; text-align:center; padding: 8px 0;">
-                                这是一个专属于你和他的私人对话空间。<br>
-                                所有他说的话，都来自你亲手写下的字卡。<br>
-                                愿每一句回复，都能温暖你。💛
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-        <div class="home-bar" id="settingsHomeBar" title="返回桌面" aria-label="返回桌面"><div class="home-indicator"></div></div>
-    </div>
-
-    <input type="file" id="fileTaAvatar" accept="image/*" style="display:none;">
-    <input type="file" id="fileMyAvatar" accept="image/*" style="display:none;">
-    <input type="file" id="fileBgImage" accept="image/*" style="display:none;">
-    <input type="file" id="fileWallpaper" accept="image/*" style="display:none;">
-    <input type="file" id="fileWidgetBg" accept="image/*" style="display:none;">
-
-    <div class="modal-overlay" id="welcomeModal">
-        <div class="modal-box">
-            <div class="modal-icon">💌</div>
-            <h3>欢迎来到你们的对话空间</h3>
-            <p>
-                在这里，你可以和他聊天。<br>
-                但他的每一句回复，都来自你提前写好的<strong>「字卡」</strong>。<br>
-                先设置好他的名字，再添加一些他会说的话吧。
-            </p>
-            <div class="modal-field">
-                <label>他的名字</label>
-                <input type="text" id="welcomeTaName" placeholder="比如：小月亮" maxlength="20">
-            </div>
-            <div class="modal-field">
-                <label>你的名字</label>
-                <input type="text" id="welcomeMyName" placeholder="比如：我" maxlength="20">
-            </div>
-            <div class="modal-field">
-                <label>先写几句他会对你说的话（每行一句）</label>
-                <textarea id="welcomeCards" placeholder="比如：&#10;今天想我了吗？&#10;我在呢。&#10;别怕，有我在。"></textarea>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" id="btnWelcomeSkip">先跳过</button>
-                <button class="btn btn-primary" id="btnWelcomeDone">进入桌面 →</button>
+        
+        <!-- 子页面容器（这里先预留，下一版写JS时再动态填充具体HTML，或先用隐藏div） -->
+        <div class="settings-sub-page" id="settingsSubPage" style="display:none;">
+            <header class="sub-header">
+                <button class="glass-btn" id="btnSubBack">‹</button>
+                <span class="sub-title" id="subPageTitle">标题</span>
+                <span style="width:36px"></span>
+            </header>
+            <div class="sub-content" id="subPageContent">
+                <!-- 内容将被JS动态注入或隐藏/显示对应的块 -->
             </div>
         </div>
     </div>
 
-    <div class="sheet-overlay" id="sheetOverlay"></div>
-    <div class="action-sheet" id="actionSheet">
-        <button class="sheet-item" id="btnTakePhoto">📷 拍照</button>
-        <button class="sheet-item" id="btnPickImage">🖼️ 从照片中选择</button>
-        <button class="sheet-item sheet-cancel" id="btnSheetCancel">取消</button>
-    </div>
-
-    <div class="msg-menu" id="msgMenu">
-        <button class="msg-menu-item" id="btnQuote">引用</button>
-        <button class="msg-menu-item msg-menu-danger" id="btnDeleteMsg">删除</button>
-        <span class="msg-menu-arrow"></span>
-    </div>
-
-    <div class="status-modal-overlay" id="statusModal">
-        <div class="status-modal-box">
-            <div class="status-modal-avatar" id="statusModalAvatar">🌙</div>
-            <div class="status-modal-text" id="statusModalText">摸摸头</div>
-            <div class="status-modal-actions">
-                <button class="status-modal-btn wait" id="btnStatusWait">✋(˙꒳˙ )等下哦</button>
-                <button class="status-modal-btn go" id="btnStatusGo">(*'-')b闪去！</button>
-            </div>
+    <!-- 独立 App: 字卡 -->
+    <div class="screen cards-view" id="cardsView">
+        <header class="app-header">
+            <button class="glass-btn" id="btnCardsBack">‹</button>
+            <span class="app-title">字卡库</span>
+            <button class="glass-btn" id="btnCardsMore">...</button>
+        </header>
+        <div class="app-content">
+            <!-- 这里未来放 文字|emoji|表情包|状态 切换栏和列表 -->
+            <div id="cardsListContainer"></div>
         </div>
     </div>
 
-    <div class="call-screen" id="callScreen">
-        <button class="call-minimize" id="btnCallMinimize" aria-label="最小化">
-            <svg viewBox="0 0 60 60" aria-hidden="true"><path d="M14 34 H46" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>
-        </button>
-        <div class="call-avatar" id="callAvatar">🌙</div>
-        <div class="call-name" id="callName">他</div>
-        <div class="call-status" id="callStatus">正在呼叫…</div>
-        <div class="call-timer" id="callTimer"></div>
-        <div class="call-actions" id="callActions"></div>
-    </div>
-
-    <div class="call-mini" id="callMini">
-        <div class="call-mini-avatar" id="callMiniAvatar">🌙</div>
-        <div class="call-mini-info">
-            <div class="call-mini-name" id="callMiniName">他</div>
-            <div class="call-mini-status" id="callMiniStatus">通话中</div>
+    <!-- 独立 App: 倒数日 -->
+    <div class="screen countdown-view" id="countdownView">
+        <header class="app-header">
+            <button class="glass-btn" id="btnCountdownBack">‹</button>
+            <span class="app-title">倒数日</span>
+            <button class="glass-btn" id="btnCountdownAdd">+</button>
+        </header>
+        <div class="app-content" id="countdownListContainer">
+            <!-- 倒数日列表 -->
         </div>
-        <div class="call-mini-timer" id="callMiniTimer">00:00</div>
     </div>
 
-    <input type="file" id="fileTakePhoto" accept="image/*" capture="environment" style="display:none;">
-    <input type="file" id="filePickImage" accept="image/*" style="display:none;">
+    <!-- 独立 App: 信箱 -->
+    <div class="screen letter-view" id="letterView">
+        <header class="app-header">
+            <button class="glass-btn" id="btnLetterBack">‹</button>
+            <span class="app-title">信箱</span>
+            <span style="width:36px"></span>
+        </header>
+        <div class="app-content" id="letterListContainer">
+            <!-- 信件列表 -->
+        </div>
+    </div>
 
-    <div id="toast" style="
-        position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-        background: rgba(30,28,48,0.95); color: #f0eae0; padding: 10px 20px;
-        border-radius: 12px; font-size: 13px; letter-spacing: 0.3px; z-index: 300;
-        opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease;
-        border: 1px solid #3a354e; box-shadow: 0 4px 20px rgba(0,0,0,0.4); white-space: nowrap;
-    "></div>
+    <!-- 独立 App: 小组件 -->
+    <div class="screen widgets-view" id="widgetsView">
+        <header class="app-header">
+            <button class="glass-btn" id="btnWidgetsBack">‹</button>
+            <span class="app-title">小组件</span>
+            <span style="width:36px"></span>
+        </header>
+        <div class="app-content" id="widgetsListContainer">
+            <!-- 模板列表 -->
+        </div>
+    </div>
+
+    <!-- 全局遮罩和弹窗占位 (JS后续控制) -->
+    <div class="global-overlay" id="globalOverlay"></div>
+    <div class="global-toast" id="globalToast"></div>
 
     <script src="app.js"></script>
 </body>
