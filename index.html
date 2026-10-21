@@ -17,9 +17,7 @@
     <!-- 启动页 -->
     <div class="splash" id="splash">
         <div class="splash-planet">
-            <div class="planet-glow"></div>
             <div class="planet-body"></div>
-            <div class="planet-ring ring-front"></div>
         </div>
         <div class="splash-title">☆ Philos</div>
     </div>
@@ -29,7 +27,7 @@
         <div class="desktop-wallpaper" id="desktopWallpaper"></div>
         <div class="desktop-content">
             
-            <!-- 顶部大组件 (4行文字) -->
+            <!-- 顶部大组件 -->
             <div class="widget-large" id="widgetLarge">
                 <div class="widget-top" id="widgetTopBg"></div>
                 <div class="widget-avatar" id="widgetAvatar">🌙</div>
@@ -43,30 +41,29 @@
 
             <!-- 中间图标区 -->
             <div class="icon-grid">
-                <!-- 2x2 小组件区 -->
+                <!-- 左侧 2x2 小组件 -->
                 <div class="widget-small" id="widgetSmallArea">
                     <div class="widget-small-inner" id="widgetSmallContent">
-                        <!-- 动态渲染内容，默认放一个占位 -->
                         <div class="ws-placeholder">Select Widget</div>
                     </div>
                 </div>
                 
                 <!-- 右侧 1x1 图标 -->
                 <div class="app-grid-small">
-                    <button class="app-icon btn-icon" id="appLetter">
-                        <span class="app-icon-box"></span>
+                    <button class="app-icon" id="appLetter">
+                        <span class="app-icon-box">✉️</span>
                         <span class="app-label">信箱</span>
                     </button>
-                    <button class="app-icon btn-icon" id="appSettings">
-                        <span class="app-icon-box"></span>
+                    <button class="app-icon" id="appSettings">
+                        <span class="app-icon-box">⚙️</span>
                         <span class="app-label">设置</span>
                     </button>
-                    <button class="app-icon btn-icon" id="appCountdown">
-                        <span class="app-icon-box"></span>
+                    <button class="app-icon" id="appCountdown">
+                        <span class="app-icon-box">⏳</span>
                         <span class="app-label">倒数日</span>
                     </button>
-                    <button class="app-icon btn-icon" id="appWidgets">
-                        <span class="app-icon-box"></span>
+                    <button class="app-icon" id="appWidgets">
+                        <span class="app-icon-box">🧩</span>
                         <span class="app-label">小组件</span>
                     </button>
                 </div>
@@ -74,10 +71,10 @@
 
             <!-- 底部 Dock 栏 -->
             <div class="dock">
-                <button class="dock-icon" id="appChat"><span class="dock-label">聊天</span></button>
-                <button class="dock-icon" id="appCards"><span class="dock-label">字卡</span></button>
-                <button class="dock-icon" id="dockAppearance"><span class="dock-label">外观</span></button>
-                <button class="dock-icon" id="dockPermission"><span class="dock-label">权限</span></button>
+                <button class="dock-icon" id="appChat">聊天</button>
+                <button class="dock-icon" id="appCards">字卡</button>
+                <button class="dock-icon" id="dockAppearance">外观</button>
+                <button class="dock-icon" id="dockPermission">权限</button>
             </div>
         </div>
     </div>
@@ -94,7 +91,6 @@
         </header>
         <div class="chat-messages" id="chatMessages"></div>
         
-        <!-- 底部悬浮输入区 -->
         <div class="chat-input-wrapper">
             <button class="glass-circle-btn" id="btnChatMore">+</button>
             <div class="chat-input-box">
@@ -104,12 +100,16 @@
         </div>
     </div>
 
-    <!-- 设置系统界面 -->
+    <!-- 设置界面 -->
     <div class="screen settings-view" id="settingsView">
         <div class="settings-main-page" id="settingsMainPage">
-            <h1 class="nav-large-title">设置</h1>
+            <header class="app-header" style="background: transparent; border-bottom: none; padding-bottom: 0; padding-left: 0;">
+                <button class="glass-btn" id="btnSettingsBack">‹</button>
+                <span></span><span></span>
+            </header>
             
-            <!-- Philos 账户卡片 -->
+            <h1 class="nav-large-title" style="margin-top: -10px;">设置</h1>
+            
             <div class="settings-card account-card" id="btnEditMyInfo">
                 <div class="account-avatar" id="settingsMyAvatar">👤</div>
                 <div class="account-info">
@@ -132,7 +132,7 @@
             </div>
         </div>
         
-        <!-- 子页面容器（这里先预留，下一版写JS时再动态填充具体HTML，或先用隐藏div） -->
+        <!-- 子页面容器 -->
         <div class="settings-sub-page" id="settingsSubPage" style="display:none;">
             <header class="sub-header">
                 <button class="glass-btn" id="btnSubBack">‹</button>
@@ -140,7 +140,7 @@
                 <span style="width:36px"></span>
             </header>
             <div class="sub-content" id="subPageContent">
-                <!-- 内容将被JS动态注入或隐藏/显示对应的块 -->
+                <div style="text-align:center; color:#999; margin-top:50px; font-size:14px;">这里是具体的设置项，下次更新填入。</div>
             </div>
         </div>
     </div>
@@ -153,8 +153,7 @@
             <button class="glass-btn" id="btnCardsMore">...</button>
         </header>
         <div class="app-content">
-            <!-- 这里未来放 文字|emoji|表情包|状态 切换栏和列表 -->
-            <div id="cardsListContainer"></div>
+            <div style="text-align:center; color:#999; margin-top:50px; font-size:14px;">字卡列表将在下个阶段更新。</div>
         </div>
     </div>
 
@@ -165,8 +164,8 @@
             <span class="app-title">倒数日</span>
             <button class="glass-btn" id="btnCountdownAdd">+</button>
         </header>
-        <div class="app-content" id="countdownListContainer">
-            <!-- 倒数日列表 -->
+        <div class="app-content">
+            <div style="text-align:center; color:#999; margin-top:50px; font-size:14px;">倒数日列表将在下个阶段更新。</div>
         </div>
     </div>
 
@@ -177,8 +176,8 @@
             <span class="app-title">信箱</span>
             <span style="width:36px"></span>
         </header>
-        <div class="app-content" id="letterListContainer">
-            <!-- 信件列表 -->
+        <div class="app-content">
+            <div style="text-align:center; color:#999; margin-top:50px; font-size:14px;">信件列表将在下个阶段更新。</div>
         </div>
     </div>
 
@@ -189,14 +188,10 @@
             <span class="app-title">小组件</span>
             <span style="width:36px"></span>
         </header>
-        <div class="app-content" id="widgetsListContainer">
-            <!-- 模板列表 -->
+        <div class="app-content">
+            <div style="text-align:center; color:#999; margin-top:50px; font-size:14px;">组件模板将在下个阶段更新。</div>
         </div>
     </div>
-
-    <!-- 全局遮罩和弹窗占位 (JS后续控制) -->
-    <div class="global-overlay" id="globalOverlay"></div>
-    <div class="global-toast" id="globalToast"></div>
 
     <script src="app.js"></script>
 </body>
