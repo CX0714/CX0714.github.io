@@ -1,6 +1,6 @@
 /* =========================================================
    Philos · 阶段一
-   设计规范：iOS 原生感 + 韩系极简 / 冷调灰蓝 / 磨砂毛玻璃 / 无 Emoji
+   iOS 原生感 + 韩系极简 / 冷调灰蓝 / 磨砂毛玻璃 / 无 Emoji
    ========================================================= */
 
 /* ===== 1. 设计变量 ===== */
@@ -12,6 +12,14 @@
     --glass-bg-strong: rgba(255, 255, 255, 0.74);
     --glass-border: rgba(255, 255, 255, 0.40);
     --card-bg: rgba(255, 255, 255, 0.94);
+
+    --widget-top: linear-gradient(160deg, #eef1f5 0%, #e1e7ee 100%);
+    --widget-bottom: rgba(255, 255, 255, 0.40);
+    --widget-divider: rgba(255, 255, 255, 0.95);
+
+    --icon-bg: rgba(255, 255, 255, 0.85);
+    --dock-item-bg: rgba(255, 255, 255, 0.22);
+    --dock-item-active: rgba(255, 255, 255, 0.38);
 
     --text-primary: #1b1d21;
     --text-secondary: #8b909a;
@@ -29,7 +37,7 @@
 
     --font-home: 16px;
     --font-chat: 15px;
-    --avatar-border: rgba(255, 255, 255, 0.92);
+    --avatar-border: rgba(255, 255, 255, 0.95);
 
     --bubble-me-bg: #5b7fa6;
     --bubble-me-text: #ffffff;
@@ -38,13 +46,21 @@
 }
 
 [data-theme="dark"] {
-    --bg-grad: linear-gradient(135deg, #07080a 0%, #16181c 100%);
-    --bg-solid: #0b0c0e;
+    --bg-grad: linear-gradient(135deg, #000000 0%, #0d0e10 100%);
+    --bg-solid: #000000;
 
     --glass-bg: rgba(30, 32, 36, 0.55);
     --glass-bg-strong: rgba(42, 44, 49, 0.75);
     --glass-border: rgba(255, 255, 255, 0.12);
     --card-bg: #1b1c20;
+
+    --widget-top: linear-gradient(160deg, #1e2024 0%, #141619 100%);
+    --widget-bottom: rgba(40, 42, 47, 0.55);
+    --widget-divider: rgba(255, 255, 255, 0.14);
+
+    --icon-bg: #26282d;
+    --dock-item-bg: rgba(255, 255, 255, 0.07);
+    --dock-item-active: rgba(255, 255, 255, 0.14);
 
     --text-primary: #f2f3f6;
     --text-secondary: #8b909a;
@@ -120,6 +136,8 @@ input, textarea {
     display: block;
 }
 
+[hidden] { display: none !important; }
+
 /* ===== 3. 屏幕切换 ===== */
 .screen {
     position: fixed;
@@ -175,17 +193,21 @@ input, textarea {
     50% { transform: scale(1.035); }
 }
 
-/* ===== 5. 主屏幕 ===== */
+/* =========================================================
+   5. 主屏幕
+   屏宽 padding 20px → 卡片宽度约为屏幕的 90%
+   大组件严格 1:1，不用 flex 撑高
+   ========================================================= */
 .desktop-view {
-    padding: calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 14px);
     height: 100vh;
     height: 100dvh;
+    padding: calc(env(safe-area-inset-top) + 16px) 20px calc(env(safe-area-inset-bottom) + 14px);
 }
 
 .desktop-content {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 20px;
     height: 100%;
     min-height: 0;
     overflow-y: auto;
@@ -195,39 +217,64 @@ input, textarea {
 /* --- 5.1 顶部大组件 --- */
 .widget-large {
     position: relative;
-    flex: 0 0 200px;
+    flex: 0 0 auto;
     width: 100%;
-    height: 200px;
-    border-radius: var(--r-xl);
-    background: var(--glass-bg);
-    -webkit-backdrop-filter: var(--blur);
-    backdrop-filter: var(--blur);
+    aspect-ratio: 1 / 1;
+    border-radius: 34px;
     border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-soft);
     overflow: hidden;
+    isolation: isolate;
+}
+
+.widget-half {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 50%;
+}
+
+.widget-half-top {
+    top: 0;
+    background: var(--widget-top);
+}
+
+.widget-half-bottom {
+    bottom: 0;
+    background: var(--widget-bottom);
+    -webkit-backdrop-filter: var(--blur);
+    backdrop-filter: var(--blur);
+}
+
+.widget-divider {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: var(--widget-divider);
+    z-index: 6;
 }
 
 .widget-avatar {
     position: absolute;
-    top: 34px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-    width: 72px;
-    height: 72px;
+    transform: translate(-50%, -50%);
+    z-index: 20;
+    width: 84px;
+    height: 84px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     background: var(--glass-bg-strong);
-    border: 3px solid var(--avatar-border);
-    box-shadow: 0 8px 20px rgba(80, 105, 135, 0.16);
+    border: 2px solid var(--avatar-border);
+    box-shadow: 0 10px 24px rgba(70, 95, 125, 0.18);
 }
 
-.widget-avatar img,
-.account-avatar img,
-.chat-header-avatar img {
+.widget-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -236,7 +283,7 @@ input, textarea {
 }
 
 .widget-avatar .avatar-text {
-    font-size: 22px;
+    font-size: 24px;
     font-weight: 600;
     letter-spacing: 0.5px;
     color: var(--text-secondary);
@@ -244,21 +291,23 @@ input, textarea {
 
 .widget-text-area {
     position: absolute;
-    left: 14px;
-    right: 14px;
-    top: 114px;
-    bottom: 14px;
+    top: 50%;
+    bottom: 0;
+    left: 18px;
+    right: 18px;
+    padding-top: 58px;
+    z-index: 15;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 5px;
     text-align: center;
     cursor: pointer;
     overflow: hidden;
 }
 
-.widget-text-area:active { transform: scale(0.98); }
+.widget-text-area:active { transform: scale(0.985); }
 
 .widget-line {
     max-width: 100%;
@@ -268,30 +317,42 @@ input, textarea {
 }
 
 .widget-line-1 {
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.6px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
     color: var(--text-primary);
 }
+
 .widget-line-2 {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0.4px;
+    letter-spacing: 0.3px;
     color: var(--text-secondary);
 }
+
 .widget-line-3 {
-    font-size: 11px;
+    font-size: 12px;
     font-style: italic;
     color: var(--text-secondary);
 }
+
 .widget-line-4 {
-    font-size: 10px;
-    letter-spacing: 0.3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    letter-spacing: 0.2px;
     color: var(--text-secondary);
-    opacity: 0.85;
 }
 
-/* --- 5.2 图标区（锁死正方形） --- */
+.widget-line-4 .pin {
+    width: 11px;
+    height: 11px;
+    flex: 0 0 auto;
+    opacity: 0.8;
+}
+
+/* --- 5.2 图标区 --- */
 .icon-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -303,7 +364,7 @@ input, textarea {
 .widget-small {
     width: 100%;
     aspect-ratio: 1 / 1;
-    border-radius: var(--r-xl);
+    border-radius: 34px;
     background: var(--glass-bg);
     -webkit-backdrop-filter: var(--blur);
     backdrop-filter: var(--blur);
@@ -330,17 +391,17 @@ input, textarea {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 12px;
+    gap: 15px;
     min-width: 0;
     min-height: 0;
 }
 
 .app-icon {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    justify-items: center;
     align-items: center;
-    justify-content: center;
-    gap: 5px;
+    gap: 4px;
     min-width: 0;
     min-height: 0;
     padding: 0;
@@ -349,30 +410,27 @@ input, textarea {
 }
 
 .app-icon-box {
-    flex: 1 1 auto;
+    height: 100%;
     aspect-ratio: 1 / 1;
     max-width: 100%;
     min-height: 0;
-    border-radius: 15px;
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--icon-color);
-    background: var(--glass-bg);
-    -webkit-backdrop-filter: var(--blur);
-    backdrop-filter: var(--blur);
+    background: var(--icon-bg);
     border: 1px solid var(--glass-border);
     box-shadow: var(--shadow-card);
 }
 
-.app-icon-box .svg-icon { width: 20px; height: 20px; }
+.app-icon-box .svg-icon { width: 22px; height: 22px; }
 
 .app-label {
-    flex: 0 0 auto;
-    font-size: 10.5px;
-    line-height: 1;
+    font-size: 11px;
+    line-height: 1.2;
     font-weight: 500;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.2px;
     color: var(--text-secondary);
 }
 
@@ -390,19 +448,25 @@ input, textarea {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     align-items: center;
-    padding: 0 6px;
+    justify-items: center;
+    padding: 0 8px;
 }
 
 .dock-btn {
+    width: 60px;
     height: 60px;
-    border-radius: 22px;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.8px;
-    color: var(--text-primary);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--icon-color);
+    background: var(--dock-item-bg);
+    border: 1px solid var(--glass-border);
 }
 
-.dock-btn:active { background: rgba(255, 255, 255, 0.18); }
+.dock-btn .svg-icon { width: 24px; height: 24px; }
+
+.dock-btn:active { background: var(--dock-item-active); }
 
 /* ===== 6. 设置 ===== */
 .settings-view {
@@ -481,6 +545,13 @@ input, textarea {
     font-weight: 600;
     letter-spacing: 0.4px;
 }
+.account-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
 
 .account-info {
     flex: 1 1 auto;
@@ -547,7 +618,6 @@ input, textarea {
 
 .settings-item:active { background: rgba(125, 140, 160, 0.08); transform: none; }
 
-/* 二级页 */
 .settings-sub {
     position: absolute;
     inset: 0;
@@ -558,7 +628,6 @@ input, textarea {
     padding: calc(env(safe-area-inset-top) + 10px) 16px calc(env(safe-area-inset-bottom) + 20px);
     z-index: 30;
 }
-.settings-sub[hidden] { display: none; }
 
 .sub-title {
     font-size: 17px;
@@ -754,6 +823,14 @@ input, textarea {
     color: var(--text-secondary);
 }
 
+.chat-header-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
 .chat-header-name {
     font-size: 16px;
     font-weight: 600;
@@ -900,11 +977,18 @@ input, textarea {
     margin-top: 60px;
 }
 
-/* ===== 10. 小屏兜底 ===== */
-@media (max-height: 700px) {
-    .widget-large { flex-basis: 176px; height: 176px; }
-    .widget-text-area { top: 100px; }
-    .widget-avatar { top: 28px; width: 64px; height: 64px; }
+/* ===== 10. 小屏兜底（保持所有正方形不变，只压缩间距） ===== */
+@media (max-height: 720px) {
+    .desktop-view {
+        padding-top: calc(env(safe-area-inset-top) + 10px);
+        padding-bottom: calc(env(safe-area-inset-bottom) + 10px);
+    }
+    .desktop-content { gap: 16px; }
+    .icon-grid { gap: 16px; }
+    .app-grid-small { gap: 12px; }
     .dock { flex-basis: 72px; height: 72px; border-radius: 36px; }
-    .dock-btn { height: 54px; }
+    .dock-btn { width: 54px; height: 54px; border-radius: 16px; }
+    .dock-btn .svg-icon { width: 22px; height: 22px; }
+    .widget-text-area { padding-top: 52px; }
+    .widget-line-1 { font-size: 17px; }
 }

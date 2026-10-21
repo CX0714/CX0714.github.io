@@ -63,6 +63,25 @@
         <symbol id="ic-phone" viewBox="0 0 24 24">
             <path d="M6.4 3.8h2.9l1.5 3.7-2 1.4a11.4 11.4 0 0 0 5.3 5.3l1.4-2 3.7 1.5v2.9a2.3 2.3 0 0 1-2.5 2.3A16.4 16.4 0 0 1 4.1 6.3 2.3 2.3 0 0 1 6.4 3.8z"/>
         </symbol>
+        <symbol id="ic-chat" viewBox="0 0 24 24">
+            <path d="M20 11.9c0 3.7-3.6 6.7-8 6.7-1 0-2-.15-2.9-.43L4.6 20l1.15-3.2C4.5 15.3 4 13.7 4 11.9 4 8.2 7.6 5.2 12 5.2s8 3 8 6.7z"/>
+        </symbol>
+        <symbol id="ic-card" viewBox="0 0 24 24">
+            <rect x="3" y="5.5" width="18" height="13" rx="3.4"/>
+            <path d="M3 10.5h18M7 15h4"/>
+        </symbol>
+        <symbol id="ic-palette" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="8.6"/>
+            <path d="M12 3.4a8.6 8.6 0 0 1 0 17.2z" fill="currentColor" stroke="none"/>
+        </symbol>
+        <symbol id="ic-key" viewBox="0 0 24 24">
+            <circle cx="8.2" cy="9.4" r="3.7"/>
+            <path d="M10.9 12.1 19 20.2M16.2 17.4l1.7-1.7M18.4 19.6l1.6-1.6"/>
+        </symbol>
+        <symbol id="ic-pin" viewBox="0 0 24 24">
+            <path d="M12 21s6.3-6 6.3-10.3A6.3 6.3 0 0 0 5.7 10.7C5.7 15 12 21 12 21z"/>
+            <circle cx="12" cy="10.5" r="2.2"/>
+        </symbol>
     </svg>
 
     <!-- ===== 启动页 ===== -->
@@ -78,25 +97,33 @@
     <div class="screen desktop-view active" id="desktopView">
         <div class="desktop-content">
 
-            <!-- 顶部大组件 -->
+            <!-- 顶部大组件（锁死 1:1，上下各 50%） -->
             <section class="widget-large" id="widgetLarge">
+                <div class="widget-half widget-half-top"></div>
+                <div class="widget-half widget-half-bottom"></div>
+                <div class="widget-divider"></div>
+
                 <div class="widget-avatar" id="widgetAvatar">Me</div>
+
                 <div class="widget-text-area" id="widgetTextArea" role="button" tabindex="0" aria-label="编辑主页文字">
                     <div class="widget-line widget-line-1" id="wLine1">______</div>
                     <div class="widget-line widget-line-2" id="wLine2">______</div>
                     <div class="widget-line widget-line-3" id="wLine3">______</div>
-                    <div class="widget-line widget-line-4" id="wLine4">______</div>
+                    <div class="widget-line widget-line-4">
+                        <svg class="svg-icon pin" viewBox="0 0 24 24"><use href="#ic-pin"></use></svg>
+                        <span id="wLine4">______</span>
+                    </div>
                 </div>
             </section>
 
             <!-- 中间图标区 -->
             <div class="icon-grid">
-                <!-- 左侧 2x2 小组件（正方形） -->
+                <!-- 左侧 2x2 正方形小组件 -->
                 <div class="widget-small" id="widgetSmallArea">
                     <span class="ws-placeholder">Select Widget</span>
                 </div>
 
-                <!-- 右侧 4 个 1x1 图标 -->
+                <!-- 右侧 4 个 1x1 图标（整体正方形，内部 2x2，间距 15px） -->
                 <div class="app-grid-small">
                     <button class="app-icon" id="appLetter" type="button">
                         <span class="app-icon-box">
@@ -125,12 +152,20 @@
                 </div>
             </div>
 
-            <!-- 底部 Dock -->
+            <!-- 底部 Dock：4 个 60x60 图标方块，无文字 -->
             <nav class="dock">
-                <button class="dock-btn" id="appChat" type="button">聊天</button>
-                <button class="dock-btn" id="appCards" type="button">字卡</button>
-                <button class="dock-btn" id="dockAppearance" type="button">外观</button>
-                <button class="dock-btn" id="dockPermission" type="button">权限</button>
+                <button class="dock-btn" id="appChat" type="button" aria-label="聊天">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chat"></use></svg>
+                </button>
+                <button class="dock-btn" id="appCards" type="button" aria-label="字卡">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg>
+                </button>
+                <button class="dock-btn" id="dockAppearance" type="button" aria-label="外观">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-palette"></use></svg>
+                </button>
+                <button class="dock-btn" id="dockPermission" type="button" aria-label="权限">
+                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-key"></use></svg>
+                </button>
             </nav>
 
         </div>
@@ -139,7 +174,6 @@
     <!-- ===== 设置 ===== -->
     <div class="screen settings-view" id="settingsView">
 
-        <!-- 主界面 -->
         <div class="settings-main" id="settingsMainPage">
             <div class="settings-topbar">
                 <button class="nav-back" id="btnSettingsBack" type="button" aria-label="返回主屏幕">
@@ -189,7 +223,6 @@
             </div>
         </div>
 
-        <!-- 二级页 -->
         <div class="settings-sub" id="settingsSubPage" hidden>
             <div class="settings-topbar">
                 <button class="nav-back" id="btnSubBack" type="button" aria-label="返回">
