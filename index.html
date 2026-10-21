@@ -29,41 +29,38 @@
             
             <!-- 顶部大组件 -->
             <div class="widget-large" id="widgetLarge">
-                <div class="widget-top" id="widgetTopBg"></div>
                 <div class="widget-avatar" id="widgetAvatar">🌙</div>
-                <div class="widget-bottom" id="widgetBottomBg">
-                    <div class="widget-line-1" id="wLine1">______</div>
-                    <div class="widget-line-2" id="wLine2">______</div>
-                    <div class="widget-line-3" id="wLine3">______</div>
-                    <div class="widget-line-4" id="wLine4">______</div>
+                <div class="widget-text-area">
+                    <div class="widget-line-1" id="wLine1">Solo vibe</div>
+                    <div class="widget-line-2" id="wLine2">@Philos</div>
+                    <div class="widget-line-3" id="wLine3">"Love is the resonance."</div>
+                    <div class="widget-line-4" id="wLine4">📍 家里</div>
                 </div>
             </div>
 
             <!-- 中间图标区 -->
             <div class="icon-grid">
-                <!-- 左侧 2x2 小组件 -->
+                <!-- 左侧 2x2 小组件 (正方形) -->
                 <div class="widget-small" id="widgetSmallArea">
-                    <div class="widget-small-inner" id="widgetSmallContent">
-                        <div class="ws-placeholder">Select Widget</div>
-                    </div>
+                    <div class="ws-placeholder">Select Widget</div>
                 </div>
                 
                 <!-- 右侧 1x1 图标 -->
                 <div class="app-grid-small">
                     <button class="app-icon" id="appLetter">
-                        <span class="app-icon-box">✉️</span>
+                        <span class="app-icon-box"></span>
                         <span class="app-label">信箱</span>
                     </button>
                     <button class="app-icon" id="appSettings">
-                        <span class="app-icon-box">⚙️</span>
+                        <span class="app-icon-box"></span>
                         <span class="app-label">设置</span>
                     </button>
                     <button class="app-icon" id="appCountdown">
-                        <span class="app-icon-box">⏳</span>
+                        <span class="app-icon-box"></span>
                         <span class="app-label">倒数日</span>
                     </button>
                     <button class="app-icon" id="appWidgets">
-                        <span class="app-icon-box">🧩</span>
+                        <span class="app-icon-box"></span>
                         <span class="app-label">小组件</span>
                     </button>
                 </div>
@@ -71,10 +68,10 @@
 
             <!-- 底部 Dock 栏 -->
             <div class="dock">
-                <button class="dock-icon" id="appChat">聊天</button>
-                <button class="dock-icon" id="appCards">字卡</button>
-                <button class="dock-icon" id="dockAppearance">外观</button>
-                <button class="dock-icon" id="dockPermission">权限</button>
+                <button class="dock-icon" id="appChat"><span class="dock-icon-box">聊天</span></button>
+                <button class="dock-icon" id="appCards"><span class="dock-icon-box">字卡</span></button>
+                <button class="dock-icon" id="dockAppearance"><span class="dock-icon-box">外观</span></button>
+                <button class="dock-icon" id="dockPermission"><span class="dock-icon-box">权限</span></button>
             </div>
         </div>
     </div>
@@ -100,7 +97,7 @@
         </div>
     </div>
 
-    <!-- 设置界面 -->
+    <!-- 设置界面 (带返回键) -->
     <div class="screen settings-view" id="settingsView">
         <div class="settings-main-page" id="settingsMainPage">
             <header class="app-header" style="background: transparent; border-bottom: none; padding-bottom: 0; padding-left: 0;">
@@ -132,7 +129,6 @@
             </div>
         </div>
         
-        <!-- 子页面容器 -->
         <div class="settings-sub-page" id="settingsSubPage" style="display:none;">
             <header class="sub-header">
                 <button class="glass-btn" id="btnSubBack">‹</button>
