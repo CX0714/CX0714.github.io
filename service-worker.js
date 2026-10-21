@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v6";
+const CACHE_NAME = "philos-v7";
 const ASSETS = ["./", "./index.html", "./styles.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
@@ -34,7 +34,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 静态资源（css/js/图片等）：优先用最新版，没网时才用缓存兜底
+  // 静态资源：优先用最新版，没网时才用缓存兜底
   event.respondWith(
     fetch(req)
       .then((res) => {
