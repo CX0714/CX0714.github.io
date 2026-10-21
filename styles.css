@@ -5,8 +5,8 @@
     --text-primary: #1a1a1c;
     --text-secondary: #8e8e93;
     
-    /* 关键：毛玻璃质感增强 */
-    --glass-bg: rgba(255, 255, 255, 0.55);
+    /* 玻璃质感 */
+    --glass-bg: rgba(255, 255, 255, 0.45);
     --glass-border: rgba(255, 255, 255, 0.6);
     
     --radius-sm: 12px;
@@ -25,7 +25,7 @@
     --bg-surface: #1c1c1e;
     --text-primary: #ffffff;
     --text-secondary: #8e8e93;
-    --glass-bg: rgba(28, 28, 30, 0.55);
+    --glass-bg: rgba(28, 28, 30, 0.45);
     --glass-border: rgba(255, 255, 255, 0.1);
     --bubble-me-bg: #0a84ff;
     --bubble-ta-bg: #26262a;
@@ -41,8 +41,8 @@
 body, html {
     height: 100%; width: 100%; overflow: hidden;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", sans-serif;
-    /* 给个微弱的渐变底色，不然毛玻璃透不出东西 */
-    background: linear-gradient(135deg, #eef0f4 0%, #f4f5f8 100%);
+    /* 重点：给底层加一个很浅的灰蓝渐变，这样才能透出毛玻璃质感 */
+    background: linear-gradient(135deg, #e8ecf1 0%, #f4f5f8 100%);
     color: var(--text-primary);
 }
 
@@ -74,56 +74,61 @@ body, html {
 
 /* ===== 主屏幕 ===== */
 .desktop-view { padding: calc(env(safe-area-inset-top) + 20px) 20px calc(env(safe-area-inset-bottom) + 20px); }
-.desktop-content { display: flex; flex-direction: column; height: 100%; gap: 20px; }
+.desktop-content { display: flex; flex-direction: column; height: 100%; gap: 25px; }
 
-/* 顶部大组件 (全毛玻璃) */
+/* 顶部大组件 (完美布局，防止重叠) */
 .widget-large {
     position: relative; width: 100%; height: 200px; border-radius: var(--radius-lg);
     background: var(--glass-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
-    border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+    border: 1px solid var(--glass-border); box-shadow: 0 10px 30px rgba(0,0,0,0.03);
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
     padding-bottom: 20px; flex-shrink: 0;
 }
 .widget-avatar {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: 76px; height: 76px; border-radius: 50%; background: #fff;
-    border: 3px solid rgba(255,255,255,0.8); display: flex; align-items: center; justify-content: center;
-    font-size: 32px; box-shadow: 0 6px 16px rgba(0,0,0,0.1); z-index: 2;
+    border: 3px solid rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center;
+    font-size: 32px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); z-index: 2;
 }
-.widget-text-area { text-align: center; display: flex; flex-direction: column; gap: 4px; }
-.widget-line-1 { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.widget-text-area { 
+    text-align: center; display: flex; flex-direction: column; gap: 4px; 
+    padding-top: 50px; /* 核心：强制文字往下走，避开头像 */
+}
+.widget-line-1 { font-size: 17px; font-weight: 700; color: var(--text-primary); letter-spacing: 1px;}
 .widget-line-2 { font-size: 12px; color: var(--text-secondary); }
 .widget-line-3 { font-size: 12px; font-style: italic; color: var(--text-secondary); margin-top: 2px; }
 .widget-line-4 { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
 
-/* 中间图标区：完美网格 */
+/* 中间图标区：用 Flex 强制一左一右 */
 .icon-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 强制一半一半 */
+    display: flex;
     gap: 20px;
     flex: 1;
+    align-items: flex-start; /* 顶部对齐 */
 }
 
-/* 左侧 2x2 小组件 (严格正方形) */
+/* 左侧 2x2 小组件 (严格的宽高比例，绝对不会拉伸) */
 .widget-small {
+    width: calc(50% - 10px); 
     aspect-ratio: 1 / 1; 
-    width: 100%;
     border-radius: var(--radius-lg); 
     background: var(--glass-bg);
     backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
     box-shadow: 0 5px 20px rgba(0,0,0,0.03);
     display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
 }
-.ws-placeholder { font-size: 12px; color: #a1a1aa; }
+.ws-placeholder { font-size: 13px; color: var(--text-secondary); opacity: 0.5; font-weight: 500;}
 
 /* 右侧 4个 1x1 图标 */
 .app-grid-small {
+    flex: 1;
     display: grid; 
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, 1fr); 
     gap: 15px; 
-    width: 100%;
+    aspect-ratio: 1 / 1; /* 整体也是正方形 */
 }
 .app-icon {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -131,7 +136,7 @@ body, html {
 }
 .app-icon-box {
     width: 100%; 
-    aspect-ratio: 1/1; /* 图标也是正方形 */
+    aspect-ratio: 1/1; 
     border-radius: var(--radius-md);
     background: var(--glass-bg); 
     backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
@@ -142,18 +147,28 @@ body, html {
 .app-icon:active .app-icon-box { transform: scale(0.9); }
 .app-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
 
-/* 底部 Dock 栏 */
+/* 底部 Dock 栏 (长条悬浮胶囊) */
 .dock {
-    display: flex; align-items: center; justify-content: space-between;
-    gap: 15px; flex-shrink: 0;
+    height: 80px; 
+    border-radius: var(--radius-lg); 
+    background: var(--glass-bg);
+    backdrop-filter: blur(25px); 
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid var(--glass-border); 
+    display: flex; 
+    align-items: center;
+    justify-content: space-around; 
+    padding: 0 10px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+    flex-shrink: 0;
+    margin-top: auto; /* 推到最底部 */
 }
 .dock-icon {
-    flex: 1; aspect-ratio: 1/1; max-height: 70px; border-radius: var(--radius-md);
-    border: none; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border); box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-    display: flex; align-items: center; justify-content: center;
+    width: 60px; height: 60px; border-radius: var(--radius-md); border: none;
+    background: transparent; display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px;
 }
-.dock-icon-box { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.dock-icon:active { background: rgba(0,0,0,0.05); }
 
 /* ===== 聊天界面 ===== */
 .chat-view { background: var(--bg-primary); }
