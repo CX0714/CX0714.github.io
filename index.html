@@ -15,10 +15,7 @@
         try {
             var _raw = localStorage.getItem('private_chat_app_v1');
             var _mode = 'auto';
-            if (_raw) {
-                var _data = JSON.parse(_raw);
-                if (_data && _data.themeMode) _mode = _data.themeMode;
-            }
+            if (_raw) { var _d = JSON.parse(_raw); if (_d && _d.themeMode) _mode = _d.themeMode; }
             var _dark = _mode === 'dark' || (_mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
             document.documentElement.setAttribute('data-theme', _dark ? 'dark' : 'light');
         } catch (e) {}
@@ -29,62 +26,24 @@
 
     <!-- ===== 线框图标库 ===== -->
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
-        <symbol id="ic-mail" viewBox="0 0 24 24">
-            <rect x="3" y="5.5" width="18" height="13" rx="3.6"/>
-            <path d="M4.2 8.4 12 13.4l7.8-5"/>
-        </symbol>
-        <symbol id="ic-gear" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="3.1"/>
-            <path d="M12 3.2v2.1M12 18.7v2.1M3.2 12h2.1M18.7 12h2.1M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"/>
-        </symbol>
-        <symbol id="ic-calendar" viewBox="0 0 24 24">
-            <rect x="3.5" y="5" width="17" height="15.5" rx="3.6"/>
-            <path d="M3.5 10h17M8 3.2v3.6M16 3.2v3.6M8.2 14.2h2.2"/>
-        </symbol>
-        <symbol id="ic-grid" viewBox="0 0 24 24">
-            <rect x="3.5" y="3.5" width="7" height="7" rx="2.2"/>
-            <rect x="13.5" y="3.5" width="7" height="7" rx="2.2"/>
-            <rect x="3.5" y="13.5" width="7" height="7" rx="2.2"/>
-            <rect x="13.5" y="13.5" width="7" height="7" rx="2.2"/>
-        </symbol>
-        <symbol id="ic-back" viewBox="0 0 24 24">
-            <path d="M14.5 5.5 8 12l6.5 6.5"/>
-        </symbol>
-        <symbol id="ic-chevron" viewBox="0 0 24 24">
-            <path d="M9.5 5.5 16 12l-6.5 6.5"/>
-        </symbol>
-        <symbol id="ic-plus" viewBox="0 0 24 24">
-            <path d="M12 5.5v13M5.5 12h13"/>
-        </symbol>
-        <symbol id="ic-up" viewBox="0 0 24 24">
-            <path d="M12 19V5.5M6 11.5 12 5.5l6 6"/>
-        </symbol>
-        <symbol id="ic-phone" viewBox="0 0 24 24">
-            <path d="M6.4 3.8h2.9l1.5 3.7-2 1.4a11.4 11.4 0 0 0 5.3 5.3l1.4-2 3.7 1.5v2.9a2.3 2.3 0 0 1-2.5 2.3A16.4 16.4 0 0 1 4.1 6.3 2.3 2.3 0 0 1 6.4 3.8z"/>
-        </symbol>
-        <symbol id="ic-chat" viewBox="0 0 24 24">
-            <path d="M20 11.9c0 3.7-3.6 6.7-8 6.7-1 0-2-.15-2.9-.43L4.6 20l1.15-3.2C4.5 15.3 4 13.7 4 11.9 4 8.2 7.6 5.2 12 5.2s8 3 8 6.7z"/>
-        </symbol>
-        <symbol id="ic-card" viewBox="0 0 24 24">
-            <rect x="3" y="5.5" width="18" height="13" rx="3.4"/>
-            <path d="M3 10.5h18M7 15h4"/>
-        </symbol>
-        <symbol id="ic-palette" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="8.6"/>
-            <path d="M12 3.4a8.6 8.6 0 0 1 0 17.2z" fill="currentColor" stroke="none"/>
-        </symbol>
-        <symbol id="ic-key" viewBox="0 0 24 24">
-            <circle cx="8.2" cy="9.4" r="3.7"/>
-            <path d="M10.9 12.1 19 20.2M16.2 17.4l1.7-1.7M18.4 19.6l1.6-1.6"/>
-        </symbol>
-        <symbol id="ic-pin" viewBox="0 0 24 24">
-            <path d="M12 21s6.3-6 6.3-10.3A6.3 6.3 0 0 0 5.7 10.7C5.7 15 12 21 12 21z"/>
-            <circle cx="12" cy="10.5" r="2.2"/>
-        </symbol>
-        <symbol id="ic-person" viewBox="0 0 24 24">
-            <circle cx="12" cy="9.2" r="3.5"/>
-            <path d="M5.4 19.6c0-3.3 3-5.4 6.6-5.4s6.6 2.1 6.6 5.4"/>
-        </symbol>
+        <symbol id="ic-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="3.6"/><path d="M4.2 8.4 12 13.4l7.8-5"/></symbol>
+        <symbol id="ic-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1"/><path d="M12 3.2v2.1M12 18.7v2.1M3.2 12h2.1M18.7 12h2.1M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18"/></symbol>
+        <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3.6"/><path d="M3.5 10h17M8 3.2v3.6M16 3.2v3.6M8.2 14.2h2.2"/></symbol>
+        <symbol id="ic-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2.2"/></symbol>
+        <symbol id="ic-back" viewBox="0 0 24 24"><path d="M14.5 5.5 8 12l6.5 6.5"/></symbol>
+        <symbol id="ic-chevron" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></symbol>
+        <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+        <symbol id="ic-up" viewBox="0 0 24 24"><path d="M12 19V5.5M6 11.5 12 5.5l6 6"/></symbol>
+        <symbol id="ic-phone" viewBox="0 0 24 24"><path d="M6.4 3.8h2.9l1.5 3.7-2 1.4a11.4 11.4 0 0 0 5.3 5.3l1.4-2 3.7 1.5v2.9a2.3 2.3 0 0 1-2.5 2.3A16.4 16.4 0 0 1 4.1 6.3 2.3 2.3 0 0 1 6.4 3.8z"/></symbol>
+        <symbol id="ic-chat" viewBox="0 0 24 24"><path d="M20 11.9c0 3.7-3.6 6.7-8 6.7-1 0-2-.15-2.9-.43L4.6 20l1.15-3.2C4.5 15.3 4 13.7 4 11.9 4 8.2 7.6 5.2 12 5.2s8 3 8 6.7z"/></symbol>
+        <symbol id="ic-card" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="3.4"/><path d="M3 10.5h18M7 15h4"/></symbol>
+        <symbol id="ic-palette" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M12 3.4a8.6 8.6 0 0 1 0 17.2z" fill="currentColor" stroke="none"/></symbol>
+        <symbol id="ic-key" viewBox="0 0 24 24"><circle cx="8.2" cy="9.4" r="3.7"/><path d="M10.9 12.1 19 20.2M16.2 17.4l1.7-1.7M18.4 19.6l1.6-1.6"/></symbol>
+        <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 21s6.3-6 6.3-10.3A6.3 6.3 0 0 0 5.7 10.7C5.7 15 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/></symbol>
+        <symbol id="ic-person" viewBox="0 0 24 24"><circle cx="12" cy="9.2" r="3.5"/><path d="M5.4 19.6c0-3.3 3-5.4 6.6-5.4s6.6 2.1 6.6 5.4"/></symbol>
+        <symbol id="ic-x" viewBox="0 0 24 24"><path d="M6.5 6.5 17.5 17.5M17.5 6.5 6.5 17.5"/></symbol>
+        <symbol id="ic-down-double" viewBox="0 0 24 24"><path d="M6 8.5 12 14l6-5.5M6 14.5 12 20l6-5.5"/></symbol>
+        <symbol id="ic-status" viewBox="0 0 24 24"><path d="M4 12h3.5M16.5 12H20M9.5 8.5h5M9.5 15.5h5"/></symbol>
     </svg>
 
     <!-- ===== 启动页 ===== -->
@@ -104,9 +63,7 @@
                 <div class="widget-half widget-half-top"></div>
                 <div class="widget-half widget-half-bottom"></div>
                 <div class="widget-divider"></div>
-
                 <div class="widget-avatar" id="widgetAvatar">Me</div>
-
                 <div class="widget-text-area" id="widgetTextArea" role="button" tabindex="0" aria-label="编辑主页文字">
                     <div class="widget-line widget-line-1" id="wLine1">______</div>
                     <div class="widget-line widget-line-2" id="wLine2">______</div>
@@ -119,10 +76,7 @@
             </section>
 
             <div class="icon-grid">
-                <div class="widget-small" id="widgetSmallArea">
-                    <span class="ws-placeholder">Select Widget</span>
-                </div>
-
+                <div class="widget-small" id="widgetSmallArea"><span class="ws-placeholder">Select Widget</span></div>
                 <div class="app-grid-small">
                     <button class="app-icon" id="appLetter" type="button">
                         <span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-mail"></use></svg></span>
@@ -144,18 +98,10 @@
             </div>
 
             <nav class="dock">
-                <button class="dock-btn" id="appChat" type="button" aria-label="聊天">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chat"></use></svg>
-                </button>
-                <button class="dock-btn" id="appCards" type="button" aria-label="字卡">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg>
-                </button>
-                <button class="dock-btn" id="dockAppearance" type="button" aria-label="外观">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-palette"></use></svg>
-                </button>
-                <button class="dock-btn" id="dockPermission" type="button" aria-label="权限">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-key"></use></svg>
-                </button>
+                <button class="dock-btn" id="appChat" type="button" aria-label="聊天"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chat"></use></svg></button>
+                <button class="dock-btn" id="appCards" type="button" aria-label="字卡"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg></button>
+                <button class="dock-btn" id="dockAppearance" type="button" aria-label="外观"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-palette"></use></svg></button>
+                <button class="dock-btn" id="dockPermission" type="button" aria-label="权限"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-key"></use></svg></button>
             </nav>
 
         </div>
@@ -165,20 +111,14 @@
     <div class="screen settings-view" id="settingsView">
         <div class="settings-shell">
 
-            <!-- ===== 设置主界面 ===== -->
             <section class="set-page active" data-page="main">
                 <div class="settings-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回主屏幕">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回主屏幕"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                 </div>
-
                 <h1 class="nav-large-title">设置</h1>
 
                 <button class="account-card" data-goto="myinfo" type="button">
-                    <span class="account-avatar" id="settingsMyAvatar">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg>
-                    </span>
+                    <span class="account-avatar" id="settingsMyAvatar"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg></span>
                     <span class="account-info">
                         <span class="account-name" id="settingsMyName">your账户名</span>
                         <span class="account-sub">Philos 账户</span>
@@ -187,255 +127,181 @@
                 </button>
 
                 <div class="group-card">
-                    <button class="settings-item" data-goto="ta" type="button">
-                        <span>他的信息</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="bubble" type="button">
-                        <span>气泡</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="permission" type="button">
-                        <span>权限</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
+                    <button class="settings-item" data-goto="ta" type="button"><span>他的信息</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="bubble" type="button"><span>气泡</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="permission" type="button"><span>权限</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                 </div>
 
                 <div class="group-card">
-                    <button class="settings-item" data-goto="appearance" type="button">
-                        <span>外观</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="data" type="button">
-                        <span>数据管理</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="about" type="button">
-                        <span>关于</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
+                    <button class="settings-item" data-goto="appearance" type="button"><span>外观</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="data" type="button"><span>数据管理</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="about" type="button"><span>关于</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                 </div>
             </section>
 
-            <!-- ===== 外观 ===== -->
+            <!-- 外观 -->
             <section class="set-page" data-page="appearance">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">外观</span>
                 </div>
-
                 <div class="group-card">
-                    <button class="settings-item" data-goto="appearance.home" type="button">
-                        <span>主界面背景</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="appearance.icon" type="button">
-                        <span>图标背景</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="appearance.chat" type="button">
-                        <span>聊天背景</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="appearance.avatar" type="button">
-                        <span>头像</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
-                    <button class="settings-item" data-goto="display" type="button">
-                        <span>显示与字体</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
+                    <button class="settings-item" data-goto="appearance.home" type="button"><span>主界面背景</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="appearance.icon" type="button"><span>图标背景</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="appearance.chat" type="button"><span>聊天背景</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="appearance.avatar" type="button"><span>头像</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="status" type="button"><span>状态提示</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="display" type="button"><span>显示与字体</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                 </div>
             </section>
 
-            <!-- ===== 显示与字体 ===== -->
+            <!-- 显示与字体 -->
             <section class="set-page" data-page="display">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">显示与字体</span>
                 </div>
-
                 <div class="group-card control-card">
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">聊天消息字体大小</span>
-                            <span class="control-value" data-val="font.chat" data-unit="px">15px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">聊天消息字体大小</span><span class="control-value" data-val="font.chat" data-unit="px">15px</span></div>
                         <input type="range" class="slider" data-key="font.chat" data-unit="px" min="12" max="22" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">主界面字体大小</span>
-                            <span class="control-value" data-val="font.home" data-unit="px">16px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">主界面字体大小</span><span class="control-value" data-val="font.home" data-unit="px">16px</span></div>
                         <input type="range" class="slider" data-key="font.home" data-unit="px" min="10" max="18" step="1">
                     </div>
                 </div>
             </section>
 
-            <!-- ===== 外观 / 主界面背景 ===== -->
+            <!-- 状态提示 -->
+            <section class="set-page" data-page="status">
+                <div class="sub-topbar">
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
+                    <span class="sub-title">状态提示</span>
+                </div>
+
+                <div class="status-preview">
+                    <span class="msg-status" id="statusPreview">—— 要抱抱 ——</span>
+                </div>
+
+                <div class="group-card control-card">
+                    <div class="control-row">
+                        <span class="control-label">文字颜色</span>
+                        <label class="color-dot"><input type="color" data-key="status.color"></label>
+                    </div>
+                    <div class="control-row">
+                        <span class="control-label">背景显示</span>
+                        <label class="switch">
+                            <input type="checkbox" data-key="status.bgEnabled">
+                            <span class="switch-track"></span>
+                        </label>
+                    </div>
+                    <div class="control-row">
+                        <span class="control-label">背景颜色</span>
+                        <label class="color-dot"><input type="color" data-key="status.bgColor"></label>
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">背景透明度</span><span class="control-value" data-val="status.bgOpacity" data-unit="%">60%</span></div>
+                        <input type="range" class="slider" data-key="status.bgOpacity" data-unit="%" min="0" max="100" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">背景磨砂度</span><span class="control-value" data-val="status.bgBlur" data-unit="%">40%</span></div>
+                        <input type="range" class="slider" data-key="status.bgBlur" data-unit="%" min="0" max="100" step="1">
+                    </div>
+                </div>
+            </section>
+
+            <!-- 外观 / 主界面背景 -->
             <section class="set-page" data-page="appearance.home">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">主界面背景</span>
                 </div>
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">颜色填充</span>
-                        <label class="color-dot"><input type="color" data-key="appearance.homeBg.color"></label>
-                    </div>
-                    <div class="control-row">
-                        <span class="control-label">上传图片</span>
-                        <label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.homeBg.image" hidden></label>
-                    </div>
+                    <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.homeBg.color"></label></div>
+                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.homeBg.image" hidden></label></div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">透明度</span>
-                            <span class="control-value" data-val="appearance.homeBg.opacity" data-unit="%">100%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.homeBg.opacity" data-unit="%">100%</span></div>
                         <input type="range" class="slider" data-key="appearance.homeBg.opacity" data-unit="%" min="0" max="100" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">磨砂度</span>
-                            <span class="control-value" data-val="appearance.homeBg.blur" data-unit="%">20%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-val="appearance.homeBg.blur" data-unit="%">20%</span></div>
                         <input type="range" class="slider" data-key="appearance.homeBg.blur" data-unit="%" min="0" max="100" step="1">
                     </div>
                 </div>
             </section>
 
-            <!-- ===== 外观 / 图标背景 ===== -->
+            <!-- 外观 / 图标背景 -->
             <section class="set-page" data-page="appearance.icon">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">图标背景</span>
                 </div>
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">颜色填充</span>
-                        <label class="color-dot"><input type="color" data-key="appearance.iconBg.color"></label>
-                    </div>
-                    <div class="control-row">
-                        <span class="control-label">上传图片</span>
-                        <label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.iconBg.image" hidden></label>
-                    </div>
+                    <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.iconBg.color"></label></div>
+                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.iconBg.image" hidden></label></div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">透明度</span>
-                            <span class="control-value" data-val="appearance.iconBg.opacity" data-unit="%">85%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.iconBg.opacity" data-unit="%">85%</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.opacity" data-unit="%" min="0" max="100" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">磨砂度</span>
-                            <span class="control-value" data-val="appearance.iconBg.blur" data-unit="%">20%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-val="appearance.iconBg.blur" data-unit="%">20%</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.blur" data-unit="%" min="0" max="100" step="1">
                     </div>
                     <div class="control-row">
                         <span class="control-label">图标文字显示</span>
-                        <label class="switch">
-                            <input type="checkbox" data-key="appearance.iconBg.showLabel">
-                            <span class="switch-track"></span>
-                        </label>
+                        <label class="switch"><input type="checkbox" data-key="appearance.iconBg.showLabel"><span class="switch-track"></span></label>
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">文字大小</span>
-                            <span class="control-value" data-val="appearance.iconBg.labelSize" data-unit="px">11px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">文字大小</span><span class="control-value" data-val="appearance.iconBg.labelSize" data-unit="px">11px</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.labelSize" data-unit="px" min="8" max="16" step="1">
                     </div>
                 </div>
             </section>
 
-            <!-- ===== 外观 / 聊天背景 ===== -->
+            <!-- 外观 / 聊天背景 -->
             <section class="set-page" data-page="appearance.chat">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">聊天背景</span>
                 </div>
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">颜色填充</span>
-                        <label class="color-dot"><input type="color" data-key="appearance.chatBg.color"></label>
-                    </div>
-                    <div class="control-row">
-                        <span class="control-label">上传图片</span>
-                        <label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.chatBg.image" hidden></label>
-                    </div>
+                    <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.chatBg.color"></label></div>
+                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.chatBg.image" hidden></label></div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">透明度</span>
-                            <span class="control-value" data-val="appearance.chatBg.opacity" data-unit="%">100%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.chatBg.opacity" data-unit="%">100%</span></div>
                         <input type="range" class="slider" data-key="appearance.chatBg.opacity" data-unit="%" min="0" max="100" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">磨砂度</span>
-                            <span class="control-value" data-val="appearance.chatBg.blur" data-unit="%">20%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-val="appearance.chatBg.blur" data-unit="%">20%</span></div>
                         <input type="range" class="slider" data-key="appearance.chatBg.blur" data-unit="%" min="0" max="100" step="1">
                     </div>
                 </div>
             </section>
 
-            <!-- ===== 外观 / 头像 ===== -->
+            <!-- 外观 / 头像 -->
             <section class="set-page" data-page="appearance.avatar">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">头像</span>
                 </div>
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">颜色填充</span>
-                        <label class="color-dot"><input type="color" data-key="appearance.avatar.color"></label>
-                    </div>
-                    <div class="control-row">
-                        <span class="control-label">上传图片</span>
-                        <label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.avatar.image" hidden></label>
-                    </div>
+                    <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.avatar.color"></label></div>
+                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.avatar.image" hidden></label></div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">透明度</span>
-                            <span class="control-value" data-val="appearance.avatar.opacity" data-unit="%">100%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.avatar.opacity" data-unit="%">100%</span></div>
                         <input type="range" class="slider" data-key="appearance.avatar.opacity" data-unit="%" min="0" max="100" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">磨砂度</span>
-                            <span class="control-value" data-val="appearance.avatar.blur" data-unit="%">0%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-val="appearance.avatar.blur" data-unit="%">0%</span></div>
                         <input type="range" class="slider" data-key="appearance.avatar.blur" data-unit="%" min="0" max="100" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">头像大小</span>
-                            <span class="control-value" data-val="appearance.avatar.size" data-unit="px">84px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">头像大小</span><span class="control-value" data-val="appearance.avatar.size" data-unit="px">84px</span></div>
                         <input type="range" class="slider" data-key="appearance.avatar.size" data-unit="px" min="48" max="120" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">头像圆角</span>
-                            <span class="control-value" data-val="appearance.avatar.radius" data-unit="px">50px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">头像圆角</span><span class="control-value" data-val="appearance.avatar.radius" data-unit="px">50px</span></div>
                         <input type="range" class="slider" data-key="appearance.avatar.radius" data-unit="px" min="0" max="50" step="1">
                     </div>
                     <div class="control-block">
@@ -447,41 +313,25 @@
                     </div>
                 </div>
 
-                <!-- 头像实时预览 -->
                 <div class="preview-card">
                     <div class="preview-title">实时预览</div>
                     <div class="pv-avatar-row">
-                        <div class="pv-avatar-cell">
-                            <span class="pv-avatar-lg" id="pvTaAvatar">他</span>
-                            <span class="pv-avatar-tag">他</span>
-                        </div>
-                        <div class="pv-avatar-cell">
-                            <span class="pv-avatar-lg" id="pvMyAvatar">Me</span>
-                            <span class="pv-avatar-tag">我</span>
-                        </div>
+                        <div class="pv-avatar-cell"><span class="pv-avatar-lg" id="pvTaAvatar">他</span><span class="pv-avatar-tag">他</span></div>
+                        <div class="pv-avatar-cell"><span class="pv-avatar-lg" id="pvMyAvatar">Me</span><span class="pv-avatar-tag">我</span></div>
                     </div>
                     <div class="pv-chat">
-                        <div class="pv-row ta">
-                            <span class="pv-avatar" id="pvChatTa1">他</span>
-                            <span class="pv-bubble">我在</span>
-                        </div>
-                        <div class="pv-row ta">
-                            <span class="pv-avatar pv-avatar-ghost" id="pvChatTa2">他</span>
-                            <span class="pv-bubble">刚到家</span>
-                        </div>
+                        <div class="pv-row ta"><span class="pv-avatar" id="pvChatTa1">他</span><span class="pv-bubble">我在</span></div>
+                        <div class="pv-row ta"><span class="pv-avatar pv-avatar-ghost" id="pvChatTa2">他</span><span class="pv-bubble">刚到家</span></div>
                     </div>
                 </div>
             </section>
 
-            <!-- ===== 气泡 ===== -->
+            <!-- 气泡 -->
             <section class="set-page" data-page="bubble">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">气泡</span>
                 </div>
-
                 <div class="group-card control-card">
                     <div class="card-title">预设</div>
                     <div class="preset-scroll">
@@ -491,49 +341,25 @@
                         <button class="preset-card" data-preset="square" type="button"><span class="preset-bubble"></span></button>
                     </div>
                 </div>
-
                 <div class="group-card control-card">
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">气泡圆角</span>
-                            <span class="control-value" data-val="bubble.radius" data-unit="px">16px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">气泡圆角</span><span class="control-value" data-val="bubble.radius" data-unit="px">16px</span></div>
                         <input type="range" class="slider" data-key="bubble.radius" data-unit="px" min="0" max="30" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">气泡高度</span>
-                            <span class="control-value" data-val="bubble.height" data-unit="px">10px</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">气泡高度</span><span class="control-value" data-val="bubble.height" data-unit="px">10px</span></div>
                         <input type="range" class="slider" data-key="bubble.height" data-unit="px" min="10" max="30" step="1">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">透明度</span>
-                            <span class="control-value" data-val="bubble.opacity" data-unit="%">100%</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="bubble.opacity" data-unit="%">100%</span></div>
                         <input type="range" class="slider" data-key="bubble.opacity" data-unit="%" min="0" max="100" step="1">
                     </div>
                 </div>
-
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">气泡底色</span>
-                        <label class="color-dot"><input type="color" data-key="bubble.bg"></label>
-                    </div>
-                    <div class="control-row">
-                        <span class="control-label">边框</span>
-                        <label class="switch">
-                            <input type="checkbox" data-key="bubble.border">
-                            <span class="switch-track"></span>
-                        </label>
-                    </div>
-                    <div class="control-row">
-                        <span class="control-label">边框颜色</span>
-                        <label class="color-dot"><input type="color" data-key="bubble.borderColor"></label>
-                    </div>
+                    <div class="control-row"><span class="control-label">气泡底色</span><label class="color-dot"><input type="color" data-key="bubble.bg"></label></div>
+                    <div class="control-row"><span class="control-label">边框</span><label class="switch"><input type="checkbox" data-key="bubble.border"><span class="switch-track"></span></label></div>
+                    <div class="control-row"><span class="control-label">边框颜色</span><label class="color-dot"><input type="color" data-key="bubble.borderColor"></label></div>
                 </div>
-
                 <div class="group-card control-card">
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">CSS 自定义</span></div>
@@ -541,205 +367,109 @@
                     </div>
                 </div>
 
-                <!-- 气泡实时预览 -->
                 <div class="preview-card">
                     <div class="preview-title">实时预览</div>
-                    <div class="pv-row ta">
-                        <span class="pv-avatar" id="pvBubbleTa">他</span>
-                        <span class="pv-bubble">我在</span>
-                    </div>
-                    <div class="pv-row me">
-                        <span class="pv-bubble">老公</span>
-                        <span class="pv-avatar" id="pvBubbleMe">Me</span>
-                    </div>
+                    <div class="pv-row ta"><span class="pv-avatar" id="pvBubbleTa">他</span><span class="pv-bubble">我在</span></div>
+                    <div class="pv-row me"><span class="pv-bubble">老公</span><span class="pv-avatar" id="pvBubbleMe">Me</span></div>
                 </div>
             </section>
 
-            <!-- ===== 权限 ===== -->
+            <!-- 权限 -->
             <section class="set-page" data-page="permission">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">权限</span>
                 </div>
-
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">回复延迟</span>
-                        <span class="control-value" data-val="permission.replyDelay" data-unit="s">3s</span>
-                    </div>
-                    <div class="control-block">
-                        <input type="range" class="slider" data-key="permission.replyDelay" data-unit="s" min="0" max="60" step="1">
-                    </div>
+                    <div class="control-row"><span class="control-label">回复延迟</span><span class="control-value" data-val="permission.replyDelay" data-unit="s">3s</span></div>
+                    <div class="control-block"><input type="range" class="slider" data-key="permission.replyDelay" data-unit="s" min="0" max="60" step="1"></div>
                 </div>
-
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">主动发消息</span>
-                        <label class="switch">
-                            <input type="checkbox" data-key="permission.activeEnabled">
-                            <span class="switch-track"></span>
-                        </label>
-                    </div>
+                    <div class="control-row"><span class="control-label">主动发消息</span><label class="switch"><input type="checkbox" data-key="permission.activeEnabled"><span class="switch-track"></span></label></div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">最短间隔</span>
-                            <span class="control-value" data-val="permission.activeMin" data-unit="min">30min</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">最短间隔</span><span class="control-value" data-val="permission.activeMin" data-unit="min">30min</span></div>
                         <input type="range" class="slider" data-key="permission.activeMin" data-unit="min" min="5" max="120" step="5">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">最长间隔</span>
-                            <span class="control-value" data-val="permission.activeMax" data-unit="min">120min</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">最长间隔</span><span class="control-value" data-val="permission.activeMax" data-unit="min">120min</span></div>
                         <input type="range" class="slider" data-key="permission.activeMax" data-unit="min" min="10" max="480" step="10">
                     </div>
                 </div>
-
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">主动打电话</span>
-                        <label class="switch">
-                            <input type="checkbox" data-key="permission.callEnabled">
-                            <span class="switch-track"></span>
-                        </label>
-                    </div>
+                    <div class="control-row"><span class="control-label">主动打电话</span><label class="switch"><input type="checkbox" data-key="permission.callEnabled"><span class="switch-track"></span></label></div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">最短间隔</span>
-                            <span class="control-value" data-val="permission.callMin" data-unit="min">60min</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">最短间隔</span><span class="control-value" data-val="permission.callMin" data-unit="min">60min</span></div>
                         <input type="range" class="slider" data-key="permission.callMin" data-unit="min" min="10" max="240" step="10">
                     </div>
                     <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">最长间隔</span>
-                            <span class="control-value" data-val="permission.callMax" data-unit="min">240min</span>
-                        </div>
+                        <div class="control-head"><span class="control-label">最长间隔</span><span class="control-value" data-val="permission.callMax" data-unit="min">240min</span></div>
                         <input type="range" class="slider" data-key="permission.callMax" data-unit="min" min="30" max="720" step="30">
                     </div>
                 </div>
-
                 <div class="group-card control-card">
-                    <div class="control-row">
-                        <span class="control-label">接受通知</span>
-                        <label class="switch">
-                            <input type="checkbox" data-key="permission.notify">
-                            <span class="switch-track"></span>
-                        </label>
-                    </div>
-                    <div class="control-block">
-                        <button class="wide-btn" id="btnTestNotify" type="button">发送测试通知</button>
-                    </div>
+                    <div class="control-row"><span class="control-label">接受通知</span><label class="switch"><input type="checkbox" data-key="permission.notify"><span class="switch-track"></span></label></div>
+                    <div class="control-block"><button class="wide-btn" id="btnTestNotify" type="button">发送测试通知</button></div>
                 </div>
             </section>
 
-            <!-- ===== 我的信息 ===== -->
+            <!-- 我的信息 -->
             <section class="set-page" data-page="myinfo">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">我的信息</span>
                 </div>
-
                 <div class="profile-page">
-                    <button class="profile-avatar" id="myProfileAvatar" type="button" aria-label="更换头像">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg>
-                    </button>
+                    <button class="profile-avatar" id="myProfileAvatar" type="button" aria-label="更换头像"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg></button>
                     <input type="file" id="myProfileFile" accept="image/*" hidden>
                     <input class="profile-name" id="myProfileName" type="text" maxlength="16" placeholder="你的称呼" autocomplete="off" autocapitalize="off" spellcheck="false">
                     <p class="profile-tip">点击头像可从相册选择图片</p>
                 </div>
             </section>
 
-            <!-- ===== 他的信息 ===== -->
+            <!-- 他的信息 -->
             <section class="set-page" data-page="ta">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">他的信息</span>
                 </div>
-
                 <div class="profile-page">
-                    <button class="profile-avatar" id="taProfileAvatar" type="button" aria-label="更换头像">
-                        <span class="emoji-avatar">🌙</span>
-                    </button>
+                    <button class="profile-avatar" id="taProfileAvatar" type="button" aria-label="更换头像"><span class="emoji-avatar">🌙</span></button>
                     <input type="file" id="taProfileFile" accept="image/*" hidden>
                     <input class="profile-name" id="taProfileName" type="text" maxlength="16" placeholder="他的称呼" autocomplete="off" autocapitalize="off" spellcheck="false">
                     <p class="profile-tip">点击头像可从相册选择图片</p>
                 </div>
             </section>
 
-            <!-- ===== 数据管理 ===== -->
+            <!-- 数据管理 -->
             <section class="set-page" data-page="data">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">数据管理</span>
                 </div>
-
                 <div class="group-card">
-                    <button class="settings-item" id="btnExportData" type="button">
-                        <span>导出数据</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
+                    <button class="settings-item" id="btnExportData" type="button"><span>导出数据</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                     <label class="settings-item" for="importFile">
                         <span>导入数据</span>
                         <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
                         <input type="file" id="importFile" accept="application/json,.json" hidden>
                     </label>
-                    <button class="settings-item danger" id="btnClearData" type="button">
-                        <span>清空全部数据</span>
-                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
-                    </button>
+                    <button class="settings-item danger" id="btnClearData" type="button"><span>清空全部数据</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                 </div>
-
                 <p class="about-note">导出会生成一个 JSON 备份文件；清空会删掉聊天记录、字卡、信笺与全部设置，且无法恢复。</p>
             </section>
 
-            <!-- ===== 关于 ===== -->
+            <!-- 关于 -->
             <section class="set-page" data-page="about">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">关于</span>
                 </div>
-
                 <div class="group-card">
-                    <div class="settings-item">
-                        <span>名称</span>
-                        <span class="control-value">☆Philos</span>
-                    </div>
-                    <div class="settings-item">
-                        <span>版本</span>
-                        <span class="control-value">2.2</span>
-                    </div>
-                    <div class="settings-item">
-                        <span>数据存储</span>
-                        <span class="control-value">仅本机</span>
-                    </div>
+                    <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">2.3</span></div>
+                    <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
-
                 <p class="about-note">只为你们两个人做的网页。</p>
-            </section>
-
-            <!-- ===== 通用占位页 ===== -->
-            <section class="set-page" data-page="__placeholder">
-                <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-                    </button>
-                    <span class="sub-title" id="placeholderTitle"></span>
-                </div>
-                <div class="set-body">
-                    <div class="sub-empty" id="placeholderHint">下个阶段开放。</div>
-                </div>
             </section>
 
         </div>
@@ -748,86 +478,130 @@
 
     <!-- ===== 聊天 ===== -->
     <div class="screen chat-view" id="chatView">
-        <header class="chat-header">
-            <button class="glass-btn" id="btnChatBack" type="button" aria-label="返回">
+        <header class="chat-header" id="chatHeader">
+            <button class="chat-circle-btn" id="btnChatBack" type="button" aria-label="返回">
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
             </button>
-            <div class="chat-header-center">
-                <div class="chat-header-avatar" id="headerAvatar">Me</div>
-                <div class="chat-header-name" id="headerName">他</div>
-            </div>
-            <button class="glass-btn" id="btnChatCall" type="button" aria-label="通话">
+            <button class="chat-center" id="btnChatProfile" type="button" aria-label="拍一拍">
+                <span class="chat-avatar" id="headerAvatar">Me</span>
+                <span class="chat-name" id="headerName">他</span>
+            </button>
+            <button class="chat-circle-btn" id="btnChatCall" type="button" aria-label="通话">
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-phone"></use></svg>
             </button>
         </header>
+
         <div class="chat-messages" id="chatMessages"></div>
+
         <div class="chat-input-wrapper">
-            <button class="glass-square-btn" id="btnChatMore" type="button" aria-label="更多">
+            <button class="chat-plus" id="btnChatMore" type="button" aria-label="更多">
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg>
             </button>
             <div class="chat-input-box">
-                <textarea id="chatInput" rows="1" placeholder="发消息..."></textarea>
-                <button class="send-btn-inner" id="btnChatSend" type="button" aria-label="发送">
-                    <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-up"></use></svg>
-                </button>
+                <div class="quote-bar" id="quoteBar" hidden>
+                    <span class="quote-text" id="quoteText"></span>
+                    <button class="quote-close" id="quoteClose" type="button" aria-label="取消引用">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-x"></use></svg>
+                    </button>
+                </div>
+                <div class="input-row">
+                    <textarea id="chatInput" rows="1" placeholder="发消息..."></textarea>
+                    <button class="send-btn" id="btnChatSend" type="button" aria-label="发送">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-up"></use></svg>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- ===== 消息菜单 ===== -->
+    <div class="msg-menu" id="msgMenu" hidden>
+        <button class="msg-menu-item" data-act="quote" type="button">引用</button>
+        <button class="msg-menu-item danger" data-act="delete" type="button">删除</button>
+    </div>
+
+    <!-- ===== 拍一拍弹窗 ===== -->
+    <div class="peek-mask" id="peekMask" hidden>
+        <div class="peek-card">
+            <div class="peek-avatar" id="peekAvatar">Me</div>
+            <p class="peek-text">拍拍他，说点什么吧</p>
+            <div class="peek-actions">
+                <button class="peek-btn" id="peekLater" type="button">✋(˙꒳˙ )等下哦</button>
+                <button class="peek-btn primary" id="peekGo" type="button">(*'-')b闪去！</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 通话 ===== -->
+    <div class="call-screen" id="callScreen" hidden>
+        <div class="call-bg"></div>
+        <div class="call-overlay"></div>
+        <div class="call-info">
+            <div class="call-avatar" id="callAvatar">Me</div>
+            <div class="call-name" id="callName">他</div>
+            <div class="call-state" id="callState">通话中</div>
+            <div class="call-timer" id="callTimer">00:00</div>
+        </div>
+        <div class="call-actions">
+            <div class="call-btn-wrap">
+                <button class="call-btn" id="callMin" type="button">
+                    <svg class="svg-icon" viewBox="0 0 24 24" id="callMinIcon"><use href="#ic-down-double"></use></svg>
+                </button>
+                <span class="call-btn-label" id="callMinLabel">最小化</span>
+            </div>
+            <div class="call-btn-wrap">
+                <button class="call-btn hangup" id="callEnd" type="button">
+                    <svg class="svg-icon" viewBox="0 0 24 24" id="callEndIcon"><use href="#ic-phone"></use></svg>
+                </button>
+                <span class="call-btn-label">挂断</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 通话悬浮胶囊 ===== -->
+    <button class="call-pill" id="callPill" type="button" hidden>
+        <span class="call-dot"></span>
+        <span class="call-pill-time" id="callPillTime">00:00</span>
+    </button>
+
     <!-- ===== 字卡库 ===== -->
     <div class="screen cards-view" id="cardsView">
         <header class="app-header">
-            <button class="glass-btn" id="btnCardsBack" type="button" aria-label="返回">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-            </button>
+            <button class="glass-btn" id="btnCardsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
             <span class="app-title">字卡库</span>
             <span class="header-spacer"></span>
         </header>
-        <div class="app-content">
-            <p class="empty-hint">字卡列表将在下个阶段更新。</p>
-        </div>
+        <div class="app-content"><p class="empty-hint">字卡列表将在下个阶段更新。</p></div>
     </div>
 
     <!-- ===== 倒数日 ===== -->
     <div class="screen countdown-view" id="countdownView">
         <header class="app-header">
-            <button class="glass-btn" id="btnCountdownBack" type="button" aria-label="返回">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-            </button>
+            <button class="glass-btn" id="btnCountdownBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
             <span class="app-title">倒数日</span>
             <span class="header-spacer"></span>
         </header>
-        <div class="app-content">
-            <p class="empty-hint">倒数日列表将在下个阶段更新。</p>
-        </div>
+        <div class="app-content"><p class="empty-hint">倒数日列表将在下个阶段更新。</p></div>
     </div>
 
     <!-- ===== 信箱 ===== -->
     <div class="screen letter-view" id="letterView">
         <header class="app-header">
-            <button class="glass-btn" id="btnLetterBack" type="button" aria-label="返回">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-            </button>
+            <button class="glass-btn" id="btnLetterBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
             <span class="app-title">信箱</span>
             <span class="header-spacer"></span>
         </header>
-        <div class="app-content">
-            <p class="empty-hint">信件列表将在下个阶段更新。</p>
-        </div>
+        <div class="app-content"><p class="empty-hint">信件列表将在下个阶段更新。</p></div>
     </div>
 
     <!-- ===== 小组件 ===== -->
     <div class="screen widgets-view" id="widgetsView">
         <header class="app-header">
-            <button class="glass-btn" id="btnWidgetsBack" type="button" aria-label="返回">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-            </button>
+            <button class="glass-btn" id="btnWidgetsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
             <span class="app-title">小组件</span>
             <span class="header-spacer"></span>
         </header>
-        <div class="app-content">
-            <p class="empty-hint">组件模板将在下个阶段更新。</p>
-        </div>
+        <div class="app-content"><p class="empty-hint">组件模板将在下个阶段更新。</p></div>
     </div>
 
     <!-- ===== 主页文字编辑面板 ===== -->
@@ -836,22 +610,10 @@
         <div class="sheet-handle"></div>
         <div class="sheet-title">编辑主页文字</div>
         <div class="sheet-fields">
-            <label class="sheet-field">
-                <span>主标题</span>
-                <input type="text" id="sheetLine1" maxlength="24" placeholder="______">
-            </label>
-            <label class="sheet-field">
-                <span>标签</span>
-                <input type="text" id="sheetLine2" maxlength="24" placeholder="______">
-            </label>
-            <label class="sheet-field">
-                <span>引言</span>
-                <input type="text" id="sheetLine3" maxlength="40" placeholder="______">
-            </label>
-            <label class="sheet-field">
-                <span>地点</span>
-                <input type="text" id="sheetLine4" maxlength="24" placeholder="______">
-            </label>
+            <label class="sheet-field"><span>主标题</span><input type="text" id="sheetLine1" maxlength="24" placeholder="______"></label>
+            <label class="sheet-field"><span>标签</span><input type="text" id="sheetLine2" maxlength="24" placeholder="______"></label>
+            <label class="sheet-field"><span>引言</span><input type="text" id="sheetLine3" maxlength="40" placeholder="______"></label>
+            <label class="sheet-field"><span>地点</span><input type="text" id="sheetLine4" maxlength="24" placeholder="______"></label>
         </div>
         <div class="sheet-actions">
             <button class="sheet-btn" id="sheetCancel" type="button">取消</button>

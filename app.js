@@ -1,6 +1,6 @@
 /* =========================================================
-   Philos · 阶段 2.1 / 2.2
-   设置系统 · 实时预览 · 名片编辑 · 数据管理
+   Philos · 2.3
+   聊天 / 通话 / 状态提示
    ========================================================= */
 (function () {
     "use strict";
@@ -26,14 +26,9 @@
                 chatBg: { color: "#f2f4f7", image: "", opacity: 100, blur: 20 },
                 avatar: { color: "#dfe5ec", image: "", opacity: 100, blur: 0, size: 84, radius: 50, mode: "each" }
             },
-            bubble: {
-                preset: "tail", radius: 16, height: 10, opacity: 100,
-                bg: "#5b7fa6", border: false, borderColor: "#ffffff", css: ""
-            },
-            permission: {
-                replyDelay: 3, activeEnabled: false, activeMin: 30, activeMax: 120,
-                callEnabled: false, callMin: 60, callMax: 240, notify: false
-            },
+            status: { color: "#8b909a", bgEnabled: false, bgColor: "#ffffff", bgOpacity: 60, bgBlur: 40 },
+            bubble: { preset: "tail", radius: 16, height: 10, opacity: 100, bg: "#5b7fa6", border: false, borderColor: "#ffffff", css: "" },
+            permission: { replyDelay: 3, activeEnabled: false, activeMin: 30, activeMax: 120, callEnabled: false, callMin: 60, callMax: 240, notify: false },
             font: { chat: 15, home: 16 }
         }
     };
@@ -41,7 +36,6 @@
     var appData = null;
 
     function $(id) { return document.getElementById(id); }
-
     function isPlainObject(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
 
     function deepMerge(target, defaults) {
@@ -69,16 +63,13 @@
             if (!raw) return;
             var parsed = JSON.parse(raw);
             if (!parsed || typeof parsed !== "object") return;
-
             var merged = {};
             for (var k in defaults) {
                 if (!Object.prototype.hasOwnProperty.call(defaults, k)) continue;
                 merged[k] = parsed[k] !== undefined && parsed[k] !== null ? parsed[k] : defaults[k];
             }
             merged.settings = deepMerge(isPlainObject(parsed.settings) ? parsed.settings : {}, defaults.settings);
-            if (!Array.isArray(merged.widgetLines) || merged.widgetLines.length !== 4) {
-                merged.widgetLines = defaults.widgetLines.slice();
-            }
+            if (!Array.isArray(merged.widgetLines) || merged.widgetLines.length !== 4) merged.widgetLines = defaults.widgetLines.slice();
             if (!Array.isArray(merged.chatHistory)) merged.chatHistory = [];
             appData = merged;
         } catch (e) {
@@ -86,13 +77,10 @@
         }
     }
 
-    function saveData() {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); } catch (e) {}
-    }
+    function saveData() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(appData)); } catch (e) {} }
 
     function getPath(obj, path) {
-        var parts = path.split(".");
-        var cur = obj;
+        var parts = path.split("."), cur = obj;
         for (var i = 0; i < parts.length; i++) {
             if (cur === null || cur === undefined) return undefined;
             cur = cur[parts[i]];
@@ -101,8 +89,7 @@
     }
 
     function setPath(obj, path, value) {
-        var parts = path.split(".");
-        var cur = obj;
+        var parts = path.split("."), cur = obj;
         for (var i = 0; i < parts.length - 1; i++) {
             if (!isPlainObject(cur[parts[i]])) cur[parts[i]] = {};
             cur = cur[parts[i]];
@@ -111,9 +98,7 @@
     }
 
     /* ---------------- 主题 ---------------- */
-    function prefersDark() {
-        try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; }
-    }
+    function prefersDark() { try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; } }
 
     function applyTheme() {
         var mode = appData && appData.themeMode ? appData.themeMode : "auto";
@@ -132,22 +117,18 @@
         } catch (e) {}
     }
 
-    /* =========================================================
-       路由：双入口 + 栈
-       ========================================================= */
+    /* ---------------- 路由 ---------------- */
     var navStack = [];
     var entryReturn = "desktop";
 
     var REAL_PAGES = [
         "appearance", "appearance.home", "appearance.icon", "appearance.chat", "appearance.avatar",
-        "display", "bubble", "permission", "data", "about", "myinfo", "ta"
+        "status", "display", "bubble", "permission", "data", "about", "myinfo", "ta"
     ];
 
     function showScreen(id) {
         var all = document.querySelectorAll(".screen");
-        for (var i = 0; i < all.length; i++) {
-            all[i].classList.toggle("active", all[i].id === id);
-        }
+        for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
     }
 
     function renderNav() {
@@ -177,29 +158,26 @@
 
     function goDesktop() {
         closeSheet();
+        closeMsgMenu();
         navStack = [];
         showScreen("desktopView");
     }
 
-    /* ---------------- 渲染 ---------------- */
+    /* ---------------- 渲染基础 ---------------- */
     function isImageSource(value) {
         return typeof value === "string" && /^(https?:\/\/|data:image\/|blob:)/.test(value);
     }
 
-    function escAttr(value) {
-        return String(value).replace(/"/g, "&quot;");
-    }
+    function escAttr(value) { return String(value).replace(/"/g, "&quot;"); }
 
     function avatarMarkup(value, fallbackText) {
         if (isImageSource(value)) return '<img src="' + escAttr(value) + '" alt="">';
         return '<span class="avatar-text">' + fallbackText + "</span>";
     }
 
-    // 主屏大组件头像：他的头像图片 > 外观头像图片 > 文字 Me
     function widgetAvatarMarkup() {
         var av = appData.settings.appearance.avatar;
-        var src = isImageSource(appData.taAvatar) ? appData.taAvatar
-            : (isImageSource(av.image) ? av.image : "");
+        var src = isImageSource(appData.taAvatar) ? appData.taAvatar : (isImageSource(av.image) ? av.image : "");
         if (src) return '<img src="' + escAttr(src) + '" alt="">';
         return '<span class="avatar-text">Me</span>';
     }
@@ -231,6 +209,15 @@
 
         var headerAvatar = $("headerAvatar");
         if (headerAvatar) headerAvatar.innerHTML = avatarMarkup(appData.taAvatar, "Me");
+
+        var callName = $("callName");
+        if (callName) callName.textContent = appData.taName || "他";
+
+        var callAvatar = $("callAvatar");
+        if (callAvatar) callAvatar.innerHTML = avatarMarkup(appData.taAvatar, "Me");
+
+        var peekAvatar = $("peekAvatar");
+        if (peekAvatar) peekAvatar.innerHTML = avatarMarkup(appData.taAvatar, "Me");
     }
 
     function renderProfile() {
@@ -240,19 +227,16 @@
                 ? '<img src="' + escAttr(appData.myAvatar) + '" alt="">'
                 : '<svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg>';
         }
-
         var taAv = $("taProfileAvatar");
         if (taAv) {
             taAv.innerHTML = isImageSource(appData.taAvatar)
                 ? '<img src="' + escAttr(appData.taAvatar) + '" alt="">'
                 : '<span class="emoji-avatar">🌙</span>';
         }
-
         var myInput = $("myProfileName");
         if (myInput && document.activeElement !== myInput) {
             myInput.value = appData.myName && appData.myName !== "your账户名" ? appData.myName : "";
         }
-
         var taInput = $("taProfileName");
         if (taInput && document.activeElement !== taInput) {
             taInput.value = appData.taName && appData.taName !== "他" ? appData.taName : "";
@@ -262,16 +246,21 @@
     function renderPreview() {
         var taMarkup = avatarMarkup(appData.taAvatar, "他");
         var myMarkup = avatarMarkup(appData.myAvatar, "Me");
-
         ["pvTaAvatar", "pvChatTa1", "pvChatTa2", "pvBubbleTa"].forEach(function (id) {
             var el = $(id);
             if (el) el.innerHTML = taMarkup;
         });
-
         ["pvMyAvatar", "pvBubbleMe"].forEach(function (id) {
             var el = $(id);
             if (el) el.innerHTML = myMarkup;
         });
+    }
+
+    /* ---------------- 聊天渲染 ---------------- */
+    function fmtTime(ts) {
+        var d = new Date(ts);
+        var h = d.getHours(), m = d.getMinutes();
+        return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
     }
 
     function renderChat() {
@@ -288,13 +277,55 @@
             return;
         }
 
-        history.forEach(function (msg) {
+        var lastStamp = 0;
+        var lastFrom = null;
+        var mode = appData.settings.appearance.avatar.mode;
+
+        history.forEach(function (msg, index) {
             if (!msg) return;
+
+            if (msg.time) {
+                if (!lastStamp || msg.time - lastStamp > 5 * 60 * 1000) {
+                    var t = document.createElement("div");
+                    t.className = "msg-time";
+                    t.textContent = msg.timeText || fmtTime(msg.time);
+                    container.appendChild(t);
+                }
+                lastStamp = msg.time;
+            }
+
+            if (msg.type === "status") {
+                var st = document.createElement("div");
+                st.className = "msg-status";
+                st.textContent = msg.text || "";
+                container.appendChild(st);
+                lastFrom = null;
+                return;
+            }
+
             var row = document.createElement("div");
             row.className = "msg-row " + (msg.from === "me" ? "me" : "ta");
 
+            var hideAvatar = (mode === "first" && lastFrom === msg.from);
+            var av = document.createElement("span");
+            av.className = "msg-avatar" + (hideAvatar ? " ghost" : "");
+            av.innerHTML = msg.from === "me"
+                ? avatarMarkup(appData.myAvatar, "Me")
+                : avatarMarkup(appData.taAvatar, "他");
+
+            var wrap = document.createElement("div");
+            wrap.className = "msg-wrap";
+
             var bubble = document.createElement("div");
             bubble.className = "msg-bubble";
+            bubble.setAttribute("data-index", String(index));
+
+            if (msg.quote) {
+                var q = document.createElement("div");
+                q.className = "msg-quote";
+                q.textContent = msg.quote;
+                bubble.appendChild(q);
+            }
 
             if (msg.type === "image" || msg.type === "sticker") {
                 var img = document.createElement("img");
@@ -304,14 +335,236 @@
                 img.style.display = "block";
                 bubble.appendChild(img);
             } else {
-                bubble.textContent = msg.text || "";
+                var span = document.createElement("span");
+                span.textContent = msg.text || "";
+                bubble.appendChild(span);
             }
 
-            row.appendChild(bubble);
+            wrap.appendChild(bubble);
+
+            if (msg.from === "me" && msg.status) {
+                var s = document.createElement("div");
+                s.className = "msg-status-text";
+                s.textContent = msg.status;
+                wrap.appendChild(s);
+            }
+
+            row.appendChild(av);
+            row.appendChild(wrap);
             container.appendChild(row);
+            lastFrom = msg.from;
         });
 
         container.scrollTop = container.scrollHeight;
+    }
+
+    /* ---------------- 消息菜单 ---------------- */
+    var menuIndex = -1;
+    var quoteTarget = null;
+
+    function openMsgMenu(bubble) {
+        var menu = $("msgMenu");
+        if (!menu) return;
+        menuIndex = Number(bubble.getAttribute("data-index"));
+
+        menu.hidden = false;
+        menu.style.visibility = "hidden";
+        menu.style.left = "0px";
+        menu.style.top = "0px";
+
+        var mw = menu.offsetWidth;
+        var mh = menu.offsetHeight;
+        var rect = bubble.getBoundingClientRect();
+        var left = rect.left + rect.width / 2 - mw / 2;
+        left = Math.max(12, Math.min(left, window.innerWidth - mw - 12));
+        var top = rect.top - mh - 10;
+        if (top < 60) top = rect.bottom + 10;
+
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        menu.style.visibility = "";
+    }
+
+    function closeMsgMenu() {
+        var menu = $("msgMenu");
+        if (menu) menu.hidden = true;
+        menuIndex = -1;
+    }
+
+    function quoteMessage() {
+        var msg = appData.chatHistory[menuIndex];
+        if (!msg) return;
+        var who = msg.from === "me" ? (appData.myName || "我") : (appData.taName || "他");
+        var text = msg.text || "";
+        quoteTarget = who + "：" + (text.length > 20 ? text.slice(0, 20) + "…" : text);
+        var bar = $("quoteBar"), label = $("quoteText");
+        if (label) label.textContent = quoteTarget;
+        if (bar) bar.hidden = false;
+        var input = $("chatInput");
+        if (input) input.focus();
+    }
+
+    function clearQuote() {
+        quoteTarget = null;
+        var bar = $("quoteBar");
+        if (bar) bar.hidden = true;
+    }
+
+    function deleteMessage() {
+        if (menuIndex < 0) return;
+        appData.chatHistory.splice(menuIndex, 1);
+        saveData();
+        renderChat();
+    }
+
+    /* ---------------- 发送 ---------------- */
+    function updateSendBtn() {
+        var input = $("chatInput");
+        var btn = $("btnChatSend");
+        if (!input || !btn) return;
+        btn.classList.toggle("active", input.value.trim().length > 0);
+    }
+
+    function autoGrow() {
+        var input = $("chatInput");
+        if (!input) return;
+        input.style.height = "auto";
+        input.style.height = Math.min(input.scrollHeight, 100) + "px";
+    }
+
+    function sendMessage() {
+        var input = $("chatInput");
+        if (!input) return;
+        var text = input.value.trim();
+        if (!text) return;
+
+        var msg = { from: "me", text: text, type: "text", time: Date.now(), status: "已送达" };
+        if (quoteTarget) msg.quote = quoteTarget;
+
+        appData.chatHistory.push(msg);
+        saveData();
+
+        input.value = "";
+        input.style.height = "auto";
+        clearQuote();
+        updateSendBtn();
+        renderChat();
+    }
+
+    /* ---------------- 拍一拍 ---------------- */
+    function openPeek() {
+        var mask = $("peekMask");
+        if (mask) mask.hidden = false;
+    }
+
+    function closePeek() {
+        var mask = $("peekMask");
+        if (mask) mask.hidden = true;
+    }
+
+    function sendPeek() {
+        appData.chatHistory.push({ type: "status", text: "—— 拍了拍他 ——", time: Date.now() });
+        saveData();
+        renderChat();
+        closePeek();
+    }
+
+    /* ---------------- 通话 ---------------- */
+    var callTimerId = null;
+    var callSeconds = 0;
+    var callState = "ongoing";
+
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+    function fmtDuration(sec) {
+        var h = Math.floor(sec / 3600);
+        var m = Math.floor((sec % 3600) / 60);
+        var s = sec % 60;
+        if (h > 0) return h + ":" + pad(m) + ":" + pad(s);
+        return pad(m) + ":" + pad(s);
+    }
+
+    function updateCallClock() {
+        var text = fmtDuration(callSeconds);
+        var t = $("callTimer");
+        if (t) t.textContent = text;
+        var p = $("callPillTime");
+        if (p) p.textContent = text;
+    }
+
+    function startClock() {
+        if (callTimerId) clearInterval(callTimerId);
+        callTimerId = setInterval(function () {
+            callSeconds++;
+            updateCallClock();
+        }, 1000);
+    }
+
+    function stopClock() {
+        if (callTimerId) clearInterval(callTimerId);
+        callTimerId = null;
+    }
+
+    function setCallUI(state) {
+        callState = state;
+        var stateEl = $("callState");
+        var minBtn = $("callMin");
+        var minLabel = $("callMinLabel");
+        var minIcon = $("callMinIcon");
+
+        if (state === "incoming") {
+            if (stateEl) stateEl.textContent = "来电中";
+            if (minBtn) minBtn.classList.add("answer");
+            if (minLabel) minLabel.textContent = "接听";
+            if (minIcon) minIcon.classList.add("call-answer-icon");
+        } else {
+            if (stateEl) stateEl.textContent = "通话中";
+            if (minBtn) minBtn.classList.remove("answer");
+            if (minLabel) minLabel.textContent = "最小化";
+            if (minIcon) minIcon.classList.remove("call-answer-icon");
+        }
+    }
+
+    function openCall(incoming) {
+        var screen = $("callScreen");
+        var pill = $("callPill");
+        if (!screen) return;
+        screen.hidden = false;
+        if (pill) pill.hidden = true;
+        callSeconds = 0;
+        updateCallClock();
+        stopClock();
+        setCallUI(incoming ? "incoming" : "ongoing");
+        if (!incoming) startClock();
+    }
+
+    function endCall() {
+        stopClock();
+        var screen = $("callScreen");
+        var pill = $("callPill");
+        if (screen) screen.hidden = true;
+        if (pill) pill.hidden = true;
+        callSeconds = 0;
+        updateCallClock();
+    }
+
+    function handleCallAction() {
+        var screen = $("callScreen");
+        if (callState === "incoming") {
+            setCallUI("ongoing");
+            startClock();
+            return;
+        }
+        if (screen) screen.hidden = true;
+        var pill = $("callPill");
+        if (pill) pill.hidden = false;
+    }
+
+    function restoreCall() {
+        var pill = $("callPill");
+        var screen = $("callScreen");
+        if (pill) pill.hidden = true;
+        if (screen) screen.hidden = false;
     }
 
     /* ---------------- 设置控件 ---------------- */
@@ -353,23 +606,17 @@
         if (seg) {
             var mode = appData.settings.appearance.avatar.mode;
             var btns = seg.querySelectorAll("[data-mode]");
-            for (var j = 0; j < btns.length; j++) {
-                btns[j].classList.toggle("active", btns[j].getAttribute("data-mode") === mode);
-            }
+            for (var j = 0; j < btns.length; j++) btns[j].classList.toggle("active", btns[j].getAttribute("data-mode") === mode);
         }
 
         var cards = document.querySelectorAll("[data-preset]");
         var preset = appData.settings.bubble.preset;
-        for (var k = 0; k < cards.length; k++) {
-            cards[k].classList.toggle("selected", cards[k].getAttribute("data-preset") === preset);
-        }
+        for (var k = 0; k < cards.length; k++) cards[k].classList.toggle("selected", cards[k].getAttribute("data-preset") === preset);
     }
 
     function applySettings() {
-        var s = appData.settings;
-        var a = s.appearance;
-        var root = document.documentElement;
-        var css = root.style;
+        var s = appData.settings, a = s.appearance;
+        var root = document.documentElement, css = root.style;
 
         css.setProperty("--home-bg-color", hexToRgba(a.homeBg.color, a.homeBg.opacity / 100));
         css.setProperty("--home-bg-image", a.homeBg.image ? "url(" + a.homeBg.image + ")" : "none");
@@ -393,6 +640,10 @@
         css.setProperty("--bubble-pad-y", s.bubble.height + "px");
         css.setProperty("--bubble-border", s.bubble.border ? ("1px solid " + s.bubble.borderColor) : "none");
 
+        css.setProperty("--status-color", s.status.color);
+        css.setProperty("--status-bg", s.status.bgEnabled ? hexToRgba(s.status.bgColor, s.status.bgOpacity / 100) : "transparent");
+        css.setProperty("--status-blur", (s.status.bgBlur / 100 * 30) + "px");
+
         css.setProperty("--font-chat", s.font.chat + "px");
         css.setProperty("--font-home", s.font.home + "px");
         css.setProperty("--home-scale", s.font.home / 16);
@@ -414,16 +665,14 @@
             var v = lines[i];
             input.value = (typeof v === "string" && v !== BLANK) ? v : "";
         }
-        var mask = $("sheetMask");
-        var sheet = $("editSheet");
+        var mask = $("sheetMask"), sheet = $("editSheet");
         if (mask) mask.classList.add("show");
         if (sheet) sheet.classList.add("show");
         sheetOpen = true;
     }
 
     function closeSheet() {
-        var mask = $("sheetMask");
-        var sheet = $("editSheet");
+        var mask = $("sheetMask"), sheet = $("editSheet");
         if (mask) mask.classList.remove("show");
         if (sheet) sheet.classList.remove("show");
         sheetOpen = false;
@@ -443,13 +692,10 @@
         closeSheet();
     }
 
-    /* ---------------- 头像 / 图片 ---------------- */
+    /* ---------------- 图片 / 数据 ---------------- */
     function readImageFile(file, cb) {
         if (!file) return;
-        if (file.size > 2 * 1024 * 1024) {
-            alert("图片太大，请选择 2MB 以内的图片");
-            return;
-        }
+        if (file.size > 2 * 1024 * 1024) { alert("图片太大，请选择 2MB 以内的图片"); return; }
         var reader = new FileReader();
         reader.onload = function () { cb(reader.result); };
         reader.readAsDataURL(file);
@@ -457,9 +703,8 @@
 
     function handleUpload(input) {
         var path = input.getAttribute("data-upload");
-        var file = input.files && input.files[0];
         if (!path) return;
-        readImageFile(file, function (result) {
+        readImageFile(input.files && input.files[0], function (result) {
             setPath(appData.settings, path, result);
             saveData();
             applySettings();
@@ -476,9 +721,9 @@
         saveData();
         renderWidget();
         renderPreview();
+        renderChat();
     }
 
-    /* ---------------- 数据管理 ---------------- */
     function exportData() {
         try {
             var blob = new Blob([JSON.stringify(appData, null, 2)], { type: "application/json" });
@@ -488,13 +733,8 @@
             a.download = "philos-backup.json";
             document.body.appendChild(a);
             a.click();
-            setTimeout(function () {
-                URL.revokeObjectURL(url);
-                if (a.parentNode) a.parentNode.removeChild(a);
-            }, 1500);
-        } catch (e) {
-            alert("导出失败，请重试");
-        }
+            setTimeout(function () { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 1500);
+        } catch (e) { alert("导出失败，请重试"); }
     }
 
     function importData(file) {
@@ -505,18 +745,9 @@
                 var parsed = JSON.parse(reader.result);
                 if (!parsed || typeof parsed !== "object") throw new Error("bad");
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
-                loadData();
-                applyTheme();
-                renderWidget();
-                renderProfile();
-                renderPreview();
-                renderChat();
-                renderControls();
-                applySettings();
+                refreshAll();
                 alert("导入成功");
-            } catch (e) {
-                alert("导入失败：文件格式不正确");
-            }
+            } catch (e) { alert("导入失败：文件格式不正确"); }
         };
         reader.readAsText(file);
     }
@@ -524,6 +755,19 @@
     function clearData() {
         if (!confirm("将清空聊天记录、字卡、信笺和全部设置，且无法恢复。确定继续吗？")) return;
         try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+        refreshAll();
+        alert("已清空");
+    }
+
+    function testNotify() {
+        if (!("Notification" in window)) { alert("这个浏览器不支持系统通知"); return; }
+        Notification.requestPermission().then(function (perm) {
+            if (perm === "granted") { try { new Notification("☆Philos", { body: "这是一条测试通知" }); } catch (e) {} }
+            else alert("通知权限未开启，请到系统设置里允许");
+        });
+    }
+
+    function refreshAll() {
         loadData();
         applyTheme();
         renderWidget();
@@ -532,21 +776,6 @@
         renderChat();
         renderControls();
         applySettings();
-        alert("已清空");
-    }
-
-    function testNotify() {
-        if (!("Notification" in window)) {
-            alert("这个浏览器不支持系统通知");
-            return;
-        }
-        Notification.requestPermission().then(function (perm) {
-            if (perm === "granted") {
-                try { new Notification("☆Philos", { body: "这是一条测试通知" }); } catch (e) {}
-            } else {
-                alert("通知权限未开启，请到系统设置里允许");
-            }
-        });
     }
 
     /* ---------------- 事件 ---------------- */
@@ -557,7 +786,6 @@
         if (el.type === "checkbox") value = el.checked;
         else if (el.type === "range") value = Number(el.value);
         else value = el.value;
-
         setPath(appData.settings, key, value);
         if (el.type === "range") updateValLabel(key, value);
         saveData();
@@ -575,7 +803,6 @@
         on("appLetter", "click", function () { showScreen("letterView"); });
         on("appCountdown", "click", function () { showScreen("countdownView"); });
         on("appWidgets", "click", function () { showScreen("widgetsView"); });
-
         on("appSettings", "click", function () { openSettings("main", "desktop"); });
         on("dockAppearance", "click", function () { openSettings("appearance", "desktop"); });
         on("dockPermission", "click", function () { openSettings("permission", "desktop"); });
@@ -584,7 +811,16 @@
             on(id, "click", goDesktop);
         });
 
-        // 名片页：点击头像 → 相册
+        on("btnChatCall", "click", function () { openCall(false); });
+        on("btnChatProfile", "click", openPeek);
+        on("peekLater", "click", closePeek);
+        on("peekGo", "click", sendPeek);
+        on("peekMask", "click", function (e) { if (e.target === this) closePeek(); });
+
+        on("callMin", "click", handleCallAction);
+        on("callEnd", "click", endCall);
+        on("callPill", "click", restoreCall);
+
         on("myProfileAvatar", "click", function () { var f = $("myProfileFile"); if (f) f.click(); });
         on("taProfileAvatar", "click", function () { var f = $("taProfileFile"); if (f) f.click(); });
 
@@ -596,6 +832,7 @@
                 renderWidget();
                 renderProfile();
                 renderPreview();
+                renderChat();
             });
             self.value = "";
         });
@@ -608,6 +845,7 @@
                 renderWidget();
                 renderProfile();
                 renderPreview();
+                renderChat();
             });
             self.value = "";
         });
@@ -622,9 +860,40 @@
         on("btnClearData", "click", clearData);
         on("btnTestNotify", "click", testNotify);
 
+        on("chatInput", "input", function () { autoGrow(); updateSendBtn(); });
+        on("btnChatSend", "click", sendMessage);
+        on("quoteClose", "click", clearQuote);
+
+        // 单击气泡 → 菜单（禁用长按选择）
+        var msgs = $("chatMessages");
+        if (msgs) {
+            msgs.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+            msgs.addEventListener("click", function (e) {
+                var t = e.target;
+                var bubble = t && t.closest ? t.closest(".msg-bubble") : null;
+                if (bubble) { openMsgMenu(bubble); return; }
+                closeMsgMenu();
+            });
+            msgs.addEventListener("scroll", closeMsgMenu);
+        }
+
+        var menu = $("msgMenu");
+        if (menu) {
+            menu.addEventListener("click", function (e) {
+                var btn = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
+                if (!btn) return;
+                var act = btn.getAttribute("data-act");
+                if (act === "quote") quoteMessage();
+                if (act === "delete") deleteMessage();
+                closeMsgMenu();
+            });
+        }
+
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
+
+            if (!t.closest("#msgMenu") && !t.closest(".msg-bubble")) closeMsgMenu();
 
             var back = t.closest('[data-nav="back"]');
             if (back) { popPage(); return; }
@@ -633,25 +902,20 @@
             if (gotoEl) {
                 var target = gotoEl.getAttribute("data-goto");
                 if (REAL_PAGES.indexOf(target) >= 0) pushPage(target);
-                else openPlaceholder(target);
                 return;
             }
 
             var presetEl = t.closest("[data-preset]");
             if (presetEl) {
                 appData.settings.bubble.preset = presetEl.getAttribute("data-preset");
-                saveData();
-                renderControls();
-                applySettings();
+                saveData(); renderControls(); applySettings();
                 return;
             }
 
             var segmentEl = t.closest("[data-mode]");
             if (segmentEl) {
                 appData.settings.appearance.avatar.mode = segmentEl.getAttribute("data-mode");
-                saveData();
-                renderControls();
-                applySettings();
+                saveData(); renderControls(); applySettings(); renderChat();
                 return;
             }
         });
@@ -681,9 +945,7 @@
         on("sheetSave", "click", saveSheet);
 
         var sheet = $("editSheet");
-        if (sheet) {
-            sheet.addEventListener("keydown", function (e) { if (e.key === "Enter") saveSheet(); });
-        }
+        if (sheet) sheet.addEventListener("keydown", function (e) { if (e.key === "Enter") saveSheet(); });
 
         if (window.visualViewport) {
             window.visualViewport.addEventListener("resize", function () {
@@ -696,23 +958,12 @@
         }
 
         window.addEventListener("popstate", function () {
+            if (callState && $("callScreen") && !$("callScreen").hidden) { endCall(); return; }
             if (sheetOpen) { closeSheet(); return; }
             var active = document.querySelector(".screen.active");
             if (active && active.id === "settingsView") { popPage(); return; }
             if (active && active.id !== "desktopView") goDesktop();
         });
-    }
-
-    /* ---------------- 占位页 ---------------- */
-    var PAGE_TITLES = { };
-    var PAGE_HINTS = { };
-
-    function openPlaceholder(key) {
-        var title = $("placeholderTitle");
-        var hint = $("placeholderHint");
-        if (title) title.textContent = PAGE_TITLES[key] || "";
-        if (hint) hint.textContent = PAGE_HINTS[key] || "下个阶段开放。";
-        pushPage("__placeholder");
     }
 
     /* ---------------- 启动 ---------------- */
@@ -743,13 +994,11 @@
         renderControls();
         applySettings();
         bindEvents();
+        updateSendBtn();
         hideSplash();
         registerSW();
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-    } else {
-        init();
-    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
 })();
