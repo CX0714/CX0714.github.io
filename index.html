@@ -146,7 +146,7 @@
                     <button class="settings-item" data-goto="appearance.chat" type="button"><span>聊天背景</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                     <button class="settings-item" data-goto="appearance.avatar" type="button"><span>聊天头像</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                     <button class="settings-item" data-goto="status" type="button"><span>状态提示</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
-                    <button class="settings-item" data-goto="display" type="button"><span>显示与字体</span><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="display" type="button"><span>显示与字体</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                 </div>
             </section>
 
@@ -171,7 +171,7 @@
 
             <section class="set-page" data-page="status">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">状态提示</span>
                 </div>
                 <div class="status-preview"><span class="msg-status" id="statusPreview">—— 要抱抱 ——</span></div>
@@ -197,7 +197,13 @@
                 </div>
                 <div class="group-card control-card">
                     <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.homeBg.color"></label></div>
-                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.homeBg.image" hidden></label></div>
+                    <div class="control-row">
+                        <span class="control-label">图片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-upload="appearance.homeBg.image" hidden></label>
+                            <button class="clear-text" data-clear-setting="appearance.homeBg.image" type="button">清除</button>
+                        </div>
+                    </div>
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.homeBg.opacity" data-unit="%">100%</span></div>
                         <input type="range" class="slider" data-key="appearance.homeBg.opacity" data-unit="%" min="0" max="100" step="1">
@@ -243,7 +249,13 @@
                 </div>
                 <div class="group-card control-card">
                     <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.chatBg.color"></label></div>
-                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.chatBg.image" hidden></label></div>
+                    <div class="control-row">
+                        <span class="control-label">图片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-upload="appearance.chatBg.image" hidden></label>
+                            <button class="clear-text" data-clear-setting="appearance.chatBg.image" type="button">清除</button>
+                        </div>
+                    </div>
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.chatBg.opacity" data-unit="%">100%</span></div>
                         <input type="range" class="slider" data-key="appearance.chatBg.opacity" data-unit="%" min="0" max="100" step="1">
@@ -382,6 +394,7 @@
                     <button class="profile-avatar" id="myProfileAvatar" type="button" aria-label="更换头像"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg></button>
                     <input type="file" id="myProfileFile" accept="image/*" hidden>
                     <input class="profile-name" id="myProfileName" type="text" maxlength="16" placeholder="你的称呼" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <button class="clear-text" id="myAvatarClear" type="button">清除头像</button>
                     <p class="profile-tip">点击头像可从相册选择图片</p>
                 </div>
             </section>
@@ -395,6 +408,7 @@
                     <button class="profile-avatar" id="taProfileAvatar" type="button" aria-label="更换头像"><span class="emoji-avatar">🌙</span></button>
                     <input type="file" id="taProfileFile" accept="image/*" hidden>
                     <input class="profile-name" id="taProfileName" type="text" maxlength="16" placeholder="他的称呼" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <button class="clear-text" id="taAvatarClear" type="button">清除头像</button>
                     <p class="profile-tip">点击头像可从相册选择图片</p>
                 </div>
             </section>
@@ -423,7 +437,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">3.4</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.5</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -497,6 +511,12 @@
     <div class="msg-menu" id="msgMenu" hidden>
         <button class="msg-menu-item" data-act="quote" type="button">引用</button>
         <button class="msg-menu-item danger" data-act="delete" type="button">删除</button>
+    </div>
+
+    <div class="cd-menu" id="cdMenu" hidden>
+        <button class="cd-menu-btn" data-cd-act="show" type="button">显示在主屏</button>
+        <button class="cd-menu-btn" data-cd-act="edit" type="button">编辑</button>
+        <button class="cd-menu-btn danger" data-cd-act="delete" type="button">删除</button>
     </div>
 
     <div class="peek-mask" id="peekMask" hidden>
@@ -639,23 +659,53 @@
                     <div class="control-row"><span class="control-label">选择倒数日</span><select class="cfg-input" data-wcfg="daysSourceId" id="wsDaySource"></select></div>
                     <div class="control-row"><span class="control-label">标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="自动跟随倒数日"></div>
                     <div class="control-row"><span class="control-label">天数（手填）</span><input class="cfg-input" data-wcfg="days" maxlength="16" placeholder="第 615 天"></div>
-                    <div class="control-row"><span class="control-label">左侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgLeft" hidden></label></div>
-                    <div class="control-row"><span class="control-label">右侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgRight" hidden></label></div>
+                    <div class="control-row">
+                        <span class="control-label">左侧图片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgLeft" hidden></label>
+                            <button class="clear-text" data-clear-widget="imgLeft" type="button">清除</button>
+                        </div>
+                    </div>
+                    <div class="control-row">
+                        <span class="control-label">右侧图片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgRight" hidden></label>
+                            <button class="clear-text" data-clear-widget="imgRight" type="button">清除</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="group-card control-card cfg-group" data-cfg="B" hidden>
                     <div class="control-row"><span class="control-label">标题文字</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今日单曲"></div>
-                    <div class="control-row"><span class="control-label">卡片图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgCard" hidden></label></div>
+                    <div class="control-row">
+                        <span class="control-label">卡片图片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgCard" hidden></label>
+                            <button class="clear-text" data-clear-widget="imgCard" type="button">清除</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="group-card control-card cfg-group" data-cfg="C" hidden>
                     <div class="control-row"><span class="control-label">主标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今天也想你"></div>
                     <div class="control-row"><span class="control-label">副标题</span><input class="cfg-input" data-wcfg="subtitle" maxlength="20" placeholder="距离见面还有…"></div>
-                    <div class="control-row"><span class="control-label">顶部大图</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgTop" hidden></label></div>
+                    <div class="control-row">
+                        <span class="control-label">顶部大图</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgTop" hidden></label>
+                            <button class="clear-text" data-clear-widget="imgTop" type="button">清除</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="group-card control-card cfg-group" data-cfg="D" hidden>
-                    <div class="control-row"><span class="control-label">背景图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgBg" hidden></label></div>
+                    <div class="control-row">
+                        <span class="control-label">背景图片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgBg" hidden></label>
+                            <button class="clear-text" data-clear-widget="imgBg" type="button">清除</button>
+                        </div>
+                    </div>
                     <div class="control-row"><span class="control-label">中心文字</span><input class="cfg-input" data-wcfg="centerText" maxlength="20" placeholder="今天也在想你"></div>
                 </div>
 
@@ -681,8 +731,32 @@
                             <button class="segment-btn" data-hero-mode="split" type="button">上下两张</button>
                         </div>
                     </div>
-                    <div class="control-row" data-hero-row="img1"><span class="control-label">照片</span><label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img1" hidden></label></div>
-                    <div class="control-row" data-hero-row="img2" hidden><span class="control-label">下半照片</span><label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img2" hidden></label></div>
+                    <div class="control-row" data-hero-row="img1">
+                        <span class="control-label">照片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img1" hidden></label>
+                            <button class="clear-text" data-clear-hero="img1" type="button">清除</button>
+                        </div>
+                    </div>
+                    <div class="control-row" data-hero-row="img2" hidden>
+                        <span class="control-label">下半照片</span>
+                        <div class="row-actions">
+                            <label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img2" hidden></label>
+                            <button class="clear-text" data-clear-hero="img2" type="button">清除</button>
+                        </div>
+                    </div>
+
+                    <div data-hero-row="style">
+                        <div class="control-row"><span class="control-label">下半底色</span><label class="color-dot"><input type="color" data-hero-color></label></div>
+                        <div class="control-block">
+                            <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-hero-val="opacity" data-unit="%">40%</span></div>
+                            <input type="range" class="slider" data-hero-opacity min="0" max="100" step="1">
+                        </div>
+                        <div class="control-block">
+                            <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-hero-val="blur" data-unit="%">67%</span></div>
+                            <input type="range" class="slider" data-hero-blur min="0" max="100" step="1">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -692,7 +766,7 @@
     <div class="modal-mask" id="cdMask"></div>
     <div class="modal-sheet" id="cdSheet">
         <div class="sheet-handle"></div>
-        <div class="sheet-title">新建倒数日</div>
+        <div class="sheet-title" id="cdSheetTitle">新建倒数日</div>
         <div class="field-row"><input type="text" id="cdTitle" maxlength="20" placeholder="标题，如：和老公认识"></div>
         <div class="field-row"><input type="date" id="cdDate"></div>
         <div class="sheet-actions">
