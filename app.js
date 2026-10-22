@@ -1,6 +1,6 @@
 /* =========================================================
-   Philos · 3.1
-   小组件（4 模板）+ 倒数日 / 信箱 / 字卡库 + 聊天 / 设置
+   Philos · 3.2
+   头像作用域隔离 / 大组件照片 / 小组件模板
    ========================================================= */
 (function () {
     "use strict";
@@ -43,12 +43,15 @@
         blur: 20
     };
 
+    var DEFAULT_HERO = { mode: "", img1: "", img2: "" };
+
     var DEFAULTS = {
         taName: "他", taAvatar: "", myName: "your账户名", myAvatar: "",
         chatHistory: [], cards: [], stickers: [], pats: ["要抱抱"],
         anniversaries: [], activeCountdownId: "", letters: [],
         cardCategories: JSON.parse(JSON.stringify(EMPTY_CATS)),
         widgetConfig: JSON.parse(JSON.stringify(DEFAULT_WIDGET)),
+        heroConfig: JSON.parse(JSON.stringify(DEFAULT_HERO)),
         themeMode: "auto",
         widgetLines: [BLANK, BLANK, BLANK, BLANK],
         settings: {
@@ -69,12 +72,14 @@
     var activeCardKind = "text";
     var activeCat = "全部";
     var editingCardId = null;
+    var heroPanelOpen = false;
 
     function $(id) { return document.getElementById(id); }
     function isPlainObject(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
     function clone(v) { return JSON.parse(JSON.stringify(v)); }
     function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
     function esc(str) {
         return String(str == null ? "" : str)
             .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -111,6 +116,7 @@
             }
             merged.settings = deepMerge(isPlainObject(parsed.settings) ? parsed.settings : {}, defaults.settings);
             merged.widgetConfig = deepMerge(isPlainObject(parsed.widgetConfig) ? parsed.widgetConfig : {}, defaults.widgetConfig);
+            merged.heroConfig = deepMerge(isPlainObject(parsed.heroConfig) ? parsed.heroConfig : {}, defaults.heroConfig);
             if (!Array.isArray(merged.widgetLines) || merged.widgetLines.length !== 4) merged.widgetLines = defaults.widgetLines.slice();
             if (!Array.isArray(merged.chatHistory)) merged.chatHistory = [];
             if (!Array.isArray(merged.stickers)) merged.stickers = [];
@@ -239,6 +245,47 @@
         return '<span class="avatar-text">Me</span>';
     }
 
+    /* ===== 大组件照片 ===== */
+    function applyHeroImages() {
+        var big = $("widgetLarge");
+        if (!big) return;
+        var top = big.querySelector(".widget-half-top");
+        var bottom = big.querySelector(".widget-half-bottom");
+        var cfg = appData.heroConfig || {};
+
+        big.classList.remove("hero-single", "hero-split");
+        big.style.backgroundImage = "";
+        if (top) { top.style.backgroundImage = ""; top.style.backgroundColor = ""; }
+        if (bottom) { bottom.style.backgroundImage = ""; bottom.style.backgroundColor = ""; }
+
+        if (cfg.mode === "single" && isImageSource(cfg.img1)) {
+            big.classList.add("hero-single");
+            big.style.backgroundImage = 'url("' + cfg.img1 + '")';
+        } else if (cfg.mode === "split") {
+            big.classList.add("hero-split");
+            if (top && isImageSource(cfg.img1)) top.style.backgroundImage = 'url("' + cfg.img1 + '")';
+            if (bottom && isImageSource(cfg.img2)) bottom.style.backgroundImage = 'url("' + cfg.img2 + '")';
+        }
+        renderHeroConfig();
+    }
+
+    function renderHeroConfig() {
+        var cfg = appData.heroConfig || {};
+        var btns = document.querySelectorAll("[data-hero-mode]");
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.toggle("active", btns[i].getAttribute("data-hero-mode") === (cfg.mode || ""));
+        }
+        var rows = document.querySelectorAll("[data-hero-row]");
+        for (var j = 0; j < rows.length; j++) {
+            var key = rows[j].getAttribute("data-hero-row");
+            rows[j].hidden = (key === "img2" && cfg.mode !== "split");
+        }
+        var panel = $("heroCfg");
+        if (panel) panel.hidden = !heroPanelOpen;
+        var card = document.querySelector("[data-hero]");
+        if (card) card.classList.toggle("active", !!cfg.mode);
+    }
+
     /* ===== 倒数日 ===== */
     function daysFrom(dateStr) {
         if (!dateStr) return 0;
@@ -322,7 +369,7 @@
         closeCdSheet();
     }
 
-    /* ===== 小组件 ===== */
+    /* ===== 小组件 2x2 ===== */
     function tplImage(src) {
         return isImageSource(src) ? '<img src="' + escAttr(src) + '" alt="">' : '<span class="ws-img-empty"></span>';
     }
@@ -368,7 +415,9 @@
     }
 
     function tplDHtml(cfg) {
-        var img = isImageSource(cfg.imgBg) ? '<img class="ws-d-img" src="' + escAttr(cfg.imgBg) + '" alt="">' : '<span class="ws-img-empty ws-d-img"></span>';
+        var img = isImageSource(cfg.imgBg)
+            ? '<img class="ws-d-img" src="' + escAttr(cfg.imgBg) + '" alt="">'
+            : '<span class="ws-img-empty ws-d-img"></span>';
         return '<div class="ws-tpl ws-d">' + img +
             '<div class="ws-d-text">' + esc(cfg.centerText || "今天也在想你") + '</div>' +
         '</div>';
@@ -391,7 +440,6 @@
         applyWidgetSkin(cfg);
 
         if (!cfg.template) {
-            // 兼容：没有模板但有选中的倒数日
             var item = null;
             if (appData.activeCountdownId) {
                 for (var i = 0; i < appData.anniversaries.length; i++) {
@@ -468,6 +516,7 @@
         updateWVal("opacity", cfg.opacity);
         updateWVal("blur", cfg.blur);
         fillDaySourceSelect();
+        renderHeroConfig();
     }
 
     function handleWidgetControl(el) {
@@ -769,7 +818,7 @@
         reader.readAsText(file);
     }
 
-    /* ===== 左滑手势 ===== */
+    /* ===== 左滑 ===== */
     var swipeState = null;
     function bindSwipe(container) {
         if (!container) return;
@@ -859,6 +908,7 @@
         if (peekAvatar) peekAvatar.innerHTML = avatarMarkup(appData.taAvatar, "Me");
 
         renderWidgetSmall();
+        applyHeroImages();
     }
 
     function renderProfile() {
@@ -887,7 +937,7 @@
     function renderPreview() {
         var taMarkup = avatarMarkup(appData.taAvatar, "他");
         var myMarkup = avatarMarkup(appData.myAvatar, "Me");
-        ["pvAvatarTa", "pvBubbleTa"].forEach(function (id) { var el = $(id); if (el) el.innerHTML = taMarkup; });
+        ["pvAvatarTa", "pvAvatarTa2", "pvBubbleTa"].forEach(function (id) { var el = $(id); if (el) el.innerHTML = taMarkup; });
         ["pvAvatarMe", "pvBubbleMe"].forEach(function (id) { var el = $(id); if (el) el.innerHTML = myMarkup; });
     }
 
@@ -1215,7 +1265,6 @@
     }
 
     var call = { state: "idle", seconds: 0, connectTimer: null, rejectTimer: null, taTimer: null, tickTimer: null, closeTimer: null };
-    function pad(n) { return n < 10 ? "0" + n : "" + n; }
     function fmtDuration(sec) {
         var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
         if (h > 0) return h + ":" + pad(m) + ":" + pad(s);
@@ -1344,6 +1393,7 @@
     function applySettings() {
         var s = appData.settings, a = s.appearance;
         var root = document.documentElement, css = root.style;
+
         css.setProperty("--home-bg-color", hexToRgba(a.homeBg.color, a.homeBg.opacity / 100));
         css.setProperty("--home-bg-image", a.homeBg.image ? "url(" + a.homeBg.image + ")" : "none");
         css.setProperty("--home-blur", (a.homeBg.blur / 100 * 30) + "px");
@@ -1353,9 +1403,19 @@
         root.classList.toggle("hide-app-label", a.iconBg.showLabel === false);
         css.setProperty("--chat-bg-color", hexToRgba(a.chatBg.color, a.chatBg.opacity / 100));
         css.setProperty("--chat-bg-image", a.chatBg.image ? "url(" + a.chatBg.image + ")" : "none");
-        css.setProperty("--chat-avatar-size", (a.avatar.size || 36) + "px");
-        css.setProperty("--chat-avatar-radius", (a.avatar.radius === undefined ? 50 : a.avatar.radius) + "px");
-        css.setProperty("--chat-avatar-offset-y", (a.avatar.offsetY || 0) + "px");
+
+        /* 聊天头像：只作用于消息流与预览（顶部头像已被 CSS 写死 48px） */
+        var size = a.avatar.size || 36;
+        var radius = (a.avatar.radius === undefined ? 50 : a.avatar.radius);
+        var offsetY = a.avatar.offsetY || 0;
+        css.setProperty("--msg-avatar-size", size + "px");
+        css.setProperty("--msg-avatar-radius", radius + "px");
+        css.setProperty("--avatar-offset-y", offsetY + "px");
+        /* 旧变量保留，兼容其他引用 */
+        css.setProperty("--chat-avatar-size", size + "px");
+        css.setProperty("--chat-avatar-radius", radius + "px");
+        css.setProperty("--chat-avatar-offset-y", offsetY + "px");
+
         css.setProperty("--bubble-bg", hexToRgba(s.bubble.bg, s.bubble.opacity / 100));
         css.setProperty("--bubble-radius", s.bubble.radius + "px");
         css.setProperty("--bubble-pad-y", s.bubble.height + "px");
@@ -1483,6 +1543,7 @@
         renderCards();
         renderWidgetConfig();
         applySettings();
+        applyHeroImages();
     }
 
     /* 事件 */
@@ -1495,14 +1556,15 @@
         else value = el.value;
         setPath(appData.settings, key, value);
         if (el.type === "range") updateValLabel(key, value);
-        saveData(); applySettings();
+        saveData();
+        applySettings();
+        if (key.indexOf("appearance.avatar.") === 0) renderPreview();
     }
 
     function on(id, evt, fn) {
         var el = $(id);
         if (el) el.addEventListener(evt, fn);
     }
-
     function closeCardsMenu() { var m = $("cardsMenu"); if (m) m.hidden = true; }
 
     function bindEvents() {
@@ -1519,7 +1581,6 @@
             on(id, "click", goDesktop);
         });
 
-        // 主屏 2x2 → 小组件
         on("widgetSmallArea", "click", function () { renderWidgetConfig(); showScreen("widgetsView"); });
 
         on("btnAddCountdown", "click", openCdSheet);
@@ -1639,7 +1700,24 @@
             var insideSwipe = t.closest(".swipe-row");
             if (!insideSwipe) closeAllSwipe();
 
-            // 小组件模板
+            // 大组件照片卡片
+            var heroCard = t.closest("[data-hero]");
+            if (heroCard) {
+                heroPanelOpen = !heroPanelOpen;
+                renderHeroConfig();
+                if (heroPanelOpen && $("heroCfg") && $("heroCfg").scrollIntoView) {
+                    $("heroCfg").scrollIntoView({ behavior: "smooth", block: "nearest" });
+                }
+                return;
+            }
+
+            var heroModeBtn = t.closest("[data-hero-mode]");
+            if (heroModeBtn) {
+                appData.heroConfig.mode = heroModeBtn.getAttribute("data-hero-mode");
+                saveData(); applyHeroImages();
+                return;
+            }
+
             var tplBtn = t.closest("[data-tpl]");
             if (tplBtn) {
                 appData.widgetConfig.template = tplBtn.getAttribute("data-tpl");
@@ -1745,6 +1823,16 @@
             var el = e.target;
             if (!el || !el.getAttribute) return;
 
+            var hkey = el.getAttribute("data-hero-upload");
+            if (hkey) {
+                readImageFile(el.files && el.files[0], function (result) {
+                    appData.heroConfig[hkey] = result;
+                    saveData(); applyHeroImages();
+                });
+                el.value = "";
+                return;
+            }
+
             var wkey = el.getAttribute("data-wupload");
             if (wkey) {
                 readImageFile(el.files && el.files[0], function (result) {
@@ -1837,6 +1925,7 @@
         renderCards();
         renderWidgetConfig();
         applySettings();
+        applyHeroImages();
         bindEvents();
         updateSendBtn();
         hideSplash();
