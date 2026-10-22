@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v31";
+const CACHE_NAME = "philos-v32";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
-   运行时补丁：回复方式系统、气泡预设（尾巴 / 大圆角）、
-   高度下限 0、圆角 0–60（最大即胶囊）。app.js 原文件不动。
+   运行时补丁：回复方式 / 气泡预设 / 表情包 / Typing / 输入栏
+   app.js 原文件不动，只在末尾注入。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -129,6 +129,12 @@ function rmBuildMessage(p, pool) {
     return null;
 }
 
+function rmSetTyping(on) {
+    var el = $("headerName");
+    if (!el) return;
+    el.textContent = on ? "Typing..." : (appData.taName || "他");
+}
+
 scheduleReply = function () {
     var p = rmSettings();
     if (!p) return;
@@ -139,6 +145,8 @@ scheduleReply = function () {
     var max = clamp(Number(p.replyMax) || min, min, 10);
     var count = min + Math.floor(Math.random() * (max - min + 1));
     var delay = Math.max(0, Number(p.replyDelay) || 0) * 1000;
+
+    rmSetTyping(true);
 
     if (replyTimer) clearTimeout(replyTimer);
     replyTimer = setTimeout(function () {
@@ -151,6 +159,7 @@ scheduleReply = function () {
             appData.chatHistory.push(msg);
             added++;
         }
+        rmSetTyping(false);
         if (!added) return;
 
         var patPool = appData.cards.filter(function (c) { return c.kind === "status" && c.content; });
@@ -256,16 +265,36 @@ function rmInjectStyles() {
     st.id = "rm-style";
     st.textContent =
         ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}" +
-        "html[data-bubble-preset=\"large\"] .msg-bubble,html[data-bubble-preset=\"large\"] .pv-bubble{border-radius:calc(var(--bubble-radius,16px) + 10px) !important;}" +
+        "html[data-bubble-preset=\"large\"] .msg-bubble,html[data-bubble-preset=\"large\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}" +
         "html[data-bubble-preset=\"tail\"] .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px !important;}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px !important;}" +
         "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
         "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}" +
-        "html[data-bubble-preset=\"small\"] .msg-bubble,html[data-bubble-preset=\"square\"] .msg-bubble," +
-        "html[data-bubble-preset=\"small\"] .pv-bubble,html[data-bubble-preset=\"square\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}";
+        "#chatMessages .msg-bubble.rm-sticker-bubble{background:transparent !important;border:none !important;padding:0 !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}" +
+        "#chatMessages .rm-sticker-bubble img{max-width:112px !important;border-radius:10px;}" +
+        ".chat-input-box{min-height:44px;padding:4px 8px 4px 16px;}" +
+        ".chat-input-box .input-row{align-items:center;}" +
+        ".chat-input-box textarea{padding:0;line-height:1.5;max-height:44px;}";
     document.head.appendChild(st);
 }
+
+function rmDecorateChat() {
+    var bubbles = document.querySelectorAll("#chatMessages .msg-bubble");
+    for (var i = 0; i < bubbles.length; i++) {
+        var idx = Number(bubbles[i].getAttribute("data-index"));
+        var msg = appData.chatHistory[idx];
+        if (msg && msg.type === "sticker") {
+            bubbles[i].classList.add("rm-sticker-bubble");
+        }
+    }
+}
+
+var rmBaseRenderChat = renderChat;
+renderChat = function () {
+    rmBaseRenderChat.apply(null, arguments);
+    rmDecorateChat();
+};
 
 function rmSyncBubblePreset() {
     var b = appData.settings && appData.settings.bubble;
@@ -420,6 +449,10 @@ function rmInit() {
     rmBuildUI();
     rmBind();
     rmRender();
+
+    var input = $("chatInput");
+    if (input) input.placeholder = "iMessage";
+    rmDecorateChat();
 }
 
 if (document.readyState === "loading") {
