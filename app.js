@@ -1,5 +1,5 @@
 /* =========================================================
-   Philos · 3.5
+   Philos · 3.6
    ========================================================= */
 (function () {
     "use strict";
@@ -32,7 +32,11 @@
         opacity: 100, blur: 20
     };
 
-    var DEFAULT_HERO = { mode: "", img1: "", img2: "", color: "", opacity: 40, blur: 67 };
+    var DEFAULT_HERO = {
+        mode: "", img1: "", img2: "",
+        top: { color: "", opacity: 100, blur: 0 },
+        bottom: { color: "", opacity: 40, blur: 67 }
+    };
 
     var DEFAULTS = {
         taName: "他", taAvatar: "", myName: "your账户名", myAvatar: "",
@@ -147,6 +151,14 @@
                 };
             }).filter(Boolean);
 
+            /* 旧版大组件字段迁移 */
+            var hc = merged.heroConfig;
+            if (!isPlainObject(hc.top)) hc.top = { color: "", opacity: 100, blur: 0 };
+            if (!isPlainObject(hc.bottom)) hc.bottom = { color: "", opacity: 40, blur: 67 };
+            if (hc.color && !hc.bottom.color) hc.bottom.color = hc.color;
+            if (typeof hc.opacity === "number" && hc.opacity !== 40) hc.bottom.opacity = hc.opacity;
+            if (typeof hc.blur === "number" && hc.blur !== 67) hc.bottom.blur = hc.blur;
+
             appData = merged;
         } catch (e) {
             appData = defaults;
@@ -255,44 +267,64 @@
         }
     }
 
-    /* ===== 大组件照片 / 下半样式 ===== */
+    /* ===== 大组件：上下两半完全独立 ===== */
+    function heroDefaultColor(side) {
+        var dark = isDarkTheme();
+        if (side === "top") return dark ? "#1e2024" : "#eef1f5";
+        return dark ? "#202226" : "#ffffff";
+    }
+
+    function paintHalf(el, cfg, imgSrc, fallbackColor) {
+        if (!el) return;
+        el.style.backgroundImage = "";
+        el.style.backgroundColor = "";
+        el.style.backdropFilter = "";
+        el.style.webkitBackdropFilter = "";
+
+        if (imgSrc) el.style.backgroundImage = 'url("' + imgSrc + '")';
+
+        var base = cfg.color || fallbackColor || "";
+        var alpha = (cfg.opacity == null ? 100 : cfg.opacity) / 100;
+        if (base && alpha > 0) el.style.backgroundColor = hexToRgba(base, alpha);
+
+        var blurPx = (cfg.blur == null ? 0 : cfg.blur) / 100 * 30;
+        if (blurPx > 0.1) {
+            el.style.backdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
+            el.style.webkitBackdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
+        }
+    }
+
     function applyHeroImages() {
         var big = $("widgetLarge");
         if (!big) return;
-        var top = big.querySelector(".widget-half-top");
-        var bottom = big.querySelector(".widget-half-bottom");
-        var cfg = appData.heroConfig || {};
+        var topEl = big.querySelector(".widget-half-top");
+        var bottomEl = big.querySelector(".widget-half-bottom");
+        var cfg = appData.heroConfig || clone(DEFAULT_HERO);
+        var t = cfg.top || {};
+        var b = cfg.bottom || {};
+        var isImgMode = cfg.mode === "single" || cfg.mode === "split";
 
         big.classList.remove("hero-single", "hero-split");
         big.style.backgroundImage = "";
-        if (top) { top.style.backgroundImage = ""; top.style.backgroundColor = ""; }
-        if (bottom) {
-            bottom.style.backgroundImage = "";
-            bottom.style.backgroundColor = "";
-            bottom.style.backdropFilter = "";
-            bottom.style.webkitBackdropFilter = "";
-        }
 
+        var topImg = "", bottomImg = "";
         if (cfg.mode === "single" && isImageSource(cfg.img1)) {
             big.classList.add("hero-single");
             big.style.backgroundImage = 'url("' + cfg.img1 + '")';
         } else if (cfg.mode === "split") {
             big.classList.add("hero-split");
-            if (top && isImageSource(cfg.img1)) top.style.backgroundImage = 'url("' + cfg.img1 + '")';
-            if (bottom && isImageSource(cfg.img2)) bottom.style.backgroundImage = 'url("' + cfg.img2 + '")';
-        } else if (bottom) {
-            var base = cfg.color || (isDarkTheme() ? "#202226" : "#ffffff");
-            var alpha = (cfg.opacity == null ? 40 : cfg.opacity) / 100;
-            var blurPx = (cfg.blur == null ? 67 : cfg.blur) / 100 * 30;
-            bottom.style.backgroundColor = hexToRgba(base, alpha);
-            bottom.style.backdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
-            bottom.style.webkitBackdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
+            topImg = isImageSource(cfg.img1) ? cfg.img1 : "";
+            bottomImg = isImageSource(cfg.img2) ? cfg.img2 : "";
         }
+
+        paintHalf(topEl, t, topImg, isImgMode ? "" : heroDefaultColor("top"));
+        paintHalf(bottomEl, b, bottomImg, isImgMode ? "" : heroDefaultColor("bottom"));
+
         renderHeroConfig();
     }
 
     function renderHeroConfig() {
-        var cfg = appData.heroConfig || {};
+        var cfg = appData.heroConfig || clone(DEFAULT_HERO);
         var btns = document.querySelectorAll("[data-hero-mode]");
         for (var i = 0; i < btns.length; i++) {
             btns[i].classList.toggle("active", btns[i].getAttribute("data-hero-mode") === (cfg.mode || ""));
@@ -301,27 +333,25 @@
         var rows = document.querySelectorAll("[data-hero-row]");
         for (var j = 0; j < rows.length; j++) {
             var key = rows[j].getAttribute("data-hero-row");
-            if (key === "style") rows[j].hidden = !!cfg.mode;
-            else if (key === "img2") rows[j].hidden = cfg.mode !== "split";
-            else rows[j].hidden = !cfg.mode;
+            rows[j].hidden = (key === "img2") ? (cfg.mode !== "split") : (!cfg.mode);
         }
 
-        var op = cfg.opacity == null ? 40 : cfg.opacity;
-        var bl = cfg.blur == null ? 67 : cfg.blur;
+        ["top", "bottom"].forEach(function (side) {
+            var c = cfg[side] || {};
+            var colorEl = document.querySelector('[data-hero-side="' + side + '"][data-hero-field="color"]');
+            if (colorEl && document.activeElement !== colorEl) {
+                colorEl.value = c.color || heroDefaultColor(side);
+            }
+            var opEl = document.querySelector('[data-hero-side="' + side + '"][data-hero-field="opacity"]');
+            if (opEl && document.activeElement !== opEl) opEl.value = c.opacity == null ? 0 : c.opacity;
+            var blEl = document.querySelector('[data-hero-side="' + side + '"][data-hero-field="blur"]');
+            if (blEl && document.activeElement !== blEl) blEl.value = c.blur == null ? 0 : c.blur;
 
-        var colorInput = document.querySelector("[data-hero-color]");
-        if (colorInput && document.activeElement !== colorInput) {
-            colorInput.value = cfg.color || (isDarkTheme() ? "#202226" : "#ffffff");
-        }
-        var opInput = document.querySelector("[data-hero-opacity]");
-        if (opInput && document.activeElement !== opInput) opInput.value = op;
-        var blInput = document.querySelector("[data-hero-blur]");
-        if (blInput && document.activeElement !== blInput) blInput.value = bl;
-
-        var opLabel = document.querySelector('[data-hero-val="opacity"]');
-        if (opLabel) opLabel.textContent = op + "%";
-        var blLabel = document.querySelector('[data-hero-val="blur"]');
-        if (blLabel) blLabel.textContent = bl + "%";
+            var opLabel = document.querySelector('[data-hero-val="' + side + '-opacity"]');
+            if (opLabel) opLabel.textContent = (c.opacity == null ? 0 : c.opacity) + "%";
+            var blLabel = document.querySelector('[data-hero-val="' + side + '-blur"]');
+            if (blLabel) blLabel.textContent = (c.blur == null ? 0 : c.blur) + "%";
+        });
     }
 
     /* ===== 倒数日 ===== */
@@ -1847,7 +1877,6 @@
             if (!t.closest(".swipe-row")) closeAllSwipe();
             if (!t.closest("#cdMenu") && !t.closest("[data-cd-id]")) closeCdMenu();
 
-            /* 清除按钮 */
             var clearSetting = t.closest("[data-clear-setting]");
             if (clearSetting) {
                 setPath(appData.settings, clearSetting.getAttribute("data-clear-setting"), "");
@@ -1867,7 +1896,6 @@
                 return;
             }
 
-            /* 表情删除 */
             var sdel = t.closest("[data-sticker-del]");
             if (sdel) {
                 var sIdx = Number(sdel.getAttribute("data-sticker-del"));
@@ -1905,7 +1933,6 @@
                 return;
             }
 
-            /* 倒数日菜单 */
             var actBtn = t.closest("[data-cd-act]");
             if (actBtn) {
                 var act = actBtn.getAttribute("data-cd-act");
@@ -1997,19 +2024,15 @@
             var el = e.target;
             if (!el || !el.getAttribute) return;
 
-            if (el.hasAttribute("data-hero-color")) {
-                appData.heroConfig.color = el.value;
-                saveData(); applyHeroImages();
-                return;
-            }
-            if (el.hasAttribute("data-hero-opacity")) {
-                appData.heroConfig.opacity = Number(el.value);
-                saveData(); applyHeroImages();
-                return;
-            }
-            if (el.hasAttribute("data-hero-blur")) {
-                appData.heroConfig.blur = Number(el.value);
-                saveData(); applyHeroImages();
+            var side = el.getAttribute("data-hero-side");
+            var field = el.getAttribute("data-hero-field");
+            if (side && field) {
+                if (!isPlainObject(appData.heroConfig[side])) {
+                    appData.heroConfig[side] = { color: "", opacity: side === "top" ? 100 : 40, blur: side === "top" ? 0 : 67 };
+                }
+                appData.heroConfig[side][field] = el.type === "range" ? Number(el.value) : el.value;
+                saveData();
+                applyHeroImages();
                 return;
             }
 
