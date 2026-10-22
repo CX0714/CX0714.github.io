@@ -437,7 +437,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">3.5</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.6</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -721,6 +721,7 @@
                 </div>
             </div>
 
+            <!-- 大组件 -->
             <div data-wpane="hero" hidden>
                 <div class="group-card control-card">
                     <div class="card-title">大组件照片</div>
@@ -745,17 +746,31 @@
                             <button class="clear-text" data-clear-hero="img2" type="button">清除</button>
                         </div>
                     </div>
+                </div>
 
-                    <div data-hero-row="style">
-                        <div class="control-row"><span class="control-label">下半底色</span><label class="color-dot"><input type="color" data-hero-color></label></div>
-                        <div class="control-block">
-                            <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-hero-val="opacity" data-unit="%">40%</span></div>
-                            <input type="range" class="slider" data-hero-opacity min="0" max="100" step="1">
-                        </div>
-                        <div class="control-block">
-                            <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-hero-val="blur" data-unit="%">67%</span></div>
-                            <input type="range" class="slider" data-hero-blur min="0" max="100" step="1">
-                        </div>
+                <div class="group-card control-card">
+                    <div class="hero-group-title">上半部分</div>
+                    <div class="control-row"><span class="control-label">颜色</span><label class="color-dot"><input type="color" data-hero-side="top" data-hero-field="color"></label></div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-hero-val="top-opacity" data-unit="%">100%</span></div>
+                        <input type="range" class="slider" data-hero-side="top" data-hero-field="opacity" min="0" max="100" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-hero-val="top-blur" data-unit="%">0%</span></div>
+                        <input type="range" class="slider" data-hero-side="top" data-hero-field="blur" min="0" max="100" step="1">
+                    </div>
+                </div>
+
+                <div class="group-card control-card">
+                    <div class="hero-group-title">下半部分</div>
+                    <div class="control-row"><span class="control-label">颜色</span><label class="color-dot"><input type="color" data-hero-side="bottom" data-hero-field="color"></label></div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-hero-val="bottom-opacity" data-unit="%">40%</span></div>
+                        <input type="range" class="slider" data-hero-side="bottom" data-hero-field="opacity" min="0" max="100" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-hero-val="bottom-blur" data-unit="%">67%</span></div>
+                        <input type="range" class="slider" data-hero-side="bottom" data-hero-field="blur" min="0" max="100" step="1">
                     </div>
                 </div>
             </div>
