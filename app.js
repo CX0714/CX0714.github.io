@@ -1,6 +1,6 @@
 /* =========================================================
-   Philos · 3.0
-   倒数日 / 信箱 / 字卡库
+   Philos · 3.1
+   小组件（4 模板）+ 倒数日 / 信箱 / 字卡库 + 聊天 / 设置
    ========================================================= */
 (function () {
     "use strict";
@@ -27,10 +27,28 @@
 
     var EMPTY_CATS = { text: [], emoji: [], sticker: [], status: [] };
 
+    var DEFAULT_WIDGET = {
+        template: "",
+        title: "",
+        subtitle: "",
+        days: "",
+        daysSourceId: "",
+        imgLeft: "",
+        imgRight: "",
+        imgCard: "",
+        imgTop: "",
+        imgBg: "",
+        centerText: "",
+        opacity: 100,
+        blur: 20
+    };
+
     var DEFAULTS = {
         taName: "他", taAvatar: "", myName: "your账户名", myAvatar: "",
         chatHistory: [], cards: [], stickers: [], pats: ["要抱抱"],
-        anniversaries: [], activeCountdownId: "", letters: [], cardCategories: JSON.parse(JSON.stringify(EMPTY_CATS)),
+        anniversaries: [], activeCountdownId: "", letters: [],
+        cardCategories: JSON.parse(JSON.stringify(EMPTY_CATS)),
+        widgetConfig: JSON.parse(JSON.stringify(DEFAULT_WIDGET)),
         themeMode: "auto",
         widgetLines: [BLANK, BLANK, BLANK, BLANK],
         settings: {
@@ -92,6 +110,7 @@
                 merged[k] = parsed[k] !== undefined && parsed[k] !== null ? parsed[k] : defaults[k];
             }
             merged.settings = deepMerge(isPlainObject(parsed.settings) ? parsed.settings : {}, defaults.settings);
+            merged.widgetConfig = deepMerge(isPlainObject(parsed.widgetConfig) ? parsed.widgetConfig : {}, defaults.widgetConfig);
             if (!Array.isArray(merged.widgetLines) || merged.widgetLines.length !== 4) merged.widgetLines = defaults.widgetLines.slice();
             if (!Array.isArray(merged.chatHistory)) merged.chatHistory = [];
             if (!Array.isArray(merged.stickers)) merged.stickers = [];
@@ -115,10 +134,9 @@
             if (!(av.offsetY >= -20 && av.offsetY <= 20)) av.offsetY = 0;
             av.radius = clamp(Number(av.radius) || 0, 0, 50);
 
-            /* 字卡旧数据迁移 */
             merged.cards = merged.cards.map(function (c) {
                 if (!c || typeof c !== "object") return null;
-                var kind = c.kind || (c.type === "sticker" ? "sticker" : "text");
+                var kind = c.kind || (c.type === "sticker" ? "sticker" : (c.type === "pat" || c.type === "status" ? "status" : "text"));
                 if (KINDS.indexOf(kind) < 0) kind = "text";
                 return {
                     id: c.id || uid(),
@@ -216,7 +234,6 @@
         if (isImageSource(value)) return '<img src="' + escAttr(value) + '" alt="">';
         return '<span class="avatar-text">' + esc(fallbackText) + "</span>";
     }
-
     function widgetAvatarMarkup() {
         if (isImageSource(appData.taAvatar)) return '<img src="' + escAttr(appData.taAvatar) + '" alt="">';
         return '<span class="avatar-text">Me</span>';
@@ -234,22 +251,6 @@
     function dayLabel(dateStr) {
         var d = daysFrom(dateStr);
         return d >= 0 ? "第 " + (d + 1) + " 天" : "还有 " + (-d) + " 天";
-    }
-
-    function renderWidgetSmall() {
-        var el = $("widgetSmallArea");
-        if (!el) return;
-        var item = null;
-        if (appData.activeCountdownId) {
-            for (var i = 0; i < appData.anniversaries.length; i++) {
-                if (appData.anniversaries[i].id === appData.activeCountdownId) { item = appData.anniversaries[i]; break; }
-            }
-        }
-        if (item) {
-            el.innerHTML = '<div class="ws-widget"><div class="ws-widget-title">' + esc(item.title) + '</div><div class="ws-widget-days">' + esc(dayLabel(item.date)) + '</div></div>';
-        } else {
-            el.innerHTML = '<span class="ws-placeholder">Select Widget</span>';
-        }
     }
 
     function renderCountdown() {
@@ -317,7 +318,169 @@
         saveData();
         renderCountdown();
         renderWidgetSmall();
+        fillDaySourceSelect();
         closeCdSheet();
+    }
+
+    /* ===== 小组件 ===== */
+    function tplImage(src) {
+        return isImageSource(src) ? '<img src="' + escAttr(src) + '" alt="">' : '<span class="ws-img-empty"></span>';
+    }
+
+    function widgetDaysText() {
+        var cfg = appData.widgetConfig;
+        if (cfg.daysSourceId) {
+            for (var i = 0; i < appData.anniversaries.length; i++) {
+                if (appData.anniversaries[i].id === cfg.daysSourceId) return dayLabel(appData.anniversaries[i].date);
+            }
+        }
+        return cfg.days || "";
+    }
+
+    function tplAHtml(cfg) {
+        return '<div class="ws-tpl ws-a">' +
+            '<div class="ws-a-title">' + esc(cfg.title || "我们") + '</div>' +
+            '<div class="ws-a-row">' +
+                '<span class="ws-a-avatar">' + tplImage(cfg.imgLeft) + '</span>' +
+                '<span class="ws-a-heart"></span>' +
+                '<span class="ws-a-avatar">' + tplImage(cfg.imgRight) + '</span>' +
+            '</div>' +
+            '<div class="ws-a-days">' + esc(widgetDaysText() || "第 1 天") + '</div>' +
+        '</div>';
+    }
+
+    function tplBHtml(cfg) {
+        return '<div class="ws-tpl ws-b">' +
+            '<div class="ws-b-title">' + esc(cfg.title || "今日单曲") + '</div>' +
+            '<div class="ws-b-card">' + tplImage(cfg.imgCard) + '</div>' +
+        '</div>';
+    }
+
+    function tplCHtml(cfg) {
+        return '<div class="ws-tpl ws-c">' +
+            '<div class="ws-c-img">' + tplImage(cfg.imgTop) + '</div>' +
+            '<div class="ws-c-body">' +
+                '<div class="ws-c-title">' + esc(cfg.title || "今天也想你") + '</div>' +
+                '<div class="ws-c-sub">' + esc(cfg.subtitle || "距离见面还有…") + '</div>' +
+                '<div class="ws-c-bar"><span></span></div>' +
+            '</div>' +
+        '</div>';
+    }
+
+    function tplDHtml(cfg) {
+        var img = isImageSource(cfg.imgBg) ? '<img class="ws-d-img" src="' + escAttr(cfg.imgBg) + '" alt="">' : '<span class="ws-img-empty ws-d-img"></span>';
+        return '<div class="ws-tpl ws-d">' + img +
+            '<div class="ws-d-text">' + esc(cfg.centerText || "今天也在想你") + '</div>' +
+        '</div>';
+    }
+
+    function applyWidgetSkin(cfg) {
+        var el = $("widgetSmallArea");
+        if (!el) return;
+        var op = typeof cfg.opacity === "number" ? cfg.opacity : 100;
+        var bl = typeof cfg.blur === "number" ? cfg.blur : 20;
+        el.style.setProperty("--ws-bg-alpha", (0.05 + op / 100 * 0.85).toFixed(3));
+        el.style.setProperty("--ws-blur", (bl / 100 * 30) + "px");
+        el.style.setProperty("--ws-content-opacity", (0.4 + op / 100 * 0.6).toFixed(2));
+    }
+
+    function renderWidgetSmall() {
+        var el = $("widgetSmallArea");
+        if (!el) return;
+        var cfg = appData.widgetConfig || clone(DEFAULT_WIDGET);
+        applyWidgetSkin(cfg);
+
+        if (!cfg.template) {
+            // 兼容：没有模板但有选中的倒数日
+            var item = null;
+            if (appData.activeCountdownId) {
+                for (var i = 0; i < appData.anniversaries.length; i++) {
+                    if (appData.anniversaries[i].id === appData.activeCountdownId) { item = appData.anniversaries[i]; break; }
+                }
+            }
+            el.classList.remove("has-template");
+            if (item) {
+                el.innerHTML = '<div class="ws-widget"><div class="ws-widget-title">' + esc(item.title) + '</div><div class="ws-widget-days">' + esc(dayLabel(item.date)) + '</div></div>';
+            } else {
+                el.innerHTML = '<span class="ws-placeholder">Select Widget</span>';
+            }
+            return;
+        }
+
+        el.classList.add("has-template");
+        var html = "";
+        if (cfg.template === "A") html = tplAHtml(cfg);
+        else if (cfg.template === "B") html = tplBHtml(cfg);
+        else if (cfg.template === "C") html = tplCHtml(cfg);
+        else if (cfg.template === "D") html = tplDHtml(cfg);
+        el.innerHTML = html;
+    }
+
+    function updateWVal(key, value) {
+        var labels = document.querySelectorAll('[data-wval="' + key + '"]');
+        var unit = "";
+        var input = document.querySelector('[data-wcfg="' + key + '"]');
+        if (input && input.dataset && input.dataset.wunit) unit = input.dataset.wunit;
+        for (var i = 0; i < labels.length; i++) labels[i].textContent = value + unit;
+    }
+
+    function fillDaySourceSelect() {
+        var sel = $("wsDaySource");
+        if (!sel) return;
+        var current = appData.widgetConfig.daysSourceId || "";
+        sel.innerHTML = "";
+        var none = document.createElement("option");
+        none.value = "";
+        none.textContent = "手动输入";
+        sel.appendChild(none);
+        appData.anniversaries.forEach(function (a) {
+            var opt = document.createElement("option");
+            opt.value = a.id;
+            opt.textContent = a.title;
+            sel.appendChild(opt);
+        });
+        sel.value = current;
+    }
+
+    function renderWidgetConfig() {
+        var cfg = appData.widgetConfig;
+        var tpl = cfg.template || "";
+
+        var cards = document.querySelectorAll("[data-tpl]");
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].classList.toggle("active", cards[i].getAttribute("data-tpl") === tpl);
+        }
+
+        var groups = document.querySelectorAll("[data-cfg]");
+        for (var j = 0; j < groups.length; j++) {
+            groups[j].hidden = groups[j].getAttribute("data-cfg") !== tpl;
+        }
+
+        var inputs = document.querySelectorAll("[data-wcfg]");
+        for (var k = 0; k < inputs.length; k++) {
+            var el = inputs[k];
+            var key = el.getAttribute("data-wcfg");
+            var val = cfg[key];
+            if (el.type === "range") el.value = (val === undefined || val === null) ? 0 : val;
+            else el.value = (val === undefined || val === null) ? "" : val;
+        }
+
+        updateWVal("opacity", cfg.opacity);
+        updateWVal("blur", cfg.blur);
+        fillDaySourceSelect();
+    }
+
+    function handleWidgetControl(el) {
+        var key = el.getAttribute("data-wcfg");
+        if (!key) return;
+        var value;
+        if (el.type === "checkbox") value = el.checked;
+        else if (el.type === "range") value = Number(el.value);
+        else value = el.value;
+        setPath(appData.widgetConfig, key, value);
+        if (el.type === "range") updateWVal(key, value);
+        saveData();
+        renderWidgetSmall();
     }
 
     /* ===== 信箱 ===== */
@@ -330,7 +493,6 @@
         var list = $("letterList");
         if (!list) return;
         list.innerHTML = "";
-
         if (!appData.letters.length) {
             var empty = document.createElement("div");
             empty.className = "letter-empty";
@@ -338,27 +500,21 @@
             list.appendChild(empty);
             return;
         }
-
         appData.letters.forEach(function (letter) {
             var card = document.createElement("div");
             card.className = "letter-card";
-
             var html = '<div class="letter-time">' + esc(fmtDate(letter.createdAt)) + '</div>';
             html += '<div class="letter-body">' + esc(letter.text) + '</div>';
             html += '<div class="letter-divider"></div>';
-            if (letter.reply) {
-                html += '<div class="letter-body reply">' + esc(letter.reply) + '</div>';
-            } else {
-                html += '<div class="letter-wait">等待回信…</div>';
-            }
+            if (letter.reply) html += '<div class="letter-body reply">' + esc(letter.reply) + '</div>';
+            else html += '<div class="letter-wait">等待回信…</div>';
             card.innerHTML = html;
             list.appendChild(card);
         });
     }
 
     function openCompose() {
-        var panel = $("letterCompose");
-        var input = $("letterInput");
+        var panel = $("letterCompose"), input = $("letterInput");
         if (!panel || !input) return;
         var name = appData.taName && appData.taName !== "他" ? appData.taName : "xx";
         var tpl = "亲爱的 " + name + "：\n  见字如晤：\n  ";
@@ -369,10 +525,7 @@
             try { input.setSelectionRange(tpl.length, tpl.length); } catch (e) {}
         }, 60);
     }
-    function closeCompose() {
-        var panel = $("letterCompose");
-        if (panel) panel.hidden = true;
-    }
+    function closeCompose() { var panel = $("letterCompose"); if (panel) panel.hidden = true; }
 
     function sendLetter() {
         var input = $("letterInput");
@@ -381,9 +534,7 @@
         if (!text) return;
         var letter = { id: uid(), text: text, createdAt: Date.now(), reply: "" };
         appData.letters.unshift(letter);
-        saveData();
-        renderLetters();
-        closeCompose();
+        saveData(); renderLetters(); closeCompose();
         maybeReply(letter.id);
     }
 
@@ -406,18 +557,13 @@
                 if (item && item.content) picked.push(item.content);
             }
             target.reply = picked.join("。") + "。";
-            saveData();
-            renderLetters();
+            saveData(); renderLetters();
         }, delay);
     }
 
     /* ===== 字卡库 ===== */
-    function cardsOfKind(kind) {
-        return appData.cards.filter(function (c) { return c.kind === kind; });
-    }
-    function catsOfKind(kind) {
-        return appData.cardCategories[kind] || [];
-    }
+    function cardsOfKind(kind) { return appData.cards.filter(function (c) { return c.kind === kind; }); }
+    function catsOfKind(kind) { return appData.cardCategories[kind] || []; }
     function countInCat(kind, cat) {
         var list = cardsOfKind(kind);
         if (cat === "全部") return list.length;
@@ -435,7 +581,6 @@
         var wrap = $("cardCats");
         if (!wrap) return;
         wrap.innerHTML = "";
-
         var cats = ["全部", "未分类"].concat(catsOfKind(activeCardKind));
         cats.forEach(function (name) {
             var btn = document.createElement("button");
@@ -445,7 +590,6 @@
             btn.setAttribute("data-cat", name);
             wrap.appendChild(btn);
         });
-
         var add = document.createElement("button");
         add.type = "button";
         add.className = "cat-add";
@@ -458,11 +602,9 @@
         var list = $("cardList");
         if (!list) return;
         list.innerHTML = "";
-
         var items = cardsOfKind(activeCardKind).filter(function (c) {
             return activeCat === "全部" ? true : c.category === activeCat;
         });
-
         if (!items.length) {
             var empty = document.createElement("div");
             empty.className = "card-empty";
@@ -470,7 +612,6 @@
             list.appendChild(empty);
             return;
         }
-
         items.forEach(function (card) {
             var row = document.createElement("div");
             row.className = "swipe-row";
@@ -497,11 +638,7 @@
         });
     }
 
-    function renderCards() {
-        renderKindSeg();
-        renderCats();
-        renderCardList();
-    }
+    function renderCards() { renderKindSeg(); renderCats(); renderCardList(); }
 
     function fillCategorySelect(select, current) {
         if (!select) return;
@@ -527,8 +664,7 @@
         var mask = $("cardModalMask");
         if (mask) mask.classList.remove("show");
         ["cardAddSheet", "cardEditSheet", "catSheet"].forEach(function (id) {
-            var el = $(id);
-            if (el) el.classList.remove("show");
+            var el = $(id); if (el) el.classList.remove("show");
         });
         editingCardId = null;
     }
@@ -542,10 +678,7 @@
         lines.forEach(function (text) {
             appData.cards.unshift({ id: uid(), kind: activeCardKind, content: text, category: cat, createdAt: Date.now() });
         });
-        saveData();
-        activeCat = cat;
-        renderCards();
-        closeCardModals();
+        saveData(); activeCat = cat; renderCards(); closeCardModals();
     }
 
     function openCardEdit(id) {
@@ -572,9 +705,7 @@
                 break;
             }
         }
-        saveData();
-        renderCards();
-        closeCardModals();
+        saveData(); renderCards(); closeCardModals();
     }
 
     function openCatSheet() {
@@ -590,10 +721,7 @@
         if (name === "全部" || name === "未分类") { closeCardModals(); return; }
         var cats = appData.cardCategories[activeCardKind];
         if (cats.indexOf(name) < 0) cats.push(name);
-        saveData();
-        activeCat = name;
-        renderCards();
-        closeCardModals();
+        saveData(); activeCat = name; renderCards(); closeCardModals();
     }
 
     function exportCards() {
@@ -635,9 +763,7 @@
                         }
                     });
                 }
-                saveData();
-                renderCards();
-                alert("导入成功");
+                saveData(); renderCards(); alert("导入成功");
             } catch (e) { alert("导入失败：文件格式不正确"); }
         };
         reader.readAsText(file);
@@ -662,7 +788,6 @@
             var t = e.touches[0];
             var dx = t.clientX - swipeState.startX;
             var dy = t.clientY - swipeState.startY;
-            if (!swipeState.moved && Math.abs(dx) < 6 && Math.abs(dy) > Math.abs(dx)) { swipeState = null; return; }
             if (Math.abs(dx) < Math.abs(dy)) return;
             if (e.cancelable) e.preventDefault();
             swipeState.moved = true;
@@ -723,7 +848,6 @@
 
         var headerName = $("headerName");
         if (headerName) headerName.textContent = appData.taName || "他";
-
         var headerAvatar = $("headerAvatar");
         if (headerAvatar) headerAvatar.innerHTML = avatarMarkup(appData.taAvatar, "Me");
 
@@ -857,7 +981,6 @@
             container.appendChild(empty);
             return;
         }
-
         var lastStamp = 0, lastFrom = null;
         var mode = appData.settings.appearance.avatar.mode;
 
@@ -877,7 +1000,6 @@
                 lastFrom = null;
                 return;
             }
-
             var row = document.createElement("div");
             row.className = "msg-row " + (msg.from === "me" ? "me" : "ta");
             var hideAvatar = (mode === "first" && lastFrom === msg.from);
@@ -1359,6 +1481,7 @@
         renderCountdown();
         renderLetters();
         renderCards();
+        renderWidgetConfig();
         applySettings();
     }
 
@@ -1387,16 +1510,17 @@
         on("appCards", "click", function () { activeCat = "全部"; renderCards(); showScreen("cardsView"); });
         on("appLetter", "click", function () { closeCompose(); renderLetters(); showScreen("letterView"); });
         on("appCountdown", "click", function () { renderCountdown(); showScreen("countdownView"); });
-        on("appWidgets", "click", function () { showScreen("widgetsView"); });
+        on("appWidgets", "click", function () { renderWidgetConfig(); showScreen("widgetsView"); });
         on("appSettings", "click", function () { openSettings("main", "desktop"); });
         on("dockAppearance", "click", function () { openSettings("appearance", "desktop"); });
         on("dockPermission", "click", function () { openSettings("permission", "desktop"); });
 
-        ["btnChatBack", "btnCardsBack", "btnCountdownBack", "btnLetterBack"].forEach(function (id) { on(id, "click", goDesktop); });
-        on("btnWidgetsBack", "click", goDesktop);
+        ["btnChatBack", "btnCardsBack", "btnCountdownBack", "btnLetterBack", "btnWidgetsBack"].forEach(function (id) {
+            on(id, "click", goDesktop);
+        });
 
-        // 主屏 2x2 组件 → 打开倒数日
-        on("widgetSmallArea", "click", function () { renderCountdown(); showScreen("countdownView"); });
+        // 主屏 2x2 → 小组件
+        on("widgetSmallArea", "click", function () { renderWidgetConfig(); showScreen("widgetsView"); });
 
         on("btnAddCountdown", "click", openCdSheet);
         on("cdCancel", "click", closeCdSheet);
@@ -1512,9 +1636,16 @@
             var t = e.target;
             if (!t || !t.closest) return;
 
-            // 点空白处收回左滑
             var insideSwipe = t.closest(".swipe-row");
             if (!insideSwipe) closeAllSwipe();
+
+            // 小组件模板
+            var tplBtn = t.closest("[data-tpl]");
+            if (tplBtn) {
+                appData.widgetConfig.template = tplBtn.getAttribute("data-tpl");
+                saveData(); renderWidgetSmall(); renderWidgetConfig();
+                return;
+            }
 
             var clearBtn = t.closest("[data-icon-clear]");
             if (clearBtn) {
@@ -1529,7 +1660,8 @@
                 var cdId = cdDel.getAttribute("data-cd-del");
                 appData.anniversaries = appData.anniversaries.filter(function (a) { return a.id !== cdId; });
                 if (appData.activeCountdownId === cdId) appData.activeCountdownId = "";
-                saveData(); renderCountdown(); renderWidgetSmall();
+                if (appData.widgetConfig.daysSourceId === cdId) appData.widgetConfig.daysSourceId = "";
+                saveData(); renderCountdown(); renderWidgetSmall(); fillDaySourceSelect();
                 return;
             }
 
@@ -1557,7 +1689,6 @@
                 return;
             }
 
-            // 点倒数日卡片 → 设为显示中
             var cdRow = t.closest("[data-cd-id]");
             if (cdRow && !cdRow.getAttribute("data-skip-click")) {
                 appData.activeCountdownId = cdRow.getAttribute("data-cd-id");
@@ -1567,7 +1698,6 @@
             if (cdRow) cdRow.removeAttribute("data-skip-click");
 
             if (!t.closest("#cardsMenu") && !t.closest("#btnCardsMore")) closeCardsMenu();
-
             if (!t.closest("#msgMenu") && !t.closest(".msg-bubble")) closeMsgMenu();
 
             var tabBtn = t.closest("[data-tab]");
@@ -1607,12 +1737,23 @@
         document.addEventListener("input", function (e) {
             var el = e.target;
             if (!el || !el.getAttribute) return;
-            if (el.getAttribute("data-key")) handleControl(el);
+            if (el.getAttribute("data-key")) { handleControl(el); return; }
+            if (el.getAttribute("data-wcfg")) { handleWidgetControl(el); }
         });
 
         document.addEventListener("change", function (e) {
             var el = e.target;
             if (!el || !el.getAttribute) return;
+
+            var wkey = el.getAttribute("data-wupload");
+            if (wkey) {
+                readImageFile(el.files && el.files[0], function (result) {
+                    setPath(appData.widgetConfig, wkey, result);
+                    saveData(); renderWidgetSmall();
+                });
+                el.value = "";
+                return;
+            }
 
             var iconKey = el.getAttribute("data-icon-upload");
             if (iconKey) {
@@ -1623,6 +1764,7 @@
                 el.value = "";
                 return;
             }
+
             if (el.getAttribute("data-upload")) handleUpload(el);
         });
 
@@ -1693,6 +1835,7 @@
         renderCountdown();
         renderLetters();
         renderCards();
+        renderWidgetConfig();
         applySettings();
         bindEvents();
         updateSendBtn();
