@@ -1,6 +1,6 @@
 /* =========================================================
-   Philos · 2.3
-   聊天 / 通话 / 状态提示
+   Philos · 2.4
+   聊天 / 抽屉 / 通话状态机
    ========================================================= */
 (function () {
     "use strict";
@@ -15,6 +15,8 @@
         myAvatar: "",
         chatHistory: [],
         cards: [],
+        stickers: [],
+        pats: ["要抱抱"],
         anniversaries: [],
         letters: [],
         themeMode: "auto",
@@ -71,6 +73,9 @@
             merged.settings = deepMerge(isPlainObject(parsed.settings) ? parsed.settings : {}, defaults.settings);
             if (!Array.isArray(merged.widgetLines) || merged.widgetLines.length !== 4) merged.widgetLines = defaults.widgetLines.slice();
             if (!Array.isArray(merged.chatHistory)) merged.chatHistory = [];
+            if (!Array.isArray(merged.stickers)) merged.stickers = [];
+            if (!Array.isArray(merged.pats)) merged.pats = defaults.pats.slice();
+            if (!Array.isArray(merged.cards)) merged.cards = [];
             appData = merged;
         } catch (e) {
             appData = defaults;
@@ -97,9 +102,8 @@
         cur[parts[parts.length - 1]] = value;
     }
 
-    /* ---------------- 主题 ---------------- */
+    /* 主题 */
     function prefersDark() { try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; } }
-
     function applyTheme() {
         var mode = appData && appData.themeMode ? appData.themeMode : "auto";
         var dark = mode === "dark" || (mode === "auto" && prefersDark());
@@ -107,7 +111,6 @@
         var meta = document.querySelector("meta[name=\"theme-color\"]");
         if (meta) meta.setAttribute("content", dark ? "#000000" : "#eef1f5");
     }
-
     function watchTheme() {
         try {
             var mq = window.matchMedia("(prefers-color-scheme: dark)");
@@ -117,10 +120,9 @@
         } catch (e) {}
     }
 
-    /* ---------------- 路由 ---------------- */
+    /* 路由 */
     var navStack = [];
     var entryReturn = "desktop";
-
     var REAL_PAGES = [
         "appearance", "appearance.home", "appearance.icon", "appearance.chat", "appearance.avatar",
         "status", "display", "bubble", "permission", "data", "about", "myinfo", "ta"
@@ -130,46 +132,34 @@
         var all = document.querySelectorAll(".screen");
         for (var i = 0; i < all.length; i++) all[i].classList.toggle("active", all[i].id === id);
     }
-
     function renderNav() {
         var current = navStack.length ? navStack[navStack.length - 1] : "main";
         var pages = document.querySelectorAll(".set-page");
-        for (var i = 0; i < pages.length; i++) {
-            pages[i].classList.toggle("active", pages[i].getAttribute("data-page") === current);
-        }
+        for (var i = 0; i < pages.length; i++) pages[i].classList.toggle("active", pages[i].getAttribute("data-page") === current);
         var active = document.querySelector(".set-page.active");
         if (active) active.scrollTop = 0;
     }
-
     function openSettings(page, returnTo) {
         navStack = [page || "main"];
         entryReturn = returnTo === "settings" ? "settings" : "desktop";
         showScreen("settingsView");
         renderNav();
     }
-
     function pushPage(page) { navStack.push(page); renderNav(); }
-
     function popPage() {
         if (navStack.length > 1) { navStack.pop(); renderNav(); return; }
         if (entryReturn === "settings") { navStack = ["main"]; renderNav(); return; }
         goDesktop();
     }
-
     function goDesktop() {
-        closeSheet();
-        closeMsgMenu();
+        closeSheet(); closeMsgMenu(); closeDrawer();
         navStack = [];
         showScreen("desktopView");
     }
 
-    /* ---------------- 渲染基础 ---------------- */
-    function isImageSource(value) {
-        return typeof value === "string" && /^(https?:\/\/|data:image\/|blob:)/.test(value);
-    }
-
+    /* 渲染基础 */
+    function isImageSource(value) { return typeof value === "string" && /^(https?:\/\/|data:image\/|blob:)/.test(value); }
     function escAttr(value) { return String(value).replace(/"/g, "&quot;"); }
-
     function avatarMarkup(value, fallbackText) {
         if (isImageSource(value)) return '<img src="' + escAttr(value) + '" alt="">';
         return '<span class="avatar-text">' + fallbackText + "</span>";
@@ -190,7 +180,6 @@
             var value = lines[i];
             el.textContent = (typeof value === "string" && value.trim() && value !== BLANK) ? value : BLANK;
         }
-
         var widgetAvatar = $("widgetAvatar");
         if (widgetAvatar) widgetAvatar.innerHTML = widgetAvatarMarkup();
 
@@ -247,20 +236,25 @@
         var taMarkup = avatarMarkup(appData.taAvatar, "他");
         var myMarkup = avatarMarkup(appData.myAvatar, "Me");
         ["pvTaAvatar", "pvChatTa1", "pvChatTa2", "pvBubbleTa"].forEach(function (id) {
-            var el = $(id);
-            if (el) el.innerHTML = taMarkup;
+            var el = $(id); if (el) el.innerHTML = taMarkup;
         });
         ["pvMyAvatar", "pvBubbleMe"].forEach(function (id) {
-            var el = $(id);
-            if (el) el.innerHTML = myMarkup;
+            var el = $(id); if (el) el.innerHTML = myMarkup;
         });
     }
 
-    /* ---------------- 聊天渲染 ---------------- */
+    /* 聊天渲染 */
     function fmtTime(ts) {
         var d = new Date(ts);
         var h = d.getHours(), m = d.getMinutes();
         return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
+    }
+
+    function appendSystem(container, text) {
+        var el = document.createElement("div");
+        el.className = "msg-status";
+        el.textContent = text;
+        container.appendChild(el);
     }
 
     function renderChat() {
@@ -294,11 +288,8 @@
                 lastStamp = msg.time;
             }
 
-            if (msg.type === "status") {
-                var st = document.createElement("div");
-                st.className = "msg-status";
-                st.textContent = msg.text || "";
-                container.appendChild(st);
+            if (msg.type === "status" || msg.type === "call") {
+                appendSystem(container, msg.text || "");
                 lastFrom = null;
                 return;
             }
@@ -358,7 +349,7 @@
         container.scrollTop = container.scrollHeight;
     }
 
-    /* ---------------- 消息菜单 ---------------- */
+    /* 消息菜单 */
     var menuIndex = -1;
     var quoteTarget = null;
 
@@ -366,14 +357,12 @@
         var menu = $("msgMenu");
         if (!menu) return;
         menuIndex = Number(bubble.getAttribute("data-index"));
-
         menu.hidden = false;
         menu.style.visibility = "hidden";
         menu.style.left = "0px";
         menu.style.top = "0px";
 
-        var mw = menu.offsetWidth;
-        var mh = menu.offsetHeight;
+        var mw = menu.offsetWidth, mh = menu.offsetHeight;
         var rect = bubble.getBoundingClientRect();
         var left = rect.left + rect.width / 2 - mw / 2;
         left = Math.max(12, Math.min(left, window.innerWidth - mw - 12));
@@ -385,11 +374,7 @@
         menu.style.visibility = "";
     }
 
-    function closeMsgMenu() {
-        var menu = $("msgMenu");
-        if (menu) menu.hidden = true;
-        menuIndex = -1;
-    }
+    function closeMsgMenu() { var menu = $("msgMenu"); if (menu) menu.hidden = true; menuIndex = -1; }
 
     function quoteMessage() {
         var msg = appData.chatHistory[menuIndex];
@@ -404,46 +389,35 @@
         if (input) input.focus();
     }
 
-    function clearQuote() {
-        quoteTarget = null;
-        var bar = $("quoteBar");
-        if (bar) bar.hidden = true;
-    }
+    function clearQuote() { quoteTarget = null; var bar = $("quoteBar"); if (bar) bar.hidden = true; }
 
     function deleteMessage() {
         if (menuIndex < 0) return;
         appData.chatHistory.splice(menuIndex, 1);
-        saveData();
-        renderChat();
+        saveData(); renderChat();
     }
 
-    /* ---------------- 发送 ---------------- */
+    /* 发送 */
     function updateSendBtn() {
-        var input = $("chatInput");
-        var btn = $("btnChatSend");
+        var input = $("chatInput"), btn = $("btnChatSend");
         if (!input || !btn) return;
         btn.classList.toggle("active", input.value.trim().length > 0);
     }
-
     function autoGrow() {
         var input = $("chatInput");
         if (!input) return;
         input.style.height = "auto";
         input.style.height = Math.min(input.scrollHeight, 100) + "px";
     }
-
     function sendMessage() {
         var input = $("chatInput");
         if (!input) return;
         var text = input.value.trim();
         if (!text) return;
-
         var msg = { from: "me", text: text, type: "text", time: Date.now(), status: "已送达" };
         if (quoteTarget) msg.quote = quoteTarget;
-
         appData.chatHistory.push(msg);
         saveData();
-
         input.value = "";
         input.style.height = "auto";
         clearQuote();
@@ -451,31 +425,129 @@
         renderChat();
     }
 
-    /* ---------------- 拍一拍 ---------------- */
-    function openPeek() {
-        var mask = $("peekMask");
-        if (mask) mask.hidden = false;
+    /* 抽屉 */
+    function openDrawer(tab) {
+        var mask = $("drawerMask"), drawer = $("chatDrawer");
+        if (mask) mask.classList.add("open");
+        if (drawer) drawer.classList.add("open");
+        switchTab(tab || "media");
+        renderStickers();
+        renderPats();
+    }
+    function closeDrawer() {
+        var mask = $("drawerMask"), drawer = $("chatDrawer");
+        if (mask) mask.classList.remove("open");
+        if (drawer) drawer.classList.remove("open");
+    }
+    function switchTab(name) {
+        var tabs = document.querySelectorAll(".drawer-tab");
+        for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle("active", tabs[i].getAttribute("data-tab") === name);
+        var panes = document.querySelectorAll(".drawer-pane");
+        for (var j = 0; j < panes.length; j++) panes[j].classList.toggle("active", panes[j].getAttribute("data-pane") === name);
     }
 
-    function closePeek() {
-        var mask = $("peekMask");
-        if (mask) mask.hidden = true;
+    function renderStickers() {
+        var grid = $("stickerGrid");
+        if (!grid) return;
+        grid.innerHTML = "";
+        var list = Array.isArray(appData.stickers) ? appData.stickers : [];
+        if (!list.length) {
+            var p = document.createElement("div");
+            p.className = "sticker-empty";
+            p.textContent = "还没有表情，上传一张试试";
+            grid.appendChild(p);
+            return;
+        }
+        list.forEach(function (src, i) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "sticker-cell";
+            btn.setAttribute("data-sticker", String(i));
+            var img = document.createElement("img");
+            img.src = src; img.alt = "";
+            btn.appendChild(img);
+            grid.appendChild(btn);
+        });
     }
 
+    function renderPats() {
+        var list = $("patList");
+        if (!list) return;
+        list.innerHTML = "";
+        var arr = Array.isArray(appData.pats) ? appData.pats : [];
+        if (!arr.length) {
+            var p = document.createElement("div");
+            p.className = "sticker-empty";
+            p.textContent = "还没有文案，添加一条";
+            list.appendChild(p);
+            return;
+        }
+        arr.forEach(function (text, i) {
+            var btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "pat-chip";
+            btn.setAttribute("data-pat", String(i));
+            btn.textContent = text;
+            list.appendChild(btn);
+        });
+    }
+
+    function sendStickerAt(i) {
+        var src = appData.stickers[i];
+        if (!src) return;
+        appData.chatHistory.push({ from: "me", type: "sticker", text: src, time: Date.now(), status: "已送达" });
+        saveData(); renderChat(); closeDrawer();
+    }
+
+    function sendPatAt(i) {
+        var text = appData.pats[i];
+        if (!text) return;
+        appData.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
+        saveData(); renderChat(); closeDrawer();
+    }
+
+    function addPat() {
+        var input = $("patInput");
+        var text = input ? input.value.trim() : "";
+        if (!text) return;
+        var sync = $("patSync") && $("patSync").checked;
+        appData.pats.push(text);
+        if (sync) appData.cards.push({ type: "pat", content: text, createdAt: Date.now() });
+        saveData();
+        if (input) input.value = "";
+        renderPats();
+    }
+
+    function sendMedia(input) {
+        var file = input.files && input.files[0];
+        if (!file) return;
+        readImageFile(file, function (result) {
+            appData.chatHistory.push({ from: "me", type: "image", text: result, time: Date.now(), status: "已送达" });
+            saveData(); renderChat(); closeDrawer();
+        });
+        input.value = "";
+    }
+
+    /* 拍一拍弹窗 */
+    function openPeek() { var m = $("peekMask"); if (m) m.hidden = false; }
+    function closePeek() { var m = $("peekMask"); if (m) m.hidden = true; }
     function sendPeek() {
         appData.chatHistory.push({ type: "status", text: "—— 拍了拍他 ——", time: Date.now() });
-        saveData();
-        renderChat();
-        closePeek();
+        saveData(); renderChat(); closePeek();
     }
 
-    /* ---------------- 通话 ---------------- */
-    var callTimerId = null;
-    var callSeconds = 0;
-    var callState = "ongoing";
+    /* ===== 通话状态机 ===== */
+    var call = {
+        state: "idle",
+        seconds: 0,
+        connectTimer: null,
+        rejectTimer: null,
+        taTimer: null,
+        tickTimer: null,
+        closeTimer: null
+    };
 
     function pad(n) { return n < 10 ? "0" + n : "" + n; }
-
     function fmtDuration(sec) {
         var h = Math.floor(sec / 3600);
         var m = Math.floor((sec % 3600) / 60);
@@ -484,112 +556,161 @@
         return pad(m) + ":" + pad(s);
     }
 
+    function clearCallTimers() {
+        if (call.connectTimer) clearTimeout(call.connectTimer);
+        if (call.rejectTimer) clearTimeout(call.rejectTimer);
+        if (call.taTimer) clearTimeout(call.taTimer);
+        if (call.tickTimer) clearInterval(call.tickTimer);
+        if (call.closeTimer) clearTimeout(call.closeTimer);
+        call.connectTimer = call.rejectTimer = call.taTimer = call.tickTimer = call.closeTimer = null;
+    }
+
     function updateCallClock() {
-        var text = fmtDuration(callSeconds);
+        var text;
+        if (call.state === "calling") text = "呼叫中…";
+        else text = fmtDuration(call.seconds);
         var t = $("callTimer");
         if (t) t.textContent = text;
         var p = $("callPillTime");
         if (p) p.textContent = text;
     }
 
-    function startClock() {
-        if (callTimerId) clearInterval(callTimerId);
-        callTimerId = setInterval(function () {
-            callSeconds++;
+    function setCallStateText(text) {
+        var el = $("callState");
+        if (el) el.textContent = text;
+    }
+
+    function showCallScreen() {
+        var screen = $("callScreen"), pill = $("callPill");
+        if (screen) screen.hidden = false;
+        if (pill) pill.hidden = true;
+    }
+
+    function hideCallScreen() {
+        var screen = $("callScreen");
+        if (screen) screen.hidden = true;
+    }
+
+    function startCall() {
+        clearCallTimers();
+        call.state = "calling";
+        call.seconds = 0;
+        setCallStateText("正在呼叫…");
+        updateCallClock();
+        showCallScreen();
+
+        var connectDelay = (1 + Math.random() * 29) * 1000;   // 1-30 秒
+        var willReject = Math.random() < 0.28;
+        var rejectDelay = Math.max(2000, connectDelay * (0.25 + Math.random() * 0.6));
+
+        call.connectTimer = setTimeout(onCallConnected, connectDelay);
+
+        if (willReject && rejectDelay < connectDelay) {
+            call.rejectTimer = setTimeout(function () {
+                if (call.state !== "calling") return;
+                finishCall("rejected");
+            }, rejectDelay);
+        }
+    }
+
+    function onCallConnected() {
+        if (call.state !== "calling") return;
+        call.state = "ongoing";
+        setCallStateText("通话中");
+        updateCallClock();
+
+        call.tickTimer = setInterval(function () {
+            call.seconds++;
             updateCallClock();
         }, 1000);
+
+        if (Math.random() < 0.7) {
+            var after = (15 + Math.random() * 45) * 1000;    // 15-60 秒
+            call.taTimer = setTimeout(function () {
+                if (call.state !== "ongoing") return;
+                finishCall("taHangup");
+            }, after);
+        }
     }
 
-    function stopClock() {
-        if (callTimerId) clearInterval(callTimerId);
-        callTimerId = null;
-    }
+    function finishCall(reason) {
+        if (call.state === "idle" || call.state === "ended") return;
+        var wasOngoing = call.state === "ongoing";
+        clearCallTimers();
+        call.state = "ended";
 
-    function setCallUI(state) {
-        callState = state;
-        var stateEl = $("callState");
-        var minBtn = $("callMin");
-        var minLabel = $("callMinLabel");
-        var minIcon = $("callMinIcon");
+        var label = "通话结束";
+        var record = "";
 
-        if (state === "incoming") {
-            if (stateEl) stateEl.textContent = "来电中";
-            if (minBtn) minBtn.classList.add("answer");
-            if (minLabel) minLabel.textContent = "接听";
-            if (minIcon) minIcon.classList.add("call-answer-icon");
+        if (reason === "rejected") {
+            label = "对方已拒绝";
+            record = "对方已拒绝";
+        } else if (reason === "cancelled") {
+            label = "已取消";
+            record = "已取消";
+        } else if (reason === "taHangup") {
+            label = "通话结束";
+            record = "语音通话 时长 " + fmtDuration(call.seconds) + " · 对方已挂断";
         } else {
-            if (stateEl) stateEl.textContent = "通话中";
-            if (minBtn) minBtn.classList.remove("answer");
-            if (minLabel) minLabel.textContent = "最小化";
-            if (minIcon) minIcon.classList.remove("call-answer-icon");
+            label = "通话结束";
+            record = wasOngoing
+                ? "语音通话 时长 " + fmtDuration(call.seconds)
+                : "已取消";
         }
-    }
 
-    function openCall(incoming) {
-        var screen = $("callScreen");
+        setCallStateText(label);
+        if (call.tickTimer) { clearInterval(call.tickTimer); call.tickTimer = null; }
+
+        appData.chatHistory.push({ type: "call", text: record, time: Date.now() });
+        saveData();
+
         var pill = $("callPill");
-        if (!screen) return;
-        screen.hidden = false;
         if (pill) pill.hidden = true;
-        callSeconds = 0;
-        updateCallClock();
-        stopClock();
-        setCallUI(incoming ? "incoming" : "ongoing");
-        if (!incoming) startClock();
+
+        call.closeTimer = setTimeout(function () {
+            hideCallScreen();
+            goDesktop();
+            call.state = "idle";
+        }, 1400);
     }
 
-    function endCall() {
-        stopClock();
-        var screen = $("callScreen");
-        var pill = $("callPill");
-        if (screen) screen.hidden = true;
-        if (pill) pill.hidden = true;
-        callSeconds = 0;
-        updateCallClock();
+    function endCallByMe() {
+        if (call.state === "calling") { finishCall("cancelled"); return; }
+        if (call.state === "ongoing") { finishCall("meHangup"); return; }
     }
 
-    function handleCallAction() {
-        var screen = $("callScreen");
-        if (callState === "incoming") {
-            setCallUI("ongoing");
-            startClock();
-            return;
-        }
-        if (screen) screen.hidden = true;
+    function minimizeCall() {
+        if (call.state !== "calling" && call.state !== "ongoing") return;
+        hideCallScreen();
         var pill = $("callPill");
         if (pill) pill.hidden = false;
+        updateCallClock();
     }
 
     function restoreCall() {
         var pill = $("callPill");
-        var screen = $("callScreen");
         if (pill) pill.hidden = true;
-        if (screen) screen.hidden = false;
+        if (call.state === "calling" || call.state === "ongoing") showCallScreen();
     }
 
-    /* ---------------- 设置控件 ---------------- */
+    /* 设置控件 */
     function hexToRgba(hex, alpha) {
         if (typeof hex !== "string") return "rgba(255,255,255," + alpha + ")";
         var h = hex.replace("#", "");
         if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-        var r = parseInt(h.substring(0, 2), 16);
-        var g = parseInt(h.substring(2, 4), 16);
-        var b = parseInt(h.substring(4, 6), 16);
+        var r = parseInt(h.substring(0, 2), 16), g = parseInt(h.substring(2, 4), 16), b = parseInt(h.substring(4, 6), 16);
         if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
         return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
     }
-
     function unitOf(key) {
         var el = document.querySelector('[data-key="' + key + '"]');
         return el && el.dataset && el.dataset.unit ? el.dataset.unit : "";
     }
-
     function updateValLabel(key, value) {
         var labels = document.querySelectorAll('[data-val="' + key + '"]');
         var text = value + unitOf(key);
         for (var i = 0; i < labels.length; i++) labels[i].textContent = text;
     }
-
     function renderControls() {
         var inputs = document.querySelectorAll("[data-key]");
         for (var i = 0; i < inputs.length; i++) {
@@ -601,14 +722,12 @@
             else el.value = value;
             if (el.type === "range") updateValLabel(key, value);
         }
-
         var seg = document.querySelector('[data-segment="appearance.avatar.mode"]');
         if (seg) {
             var mode = appData.settings.appearance.avatar.mode;
             var btns = seg.querySelectorAll("[data-mode]");
             for (var j = 0; j < btns.length; j++) btns[j].classList.toggle("active", btns[j].getAttribute("data-mode") === mode);
         }
-
         var cards = document.querySelectorAll("[data-preset]");
         var preset = appData.settings.bubble.preset;
         for (var k = 0; k < cards.length; k++) cards[k].classList.toggle("selected", cards[k].getAttribute("data-preset") === preset);
@@ -621,42 +740,33 @@
         css.setProperty("--home-bg-color", hexToRgba(a.homeBg.color, a.homeBg.opacity / 100));
         css.setProperty("--home-bg-image", a.homeBg.image ? "url(" + a.homeBg.image + ")" : "none");
         css.setProperty("--home-blur", (a.homeBg.blur / 100 * 30) + "px");
-
         css.setProperty("--icon-bg-color", hexToRgba(a.iconBg.color, a.iconBg.opacity / 100));
         css.setProperty("--icon-bg-image", a.iconBg.image ? "url(" + a.iconBg.image + ")" : "none");
         css.setProperty("--icon-blur", (a.iconBg.blur / 100 * 30) + "px");
         css.setProperty("--app-label-size", (a.iconBg.labelSize || 11) + "px");
         root.classList.toggle("hide-app-label", a.iconBg.showLabel === false);
-
         css.setProperty("--chat-bg-color", hexToRgba(a.chatBg.color, a.chatBg.opacity / 100));
         css.setProperty("--chat-bg-image", a.chatBg.image ? "url(" + a.chatBg.image + ")" : "none");
-
         css.setProperty("--avatar-size", (a.avatar.size || 84) + "px");
         css.setProperty("--avatar-radius", (a.avatar.radius === undefined ? 50 : a.avatar.radius) + "px");
         css.setProperty("--avatar-bg", hexToRgba(a.avatar.color, a.avatar.opacity / 100));
-
         css.setProperty("--bubble-bg", hexToRgba(s.bubble.bg, s.bubble.opacity / 100));
         css.setProperty("--bubble-radius", s.bubble.radius + "px");
         css.setProperty("--bubble-pad-y", s.bubble.height + "px");
         css.setProperty("--bubble-border", s.bubble.border ? ("1px solid " + s.bubble.borderColor) : "none");
-
         css.setProperty("--status-color", s.status.color);
         css.setProperty("--status-bg", s.status.bgEnabled ? hexToRgba(s.status.bgColor, s.status.bgOpacity / 100) : "transparent");
         css.setProperty("--status-blur", (s.status.bgBlur / 100 * 30) + "px");
-
         css.setProperty("--font-chat", s.font.chat + "px");
         css.setProperty("--font-home", s.font.home + "px");
         css.setProperty("--home-scale", s.font.home / 16);
-
         root.setAttribute("data-avatar-mode", a.avatar.mode || "each");
-
         var custom = $("bubbleCustom");
         if (custom) custom.textContent = s.bubble.css || "";
     }
 
-    /* ---------------- 编辑面板 ---------------- */
+    /* 编辑面板 */
     var sheetOpen = false;
-
     function openSheet() {
         var lines = Array.isArray(appData.widgetLines) ? appData.widgetLines : [];
         for (var i = 0; i < 4; i++) {
@@ -670,7 +780,6 @@
         if (sheet) sheet.classList.add("show");
         sheetOpen = true;
     }
-
     function closeSheet() {
         var mask = $("sheetMask"), sheet = $("editSheet");
         if (mask) mask.classList.remove("show");
@@ -678,7 +787,6 @@
         sheetOpen = false;
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     }
-
     function saveSheet() {
         var next = [];
         for (var i = 0; i < 4; i++) {
@@ -687,12 +795,10 @@
             next.push(value || BLANK);
         }
         appData.widgetLines = next;
-        saveData();
-        renderWidget();
-        closeSheet();
+        saveData(); renderWidget(); closeSheet();
     }
 
-    /* ---------------- 图片 / 数据 ---------------- */
+    /* 图片 / 数据 */
     function readImageFile(file, cb) {
         if (!file) return;
         if (file.size > 2 * 1024 * 1024) { alert("图片太大，请选择 2MB 以内的图片"); return; }
@@ -706,10 +812,7 @@
         if (!path) return;
         readImageFile(input.files && input.files[0], function (result) {
             setPath(appData.settings, path, result);
-            saveData();
-            applySettings();
-            renderWidget();
-            renderPreview();
+            saveData(); applySettings(); renderWidget(); renderPreview();
         });
         input.value = "";
     }
@@ -718,10 +821,7 @@
         var input = $(inputId);
         if (!input) return;
         appData[field] = input.value.trim();
-        saveData();
-        renderWidget();
-        renderPreview();
-        renderChat();
+        saveData(); renderWidget(); renderPreview(); renderChat();
     }
 
     function exportData() {
@@ -729,10 +829,8 @@
             var blob = new Blob([JSON.stringify(appData, null, 2)], { type: "application/json" });
             var url = URL.createObjectURL(blob);
             var a = document.createElement("a");
-            a.href = url;
-            a.download = "philos-backup.json";
-            document.body.appendChild(a);
-            a.click();
+            a.href = url; a.download = "philos-backup.json";
+            document.body.appendChild(a); a.click();
             setTimeout(function () { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 1500);
         } catch (e) { alert("导出失败，请重试"); }
     }
@@ -774,11 +872,13 @@
         renderProfile();
         renderPreview();
         renderChat();
+        renderStickers();
+        renderPats();
         renderControls();
         applySettings();
     }
 
-    /* ---------------- 事件 ---------------- */
+    /* 事件 */
     function handleControl(el) {
         var key = el.getAttribute("data-key");
         if (!key) return;
@@ -788,8 +888,7 @@
         else value = el.value;
         setPath(appData.settings, key, value);
         if (el.type === "range") updateValLabel(key, value);
-        saveData();
-        applySettings();
+        saveData(); applySettings();
     }
 
     function on(id, evt, fn) {
@@ -811,15 +910,36 @@
             on(id, "click", goDesktop);
         });
 
-        on("btnChatCall", "click", function () { openCall(false); });
+        on("btnChatCall", "click", startCall);
         on("btnChatProfile", "click", openPeek);
         on("peekLater", "click", closePeek);
         on("peekGo", "click", sendPeek);
         on("peekMask", "click", function (e) { if (e.target === this) closePeek(); });
 
-        on("callMin", "click", handleCallAction);
-        on("callEnd", "click", endCall);
+        on("callMin", "click", minimizeCall);
+        on("callEnd", "click", endCallByMe);
         on("callPill", "click", restoreCall);
+
+        on("btnChatMore", "click", function () { openDrawer("media"); });
+        on("drawerMask", "click", closeDrawer);
+        on("pickGallery", "click", function () { var f = $("mediaFile"); if (f) f.click(); });
+        on("pickCamera", "click", function () { var f = $("cameraFile"); if (f) f.click(); });
+        on("mediaFile", "change", function () { sendMedia(this); });
+        on("cameraFile", "change", function () { sendMedia(this); });
+        on("patAdd", "click", addPat);
+
+        on("patInput", "keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addPat(); } });
+
+        on("stickerFile", "change", function () {
+            var self = this;
+            var sync = $("stickerSync") && $("stickerSync").checked;
+            readImageFile(this.files && this.files[0], function (result) {
+                appData.stickers.push(result);
+                if (sync) appData.cards.push({ type: "sticker", content: result, createdAt: Date.now() });
+                saveData(); renderStickers();
+            });
+            self.value = "";
+        });
 
         on("myProfileAvatar", "click", function () { var f = $("myProfileFile"); if (f) f.click(); });
         on("taProfileAvatar", "click", function () { var f = $("taProfileFile"); if (f) f.click(); });
@@ -828,24 +948,15 @@
             var self = this;
             readImageFile(this.files && this.files[0], function (result) {
                 appData.myAvatar = result;
-                saveData();
-                renderWidget();
-                renderProfile();
-                renderPreview();
-                renderChat();
+                saveData(); renderWidget(); renderProfile(); renderPreview(); renderChat();
             });
             self.value = "";
         });
-
         on("taProfileFile", "change", function () {
             var self = this;
             readImageFile(this.files && this.files[0], function (result) {
                 appData.taAvatar = result;
-                saveData();
-                renderWidget();
-                renderProfile();
-                renderPreview();
-                renderChat();
+                saveData(); renderWidget(); renderProfile(); renderPreview(); renderChat();
             });
             self.value = "";
         });
@@ -864,7 +975,6 @@
         on("btnChatSend", "click", sendMessage);
         on("quoteClose", "click", clearQuote);
 
-        // 单击气泡 → 菜单（禁用长按选择）
         var msgs = $("chatMessages");
         if (msgs) {
             msgs.addEventListener("contextmenu", function (e) { e.preventDefault(); });
@@ -894,6 +1004,15 @@
             if (!t || !t.closest) return;
 
             if (!t.closest("#msgMenu") && !t.closest(".msg-bubble")) closeMsgMenu();
+
+            var tabBtn = t.closest("[data-tab]");
+            if (tabBtn) { switchTab(tabBtn.getAttribute("data-tab")); return; }
+
+            var stickerBtn = t.closest("[data-sticker]");
+            if (stickerBtn) { sendStickerAt(Number(stickerBtn.getAttribute("data-sticker"))); return; }
+
+            var patBtn = t.closest("[data-pat]");
+            if (patBtn) { sendPatAt(Number(patBtn.getAttribute("data-pat"))); return; }
 
             var back = t.closest('[data-nav="back"]');
             if (back) { popPage(); return; }
@@ -958,7 +1077,8 @@
         }
 
         window.addEventListener("popstate", function () {
-            if (callState && $("callScreen") && !$("callScreen").hidden) { endCall(); return; }
+            var screen = $("callScreen");
+            if (screen && !screen.hidden) { endCallByMe(); return; }
             if (sheetOpen) { closeSheet(); return; }
             var active = document.querySelector(".screen.active");
             if (active && active.id === "settingsView") { popPage(); return; }
@@ -966,7 +1086,7 @@
         });
     }
 
-    /* ---------------- 启动 ---------------- */
+    /* 启动 */
     function hideSplash() {
         setTimeout(function () {
             var splash = $("splash");
@@ -991,6 +1111,8 @@
         renderProfile();
         renderPreview();
         renderChat();
+        renderStickers();
+        renderPats();
         renderControls();
         applySettings();
         bindEvents();
