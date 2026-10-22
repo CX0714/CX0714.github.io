@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v33";
+const CACHE_NAME = "philos-v34";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
-   运行时补丁：回复方式 / 气泡预设 / 表情包 / Typing / 输入栏
-   app.js 原文件不动，只在末尾注入。
+   运行时补丁：回复方式 / 气泡预设 / 表情包 / Typing / 输入栏 /
+   自定义 CSS 应用按钮。app.js 原文件不动。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -265,12 +265,12 @@ function rmInjectStyles() {
     st.id = "rm-style";
     st.textContent =
         ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}" +
-        "html[data-bubble-preset=\"large\"] .msg-bubble,html[data-bubble-preset=\"large\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}" +
-        "html[data-bubble-preset=\"tail\"] .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}" +
-        "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px !important;}" +
-        "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px !important;}" +
-        "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
-        "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}" +
+        "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px;}" +
+        "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px;}" +
+        "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px;}" +
         "#chatMessages .msg-bubble.rm-sticker-bubble{background:transparent !important;border:none !important;padding:0 !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}" +
         "#chatMessages .rm-sticker-bubble img{max-width:112px !important;border-radius:10px;}" +
         ".chat-input-box{min-height:44px;padding:4px 8px 4px 16px;}" +
@@ -295,6 +295,43 @@ renderChat = function () {
     rmBaseRenderChat.apply(null, arguments);
     rmDecorateChat();
 };
+
+function rmApplyCustomCss() {
+    var area = document.querySelector('[data-key="bubble.css"]');
+    if (!area) return;
+    appData.settings.bubble.css = area.value;
+    var target = document.getElementById("bubbleCustom");
+    if (target) target.textContent = area.value;
+    saveData();
+}
+
+function rmSetupCustomCss() {
+    var area = document.querySelector('[data-key="bubble.css"]');
+    if (!area || area.getAttribute("data-rm-css")) return;
+    area.setAttribute("data-rm-css", "1");
+
+    var block = area.closest(".control-block") || area.parentNode;
+    var row = document.createElement("div");
+    row.className = "control-block";
+    row.innerHTML = '<button class="wide-btn" type="button" data-rm-css-apply>应用 CSS</button>' +
+        '<p class="about-note" style="padding:8px 0 0;">写完点按钮生效。想覆盖预设圆角，选择器写具体一点（如 .msg-row.ta .msg-bubble）或加 !important。</p>';
+    if (block.parentNode) block.parentNode.insertBefore(row, block.nextSibling);
+
+    var btn = row.querySelector("[data-rm-css-apply]");
+    if (btn) {
+        btn.addEventListener("click", function () {
+            rmApplyCustomCss();
+            btn.textContent = "已应用";
+            setTimeout(function () { btn.textContent = "应用 CSS"; }, 1200);
+        });
+    }
+
+    var timer = null;
+    area.addEventListener("input", function () {
+        clearTimeout(timer);
+        timer = setTimeout(rmApplyCustomCss, 400);
+    });
+}
 
 function rmSyncBubblePreset() {
     var b = appData.settings && appData.settings.bubble;
@@ -449,6 +486,7 @@ function rmInit() {
     rmBuildUI();
     rmBind();
     rmRender();
+    rmSetupCustomCss();
 
     var input = $("chatInput");
     if (input) input.placeholder = "iMessage";
