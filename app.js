@@ -1,5 +1,6 @@
 /* =========================================================
-   Philos · 3.3
+   Philos · 3.4
+   头像 inline 化 / 双方气泡与文字颜色分开
    ========================================================= */
 (function () {
     "use strict";
@@ -27,19 +28,9 @@
     var EMPTY_CATS = { text: [], emoji: [], sticker: [], status: [] };
 
     var DEFAULT_WIDGET = {
-        template: "",
-        title: "",
-        subtitle: "",
-        days: "",
-        daysSourceId: "",
-        imgLeft: "",
-        imgRight: "",
-        imgCard: "",
-        imgTop: "",
-        imgBg: "",
-        centerText: "",
-        opacity: 100,
-        blur: 20
+        template: "", title: "", subtitle: "", days: "", daysSourceId: "",
+        imgLeft: "", imgRight: "", imgCard: "", imgTop: "", imgBg: "", centerText: "",
+        opacity: 100, blur: 20
     };
 
     var DEFAULT_HERO = { mode: "", img1: "", img2: "" };
@@ -61,9 +52,9 @@
                 avatar: { color: "#dfe5ec", image: "", opacity: 100, blur: 0, size: 36, radius: 50, offsetY: 0, mode: "each" }
             },
             status: { color: "#8b909a", bgEnabled: false, bgColor: "#ffffff", bgOpacity: 60, bgBlur: 40 },
-            bubble: { preset: "tail", radius: 16, height: 10, opacity: 100, bg: "#5b7fa6", border: false, borderColor: "#ffffff", css: "" },
+            bubble: { preset: "tail", radius: 16, height: 10, opacity: 100, bg: "#5b7fa6", bgTa: "", border: false, borderColor: "#ffffff", css: "" },
             permission: { replyDelay: 3, activeEnabled: false, activeMin: 30, activeMax: 120, callEnabled: false, callMin: 60, callMax: 240, notify: false },
-            font: { chat: 15, home: 16 }
+            font: { chat: 15, home: 16, colorMe: "#ffffff", colorTa: "" }
         }
     };
 
@@ -83,6 +74,9 @@
         return String(str == null ? "" : str)
             .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
+    function isDarkTheme() {
+        return document.documentElement.getAttribute("data-theme") === "dark";
     }
 
     function deepMerge(target, defaults) {
@@ -189,7 +183,9 @@
     function watchTheme() {
         try {
             var mq = window.matchMedia("(prefers-color-scheme: dark)");
-            var handler = function () { if (!appData || appData.themeMode === "auto") applyTheme(); };
+            var handler = function () {
+                if (!appData || appData.themeMode === "auto") { applyTheme(); applySettings(); }
+            };
             if (mq.addEventListener) mq.addEventListener("change", handler);
             else if (mq.addListener) mq.addListener(handler);
         } catch (e) {}
@@ -242,6 +238,21 @@
     function widgetAvatarMarkup() {
         if (isImageSource(appData.taAvatar)) return '<img src="' + escAttr(appData.taAvatar) + '" alt="">';
         return '<span class="avatar-text">Me</span>';
+    }
+
+    /* ===== 头像：直接写 inline，不依赖 CSS 变量层叠 ===== */
+    function applyAvatarInline() {
+        var a = appData.settings.appearance.avatar;
+        var size = a.size || 36;
+        var radius = (a.radius === undefined ? 50 : a.radius);
+        var offset = a.offsetY || 0;
+        var nodes = document.querySelectorAll(".msg-avatar, .pv-avatar");
+        for (var i = 0; i < nodes.length; i++) {
+            nodes[i].style.width = size + "px";
+            nodes[i].style.height = size + "px";
+            nodes[i].style.borderRadius = radius + "px";
+            nodes[i].style.transform = "translateY(" + offset + "px)";
+        }
     }
 
     /* ===== 大组件照片 ===== */
@@ -508,6 +519,17 @@
         sel.value = current;
     }
 
+    function renderWidgetTab() {
+        var tabs = document.querySelectorAll("[data-wtab]");
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.toggle("active", tabs[i].getAttribute("data-wtab") === activeWidgetTab);
+        }
+        var panes = document.querySelectorAll("[data-wpane]");
+        for (var j = 0; j < panes.length; j++) {
+            panes[j].hidden = panes[j].getAttribute("data-wpane") !== activeWidgetTab;
+        }
+    }
+
     function renderWidgetConfig() {
         var cfg = appData.widgetConfig;
         var tpl = cfg.template || "";
@@ -536,17 +558,6 @@
         fillDaySourceSelect();
         renderHeroConfig();
         renderWidgetTab();
-    }
-
-    function renderWidgetTab() {
-        var tabs = document.querySelectorAll("[data-wtab]");
-        for (var i = 0; i < tabs.length; i++) {
-            tabs[i].classList.toggle("active", tabs[i].getAttribute("data-wtab") === activeWidgetTab);
-        }
-        var panes = document.querySelectorAll("[data-wpane]");
-        for (var j = 0; j < panes.length; j++) {
-            panes[j].hidden = panes[j].getAttribute("data-wpane") !== activeWidgetTab;
-        }
     }
 
     function handleWidgetControl(el) {
@@ -979,6 +990,7 @@
         var myMarkup = avatarMarkup(appData.myAvatar, "Me");
         ["pvAvatarTa", "pvAvatarTa2", "pvBubbleTa"].forEach(function (id) { var el = $(id); if (el) el.innerHTML = taMarkup; });
         ["pvAvatarMe", "pvBubbleMe"].forEach(function (id) { var el = $(id); if (el) el.innerHTML = myMarkup; });
+        applyAvatarInline();
     }
 
     function applyIconImages() {
@@ -1069,6 +1081,7 @@
             empty.className = "empty-hint";
             empty.textContent = "还没有聊天记录";
             container.appendChild(empty);
+            applyAvatarInline();
             return;
         }
         var lastStamp = 0, lastFrom = null;
@@ -1134,6 +1147,7 @@
             lastFrom = msg.from;
         });
         container.scrollTop = container.scrollHeight;
+        applyAvatarInline();
     }
 
     /* 消息菜单 */
@@ -1408,12 +1422,23 @@
         var text = value + unitOf(key);
         for (var i = 0; i < labels.length; i++) labels[i].textContent = text;
     }
+    function colorFallback(key) {
+        var dark = isDarkTheme();
+        if (key === "font.colorTa") return dark ? "#f2f3f6" : "#1b1d21";
+        if (key === "bubble.bgTa") return dark ? "#2a2c31" : "#ffffff";
+        if (key === "font.colorMe") return "#ffffff";
+        return "#ffffff";
+    }
     function renderControls() {
         var inputs = document.querySelectorAll("[data-key]");
         for (var i = 0; i < inputs.length; i++) {
             var el = inputs[i];
             var key = el.getAttribute("data-key");
             var value = getPath(appData.settings, key);
+            if (el.type === "color") {
+                el.value = value || colorFallback(key);
+                continue;
+            }
             if (value === undefined || value === null) continue;
             if (el.type === "checkbox") el.checked = !!value;
             else el.value = value;
@@ -1454,10 +1479,21 @@
         css.setProperty("--chat-avatar-radius", radius + "px");
         css.setProperty("--chat-avatar-offset-y", offsetY + "px");
 
-        css.setProperty("--bubble-bg", hexToRgba(s.bubble.bg, s.bubble.opacity / 100));
-        css.setProperty("--bubble-radius", s.bubble.radius + "px");
-        css.setProperty("--bubble-pad-y", s.bubble.height + "px");
-        css.setProperty("--bubble-border", s.bubble.border ? ("1px solid " + s.bubble.borderColor) : "none");
+        /* 气泡：我的 / 对方 分开 */
+        var b = s.bubble;
+        var bop = b.opacity / 100;
+        css.setProperty("--bubble-bg", hexToRgba(b.bg, bop));
+        if (b.bgTa) css.setProperty("--bubble-ta-bg", hexToRgba(b.bgTa, bop));
+        else css.removeProperty("--bubble-ta-bg");
+        css.setProperty("--bubble-radius", b.radius + "px");
+        css.setProperty("--bubble-pad-y", b.height + "px");
+        css.setProperty("--bubble-border", b.border ? ("1px solid " + b.borderColor) : "none");
+
+        /* 文字颜色：我的 / 对方 分开 */
+        css.setProperty("--bubble-me-text", s.font.colorMe || "#ffffff");
+        if (s.font.colorTa) css.setProperty("--bubble-ta-text", s.font.colorTa);
+        else css.removeProperty("--bubble-ta-text");
+
         css.setProperty("--status-color", s.status.color);
         css.setProperty("--status-bg", s.status.bgEnabled ? hexToRgba(s.status.bgColor, s.status.bgOpacity / 100) : "transparent");
         css.setProperty("--status-blur", (s.status.bgBlur / 100 * 30) + "px");
@@ -1466,6 +1502,7 @@
         css.setProperty("--home-scale", s.font.home / 16);
         root.setAttribute("data-avatar-mode", a.avatar.mode || "each");
         applyIconImages();
+        applyAvatarInline();
         var custom = $("bubbleCustom");
         if (custom) custom.textContent = s.bubble.css || "";
     }
