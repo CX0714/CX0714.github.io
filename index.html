@@ -27,7 +27,7 @@
 </head>
 <body>
 
-    <!-- ===== 线框图标库（1.5px，无 Emoji） ===== -->
+    <!-- ===== 线框图标库 ===== -->
     <svg class="svg-sprite" aria-hidden="true" focusable="false">
         <symbol id="ic-mail" viewBox="0 0 24 24">
             <rect x="3" y="5.5" width="18" height="13" rx="3.6"/>
@@ -215,27 +215,9 @@
                         <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
                     </button>
                 </div>
-
-                <!-- 全局字体调节 -->
-                <div class="group-card control-card">
-                    <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">聊天消息字体大小</span>
-                            <span class="control-value" data-val="font.chat" data-unit="px">15px</span>
-                        </div>
-                        <input type="range" class="slider" data-key="font.chat" data-unit="px" min="12" max="22" step="1">
-                    </div>
-                    <div class="control-block">
-                        <div class="control-head">
-                            <span class="control-label">主界面字体大小</span>
-                            <span class="control-value" data-val="font.home" data-unit="px">16px</span>
-                        </div>
-                        <input type="range" class="slider" data-key="font.home" data-unit="px" min="10" max="18" step="1">
-                    </div>
-                </div>
             </section>
 
-            <!-- ===== 外观（二级） ===== -->
+            <!-- ===== 外观 ===== -->
             <section class="set-page" data-page="appearance">
                 <div class="sub-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回">
@@ -261,6 +243,37 @@
                         <span>头像</span>
                         <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
                     </button>
+                    <button class="settings-item" data-goto="display" type="button">
+                        <span>显示与字体</span>
+                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
+                    </button>
+                </div>
+            </section>
+
+            <!-- ===== 显示与字体 ===== -->
+            <section class="set-page" data-page="display">
+                <div class="sub-topbar">
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
+                    </button>
+                    <span class="sub-title">显示与字体</span>
+                </div>
+
+                <div class="group-card control-card">
+                    <div class="control-block">
+                        <div class="control-head">
+                            <span class="control-label">聊天消息字体大小</span>
+                            <span class="control-value" data-val="font.chat" data-unit="px">15px</span>
+                        </div>
+                        <input type="range" class="slider" data-key="font.chat" data-unit="px" min="12" max="22" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head">
+                            <span class="control-label">主界面字体大小</span>
+                            <span class="control-value" data-val="font.home" data-unit="px">16px</span>
+                        </div>
+                        <input type="range" class="slider" data-key="font.home" data-unit="px" min="10" max="18" step="1">
+                    </div>
                 </div>
             </section>
 
@@ -275,9 +288,7 @@
                 <div class="group-card control-card">
                     <div class="control-row">
                         <span class="control-label">颜色填充</span>
-                        <label class="color-dot">
-                            <input type="color" data-key="appearance.homeBg.color">
-                        </label>
+                        <label class="color-dot"><input type="color" data-key="appearance.homeBg.color"></label>
                     </div>
                     <div class="control-row">
                         <span class="control-label">上传图片</span>
@@ -435,6 +446,31 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- 头像实时预览 -->
+                <div class="preview-card">
+                    <div class="preview-title">实时预览</div>
+                    <div class="pv-avatar-row">
+                        <div class="pv-avatar-cell">
+                            <span class="pv-avatar-lg" id="pvTaAvatar">他</span>
+                            <span class="pv-avatar-tag">他</span>
+                        </div>
+                        <div class="pv-avatar-cell">
+                            <span class="pv-avatar-lg" id="pvMyAvatar">Me</span>
+                            <span class="pv-avatar-tag">我</span>
+                        </div>
+                    </div>
+                    <div class="pv-chat">
+                        <div class="pv-row ta">
+                            <span class="pv-avatar" id="pvChatTa1">他</span>
+                            <span class="pv-bubble">我在</span>
+                        </div>
+                        <div class="pv-row ta">
+                            <span class="pv-avatar pv-avatar-ghost" id="pvChatTa2">他</span>
+                            <span class="pv-bubble">刚到家</span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- ===== 气泡 ===== -->
@@ -502,6 +538,19 @@
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">CSS 自定义</span></div>
                         <textarea class="code-area" data-key="bubble.css" placeholder="输入 CSS 代码覆盖默认气泡"></textarea>
+                    </div>
+                </div>
+
+                <!-- 气泡实时预览 -->
+                <div class="preview-card">
+                    <div class="preview-title">实时预览</div>
+                    <div class="pv-row ta">
+                        <span class="pv-avatar" id="pvBubbleTa">他</span>
+                        <span class="pv-bubble">我在</span>
+                    </div>
+                    <div class="pv-row me">
+                        <span class="pv-bubble">老公</span>
+                        <span class="pv-avatar" id="pvBubbleMe">Me</span>
                     </div>
                 </div>
             </section>
@@ -585,6 +634,99 @@
                         <button class="wide-btn" id="btnTestNotify" type="button">发送测试通知</button>
                     </div>
                 </div>
+            </section>
+
+            <!-- ===== 我的信息 ===== -->
+            <section class="set-page" data-page="myinfo">
+                <div class="sub-topbar">
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
+                    </button>
+                    <span class="sub-title">我的信息</span>
+                </div>
+
+                <div class="profile-page">
+                    <button class="profile-avatar" id="myProfileAvatar" type="button" aria-label="更换头像">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-person"></use></svg>
+                    </button>
+                    <input type="file" id="myProfileFile" accept="image/*" hidden>
+                    <input class="profile-name" id="myProfileName" type="text" maxlength="16" placeholder="你的称呼" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <p class="profile-tip">点击头像可从相册选择图片</p>
+                </div>
+            </section>
+
+            <!-- ===== 他的信息 ===== -->
+            <section class="set-page" data-page="ta">
+                <div class="sub-topbar">
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
+                    </button>
+                    <span class="sub-title">他的信息</span>
+                </div>
+
+                <div class="profile-page">
+                    <button class="profile-avatar" id="taProfileAvatar" type="button" aria-label="更换头像">
+                        <span class="emoji-avatar">🌙</span>
+                    </button>
+                    <input type="file" id="taProfileFile" accept="image/*" hidden>
+                    <input class="profile-name" id="taProfileName" type="text" maxlength="16" placeholder="他的称呼" autocomplete="off" autocapitalize="off" spellcheck="false">
+                    <p class="profile-tip">点击头像可从相册选择图片</p>
+                </div>
+            </section>
+
+            <!-- ===== 数据管理 ===== -->
+            <section class="set-page" data-page="data">
+                <div class="sub-topbar">
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
+                    </button>
+                    <span class="sub-title">数据管理</span>
+                </div>
+
+                <div class="group-card">
+                    <button class="settings-item" id="btnExportData" type="button">
+                        <span>导出数据</span>
+                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
+                    </button>
+                    <label class="settings-item" for="importFile">
+                        <span>导入数据</span>
+                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
+                        <input type="file" id="importFile" accept="application/json,.json" hidden>
+                    </label>
+                    <button class="settings-item danger" id="btnClearData" type="button">
+                        <span>清空全部数据</span>
+                        <svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg>
+                    </button>
+                </div>
+
+                <p class="about-note">导出会生成一个 JSON 备份文件；清空会删掉聊天记录、字卡、信笺与全部设置，且无法恢复。</p>
+            </section>
+
+            <!-- ===== 关于 ===== -->
+            <section class="set-page" data-page="about">
+                <div class="sub-topbar">
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回">
+                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
+                    </button>
+                    <span class="sub-title">关于</span>
+                </div>
+
+                <div class="group-card">
+                    <div class="settings-item">
+                        <span>名称</span>
+                        <span class="control-value">☆Philos</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>版本</span>
+                        <span class="control-value">2.2</span>
+                    </div>
+                    <div class="settings-item">
+                        <span>数据存储</span>
+                        <span class="control-value">仅本机</span>
+                    </div>
+                </div>
+
+                <p class="about-note">只为你们两个人做的网页。</p>
             </section>
 
             <!-- ===== 通用占位页 ===== -->
