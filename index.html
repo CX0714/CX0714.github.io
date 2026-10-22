@@ -21,6 +21,7 @@
         } catch (e) {}
     </script>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="widgets.css">
 </head>
 <body>
 
@@ -418,7 +419,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">3.0</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.1</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -430,9 +431,7 @@
     <!-- ===== 聊天 ===== -->
     <div class="screen chat-view" id="chatView">
         <header class="chat-header" id="chatHeader">
-            <button class="chat-circle-btn" id="btnChatBack" type="button" aria-label="返回">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
-            </button>
+            <button class="chat-circle-btn" id="btnChatBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
             <div class="chat-center" aria-hidden="true">
                 <span class="chat-avatar" id="headerAvatar">Me</span>
                 <span class="chat-name-pill">
@@ -440,9 +439,7 @@
                     <svg class="svg-icon chat-chevron" viewBox="0 0 24 24"><use href="#ic-chevron-down"></use></svg>
                 </span>
             </div>
-            <button class="chat-circle-btn" id="btnChatCall" type="button" aria-label="通话">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-phone"></use></svg>
-            </button>
+            <button class="chat-circle-btn" id="btnChatCall" type="button" aria-label="通话"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-phone"></use></svg></button>
         </header>
         <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-wrapper">
@@ -557,7 +554,6 @@
             <button class="compose-entry" id="btnCompose" type="button">写点什么给他…</button>
             <div id="letterList"></div>
         </div>
-
         <div class="compose-panel" id="letterCompose" hidden>
             <header class="app-nav">
                 <button class="nav-text" id="btnComposeCancel" type="button">取消</button>
@@ -581,27 +577,96 @@
             <span class="app-nav-title">字卡库</span>
             <button class="nav-back" id="btnCardsMore" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button>
         </header>
-
         <div class="kind-seg" id="cardKindSeg">
             <button class="kind-btn active" data-kind="text" type="button">文字</button>
             <button class="kind-btn" data-kind="emoji" type="button">emoji</button>
             <button class="kind-btn" data-kind="sticker" type="button">表情包</button>
             <button class="kind-btn" data-kind="status" type="button">状态</button>
         </div>
-
         <div class="cat-scroll" id="cardCats"></div>
-
         <button class="card-add-row" id="btnCardAdd" type="button">
             <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg>
             <span>批量添加字卡…</span>
         </button>
-
         <div class="card-scroll" id="cardList"></div>
-
         <div class="cards-menu" id="cardsMenu" hidden>
             <button class="msg-menu-item" id="btnExportCards" type="button">导出字卡</button>
             <label class="msg-menu-item" for="importCardsFile">导入字卡</label>
             <input type="file" id="importCardsFile" accept="application/json,.json" hidden>
+        </div>
+    </div>
+
+    <!-- ===== 小组件 ===== -->
+    <div class="screen app-view" id="widgetsView">
+        <header class="app-nav">
+            <button class="nav-back" id="btnWidgetsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
+            <span class="app-nav-title">小组件</span>
+            <span class="nav-spacer"></span>
+        </header>
+
+        <div class="app-scroll">
+            <!-- 模板选择 -->
+            <div class="tpl-scroll" id="tplScroll">
+                <button class="tpl-card" data-tpl="A" type="button">
+                    <span class="tpl-thumb">
+                        <span class="mini-row"><i class="mini-circle"></i><i class="mini-heart"></i><i class="mini-circle"></i></span>
+                        <span class="mini-line"></span>
+                    </span>
+                    <span class="tpl-name">双头像纪念日</span>
+                </button>
+                <button class="tpl-card" data-tpl="B" type="button">
+                    <span class="tpl-thumb"><span class="mini-tilt"></span></span>
+                    <span class="tpl-name">黑胶唱片</span>
+                </button>
+                <button class="tpl-card" data-tpl="C" type="button">
+                    <span class="tpl-thumb"><span class="mini-half"></span><span class="mini-line"></span></span>
+                    <span class="tpl-name">海报进度条</span>
+                </button>
+                <button class="tpl-card" data-tpl="D" type="button">
+                    <span class="tpl-thumb"><span class="mini-fill"></span></span>
+                    <span class="tpl-name">纯图片</span>
+                </button>
+            </div>
+
+            <!-- A 配置 -->
+            <div class="group-card control-card cfg-group" data-cfg="A" hidden>
+                <div class="control-row"><span class="control-label">主标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="我们"></div>
+                <div class="control-row"><span class="control-label">天数</span><input class="cfg-input" data-wcfg="days" maxlength="16" placeholder="第 615 天"></div>
+                <div class="control-row"><span class="control-label">联动倒数日</span><select class="cfg-input" data-wcfg="daysSourceId" id="wsDaySource"></select></div>
+                <div class="control-row"><span class="control-label">左侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgLeft" hidden></label></div>
+                <div class="control-row"><span class="control-label">右侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgRight" hidden></label></div>
+            </div>
+
+            <!-- B 配置 -->
+            <div class="group-card control-card cfg-group" data-cfg="B" hidden>
+                <div class="control-row"><span class="control-label">标题文字</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今日单曲"></div>
+                <div class="control-row"><span class="control-label">卡片图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgCard" hidden></label></div>
+            </div>
+
+            <!-- C 配置 -->
+            <div class="group-card control-card cfg-group" data-cfg="C" hidden>
+                <div class="control-row"><span class="control-label">主标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今天也想你"></div>
+                <div class="control-row"><span class="control-label">副标题</span><input class="cfg-input" data-wcfg="subtitle" maxlength="20" placeholder="距离见面还有…"></div>
+                <div class="control-row"><span class="control-label">顶部大图</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgTop" hidden></label></div>
+            </div>
+
+            <!-- D 配置 -->
+            <div class="group-card control-card cfg-group" data-cfg="D" hidden>
+                <div class="control-row"><span class="control-label">背景图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgBg" hidden></label></div>
+                <div class="control-row"><span class="control-label">中心文字</span><input class="cfg-input" data-wcfg="centerText" maxlength="20" placeholder="今天也在想你"></div>
+            </div>
+
+            <!-- 全局质感 -->
+            <div class="group-card control-card">
+                <div class="control-block">
+                    <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-wval="opacity" data-wunit="%">100%</span></div>
+                    <input type="range" class="slider" data-wcfg="opacity" data-wunit="%" min="0" max="100" step="1">
+                </div>
+                <div class="control-block">
+                    <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-wval="blur" data-wunit="%">20%</span></div>
+                    <input type="range" class="slider" data-wcfg="blur" data-wunit="%" min="0" max="100" step="1">
+                </div>
+            </div>
         </div>
     </div>
 
@@ -618,7 +683,6 @@
         </div>
     </div>
 
-    <!-- ===== 字卡弹窗 ===== -->
     <div class="modal-mask" id="cardModalMask" hidden></div>
 
     <div class="modal-sheet" id="cardAddSheet" hidden>

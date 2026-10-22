@@ -1,0 +1,341 @@
+/* =========================================================
+   Philos · 小组件 Widgets
+   ========================================================= */
+
+/* 主屏 2x2 容器：透明度 / 磨砂度由变量控制 */
+.widget-small {
+    background-color: rgba(255, 255, 255, var(--ws-bg-alpha, 0.5));
+    -webkit-backdrop-filter: blur(var(--ws-blur, 20px));
+    backdrop-filter: blur(var(--ws-blur, 20px));
+}
+
+[data-theme="dark"] .widget-small {
+    background-color: rgba(32, 34, 38, var(--ws-bg-alpha, 0.55));
+}
+
+.widget-small.has-template { padding: 0; }
+
+/* 模板容器 */
+.ws-tpl {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    overflow: hidden;
+    border-radius: inherit;
+    opacity: var(--ws-content-opacity, 1);
+}
+
+.ws-img-empty {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(200, 212, 224, 0.55), rgba(232, 238, 244, 0.35));
+}
+
+/* ===== 模板 A：双头像纪念日 ===== */
+.ws-a { padding: 12px; justify-content: center; gap: 9px; }
+
+.ws-a-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: rgba(80, 92, 108, 0.78);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ws-a-row { display: flex; align-items: center; gap: 9px; }
+
+.ws-a-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.65);
+    box-shadow: 0 3px 10px rgba(70, 95, 125, 0.14);
+}
+.ws-a-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* CSS 绘制的心形 */
+.ws-a-heart {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    background: #e7a3ab;
+    transform: rotate(-45deg);
+    margin: 0 1px;
+    flex: 0 0 auto;
+}
+.ws-a-heart::before,
+.ws-a-heart::after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: inherit;
+}
+.ws-a-heart::before { top: -4px; left: 0; }
+.ws-a-heart::after { top: 0; left: 4px; }
+
+.ws-a-days {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    color: var(--text-primary);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+[data-theme="dark"] .ws-a-title { color: rgba(200, 208, 220, 0.7); }
+[data-theme="dark"] .ws-a-avatar { background: rgba(255, 255, 255, 0.12); }
+
+/* ===== 模板 B：黑胶唱片 ===== */
+.ws-b { padding: 12px; gap: 10px; }
+
+.ws-b-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: rgba(80, 92, 108, 0.78);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+[data-theme="dark"] .ws-b-title { color: rgba(200, 208, 220, 0.7); }
+
+.ws-b-card {
+    width: 76px;
+    height: 76px;
+    border-radius: 9px;
+    overflow: hidden;
+    background: #ffffff;
+    transform: rotate(-8deg);
+    box-shadow: 0 10px 22px rgba(60, 82, 108, 0.22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.ws-b-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ===== 模板 C：海报进度条 ===== */
+.ws-c { padding: 0; justify-content: flex-start; gap: 0; align-items: stretch; }
+
+.ws-c-img {
+    width: 100%;
+    height: 52%;
+    overflow: hidden;
+    background: rgba(200, 212, 224, 0.4);
+}
+.ws-c-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.ws-c-body {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    text-align: left;
+}
+
+.ws-c-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ws-c-sub {
+    font-size: 10px;
+    color: rgba(96, 108, 124, 0.7);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ws-c-bar {
+    margin-top: 6px;
+    width: 100%;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(120, 140, 160, 0.2);
+    overflow: hidden;
+}
+.ws-c-bar span {
+    display: block;
+    height: 100%;
+    width: 62%;
+    border-radius: 2px;
+    background: rgba(91, 127, 166, 0.85);
+}
+
+[data-theme="dark"] .ws-c-sub { color: rgba(180, 190, 202, 0.6); }
+[data-theme="dark"] .ws-c-bar { background: rgba(255, 255, 255, 0.14); }
+
+/* ===== 模板 D：纯图片 ===== */
+.ws-d { padding: 0; position: relative; justify-content: flex-end; align-items: stretch; gap: 0; }
+
+.ws-d-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ws-d-text {
+    position: relative;
+    z-index: 2;
+    padding: 0 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #ffffff;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+    text-align: center;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== 模板选择卡片（横向滑动） ===== */
+.tpl-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 16px 16px;
+    -webkit-overflow-scrolling: touch;
+    flex: 0 0 auto;
+}
+
+.tpl-card {
+    flex: 0 0 auto;
+    width: 92px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    background: none;
+}
+
+.tpl-thumb {
+    width: 92px;
+    height: 92px;
+    border-radius: 18px;
+    background: var(--card-bg);
+    border: 2px solid transparent;
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: relative;
+    transition: border-color 0.2s ease, transform 0.18s ease;
+}
+
+.tpl-card.active .tpl-thumb { border-color: #5b7fa6; }
+.tpl-card:active .tpl-thumb { transform: scale(0.96); }
+
+.tpl-name {
+    font-size: 11px;
+    color: var(--text-secondary);
+    letter-spacing: 0.2px;
+}
+
+.tpl-card.active .tpl-name { color: var(--text-primary); font-weight: 600; }
+
+/* 缩略示意 */
+.mini-row { display: flex; align-items: center; gap: 5px; }
+.mini-circle {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: rgba(140, 158, 178, 0.35);
+    display: block;
+}
+.mini-heart {
+    position: relative;
+    width: 5px; height: 5px;
+    background: #e7a3ab;
+    transform: rotate(-45deg);
+    display: block;
+}
+.mini-heart::before,
+.mini-heart::after {
+    content: "";
+    position: absolute;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: inherit;
+}
+.mini-heart::before { top: -2.5px; left: 0; }
+.mini-heart::after { top: 0; left: 2.5px; }
+.mini-line {
+    width: 36px; height: 5px;
+    border-radius: 3px;
+    background: rgba(120, 140, 160, 0.25);
+    display: block;
+}
+.mini-tilt {
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    background: #ffffff;
+    box-shadow: 0 4px 10px rgba(70, 95, 125, 0.2);
+    transform: rotate(-8deg);
+    display: block;
+}
+[data-theme="dark"] .mini-tilt { background: #2a2c31; }
+.mini-half {
+    width: 100%; height: 40%;
+    background: linear-gradient(135deg, rgba(200, 212, 224, 0.6), rgba(232, 238, 244, 0.35));
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+}
+.mini-fill {
+    width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(170, 190, 210, 0.45), rgba(220, 230, 240, 0.3));
+    display: block;
+}
+
+/* 配置项输入 */
+.cfg-input {
+    flex: 0 0 56%;
+    min-width: 0;
+    height: 36px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 10px;
+    background: var(--input-bg);
+    font-size: 14px;
+    color: var(--text-primary);
+    outline: none;
+    text-align: right;
+}
+
+select.cfg-input {
+    -webkit-appearance: none;
+    appearance: none;
+    text-align-last: right;
+    padding-right: 10px;
+}
+
+.cfg-input::placeholder { color: var(--text-secondary); }
