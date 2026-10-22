@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v37";
+const CACHE_NAME = "philos-v38";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
    运行时补丁：回复方式 / 气泡 / 表情包 / Typing / 输入栏 /
-   自定义 CSS / 拍一拍弹窗 / 深色开关 / 消息通知 / 聊天置底。
+   自定义 CSS / 拍一拍弹窗 / 深色开关 / 消息通知 / 阴影统一。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -376,6 +376,7 @@ function rmInjectStyles() {
     st.id = "rm-style";
     st.textContent =
         ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}" +
+        ".widget-large,.dock{box-shadow:var(--shadow-card) !important;}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
