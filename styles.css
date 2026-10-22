@@ -1,5 +1,6 @@
 /* =========================================================
-   Philos · 2.4.1
+   Philos · 2.4.2
+   修正：row-reverse 必须配 flex-start，否则整组贴左
    ========================================================= */
 
 :root {
@@ -12,7 +13,6 @@
     --widget-top: linear-gradient(160deg, #eef1f5 0%, #e1e7ee 100%);
     --widget-bottom: rgba(255, 255, 255, 0.40);
     --widget-divider: rgba(255, 255, 255, 0.95);
-    --icon-bg: rgba(255, 255, 255, 0.85);
     --dock-item-bg: rgba(255, 255, 255, 0.22);
     --dock-item-active: rgba(255, 255, 255, 0.38);
     --home-bg-color: transparent;
@@ -40,11 +40,9 @@
     --text-primary: #1b1d21;
     --text-secondary: #8b909a;
     --icon-color: #5d6570;
-    --divider: rgba(20, 30, 45, 0.05);
     --shadow-soft: 0 12px 30px rgba(112, 132, 160, 0.13);
     --shadow-card: 0 2px 10px rgba(112, 132, 160, 0.07);
     --r-xl: 28px;
-    --r-lg: 20px;
     --r-md: 16px;
     --r-sm: 12px;
     --blur: blur(20px);
@@ -77,7 +75,6 @@
     --text-primary: #f2f3f6;
     --text-secondary: #8b909a;
     --icon-color: #c7cbd3;
-    --divider: rgba(255, 255, 255, 0.07);
     --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.45);
     --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.30);
     --avatar-border: rgba(255, 255, 255, 0.30);
@@ -223,7 +220,7 @@ html.hide-app-label .app-label { display: none; }
 }
 .chat-circle-btn .svg-icon { width: 18px; height: 18px; }
 
-/* 顶部头像组：纯展示，无任何点击 */
+/* 顶部头像组：纯展示，禁用一切点击 */
 .chat-center {
     position: relative; z-index: 2;
     display: flex; flex-direction: column; align-items: center; gap: 6px;
@@ -231,6 +228,7 @@ html.hide-app-label .app-label { display: none; }
     background: none; border: none;
     pointer-events: none;
     cursor: default;
+    -webkit-user-select: none; user-select: none;
 }
 
 /* 顶部头像 48px */
@@ -281,17 +279,27 @@ html.hide-app-label .app-label { display: none; }
     text-align: center;
 }
 
-/* 消息行：左右方向严格锁定 */
-.msg-row { display: flex; align-items: flex-end; gap: 8px; width: 100%; }
+/* ---------------------------------------------------------
+   消息行左右方向
+   DOM 顺序固定：[头像, 内容]
+   .ta  → row          + flex-start → 头像最左、气泡在右
+   .me  → row-reverse  + flex-start → 反转后头像最右、气泡在左
+   注意：row-reverse 下主轴起点在右侧，必须用 flex-start；
+        写 flex-end 会把整组推到左边。
+   --------------------------------------------------------- */
+.msg-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    width: 100%;
+}
 .msg-row.ta {
-    align-self: flex-start;
     justify-content: flex-start;
-    flex-direction: row;            /* 头像在左，气泡在右 */
+    flex-direction: row;
 }
 .msg-row.me {
-    align-self: flex-end;
-    justify-content: flex-end;
-    flex-direction: row-reverse;    /* 气泡在左，我的头像在最右 */
+    justify-content: flex-start;
+    flex-direction: row-reverse;
 }
 
 /* 消息流头像 36px，无边框 */
