@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v34";
+const CACHE_NAME = "philos-v35";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
-   运行时补丁：回复方式 / 气泡预设 / 表情包 / Typing / 输入栏 /
-   自定义 CSS 应用按钮。app.js 原文件不动。
+   运行时补丁：回复方式 / 气泡 / 表情包 / Typing / 输入栏 /
+   自定义 CSS / 拍一拍弹窗。app.js 原文件不动。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -135,6 +135,72 @@ function rmSetTyping(on) {
     el.textContent = on ? "Typing..." : (appData.taName || "他");
 }
 
+function rmApplyPatBlur() {
+    var b = appData.settings && appData.settings.bubble;
+    var v = b && typeof b.patBlur === "number" ? b.patBlur : 70;
+    document.documentElement.style.setProperty("--pat-blur", (v / 100 * 30).toFixed(1) + "px");
+}
+
+function rmHidePat() {
+    var el = document.getElementById("patPop");
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+}
+
+function rmShowPat(text) {
+    var existing = document.getElementById("patPop");
+    if (existing) {
+        var t = existing.querySelector(".pat-pop-text");
+        if (t) t.textContent = text;
+        return;
+    }
+
+    var wrap = document.createElement("div");
+    wrap.className = "pat-pop";
+    wrap.id = "patPop";
+
+    var mask = document.createElement("div");
+    mask.className = "pat-pop-mask";
+
+    var card = document.createElement("div");
+    card.className = "pat-pop-card";
+
+    var avatar = document.createElement("div");
+    avatar.className = "pat-pop-avatar";
+    avatar.innerHTML = avatarMarkup(appData.taAvatar, "他");
+
+    var body = document.createElement("div");
+    body.className = "pat-pop-text";
+    body.textContent = text;
+
+    var actions = document.createElement("div");
+    actions.className = "pat-pop-actions";
+
+    var later = document.createElement("button");
+    later.type = "button";
+    later.className = "pat-pop-btn";
+    later.textContent = "等下哦";
+    later.addEventListener("click", rmHidePat);
+
+    var go = document.createElement("button");
+    go.type = "button";
+    go.className = "pat-pop-btn primary";
+    go.textContent = "闪去";
+    go.addEventListener("click", function () {
+        rmHidePat();
+        showScreen("chatView");
+        renderChat();
+    });
+
+    actions.appendChild(later);
+    actions.appendChild(go);
+    card.appendChild(avatar);
+    card.appendChild(body);
+    card.appendChild(actions);
+    wrap.appendChild(mask);
+    wrap.appendChild(card);
+    document.body.appendChild(wrap);
+}
+
 scheduleReply = function () {
     var p = rmSettings();
     if (!p) return;
@@ -167,6 +233,9 @@ scheduleReply = function () {
         if (patPool.length && Math.random() * 100 < chance) {
             var pat = patPool[Math.floor(Math.random() * patPool.length)];
             appData.chatHistory.push({ type: "status", text: "—— " + pat.content + " ——", time: now + added });
+            if (!($("chatView") && $("chatView").classList.contains("active"))) {
+                rmShowPat(pat.content);
+            }
         }
 
         saveData();
@@ -275,7 +344,18 @@ function rmInjectStyles() {
         "#chatMessages .rm-sticker-bubble img{max-width:112px !important;border-radius:10px;}" +
         ".chat-input-box{min-height:44px;padding:4px 8px 4px 16px;}" +
         ".chat-input-box .input-row{align-items:center;}" +
-        ".chat-input-box textarea{padding:0;line-height:1.5;}";
+        ".chat-input-box textarea{padding:0;line-height:1.5;}" +
+        ".pat-pop{position:fixed;inset:0;z-index:620;display:flex;align-items:center;justify-content:center;padding:24px;}" +
+        ".pat-pop-mask{position:absolute;inset:0;background:rgba(16,20,26,.34);}" +
+        ".pat-pop-card{position:relative;z-index:1;width:80%;max-width:320px;padding:28px 20px 18px;border-radius:30px;text-align:center;background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(var(--pat-blur,21px)) saturate(120%);backdrop-filter:blur(var(--pat-blur,21px)) saturate(120%);border:1px solid rgba(255,255,255,.55);box-shadow:0 24px 60px rgba(20,30,45,.28);}" +
+        "[data-theme=\"dark\"] .pat-pop-card{background:rgba(32,34,39,.56);border-color:rgba(255,255,255,.12);box-shadow:0 24px 60px rgba(0,0,0,.55);}" +
+        ".pat-pop-avatar{width:92px;height:92px;border-radius:50%;margin:0 auto 16px;overflow:hidden;background:rgba(255,255,255,.6);border:3px solid #fff;box-shadow:0 8px 22px rgba(50,70,95,.18);display:flex;align-items:center;justify-content:center;color:#7d8ea2;font-size:28px;font-weight:600;}" +
+        ".pat-pop-avatar img{width:100%;height:100%;object-fit:cover;display:block;}" +
+        ".pat-pop-text{font-size:15px;line-height:1.6;color:var(--text-primary);margin-bottom:20px;word-break:break-word;}" +
+        ".pat-pop-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}" +
+        ".pat-pop-btn{height:44px;border-radius:14px;font-size:14px;font-weight:500;color:var(--text-primary);background:rgba(140,155,175,.20);}" +
+        ".pat-pop-btn.primary{background:#5b7fa6;color:#fff;}" +
+        ".pat-pop-btn:active{transform:scale(.97);opacity:.9;}";
     document.head.appendChild(st);
 }
 
@@ -330,6 +410,33 @@ function rmSetupCustomCss() {
     area.addEventListener("input", function () {
         clearTimeout(timer);
         timer = setTimeout(rmApplyCustomCss, 400);
+    });
+}
+
+function rmSetupPatSettings() {
+    var b = appData.settings.bubble;
+    if (typeof b.patBlur !== "number") b.patBlur = 70;
+    rmApplyPatBlur();
+
+    var anchor = document.querySelector("[data-preset]");
+    var page = anchor ? anchor.closest(".set-page") : null;
+    if (!page || page.querySelector("[data-pat-blur]")) return;
+
+    var card = document.createElement("div");
+    card.className = "group-card control-card";
+    card.innerHTML = '<div class="card-title">拍一拍弹窗</div>' +
+        '<div class="control-block"><div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-pat-blur-val>' + b.patBlur + '%</span></div>' +
+        '<input type="range" class="slider" data-pat-blur min="0" max="100" step="5"></div>';
+    page.appendChild(card);
+
+    var input = card.querySelector("[data-pat-blur]");
+    var label = card.querySelector("[data-pat-blur-val]");
+    input.value = b.patBlur;
+    input.addEventListener("input", function () {
+        b.patBlur = Number(input.value) || 0;
+        label.textContent = b.patBlur + "%";
+        rmApplyPatBlur();
+        saveData();
     });
 }
 
@@ -475,6 +582,7 @@ var rmBaseApplySettings = applySettings;
 applySettings = function () {
     rmBaseApplySettings.apply(null, arguments);
     rmSyncBubblePreset();
+    rmApplyPatBlur();
 };
 
 function rmInit() {
@@ -483,6 +591,7 @@ function rmInit() {
     rmSettings();
     rmTrimPresets();
     rmSyncBubblePreset();
+    rmSetupPatSettings();
     rmBuildUI();
     rmBind();
     rmRender();
@@ -609,7 +718,7 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if ("focus" in client) return client.focus();
+        if (client.focus) return client.focus();
       }
       if (clients.openWindow) return clients.openWindow("./");
     })
