@@ -1,6 +1,5 @@
 /* =========================================================
-   Philos · 3.2
-   头像作用域隔离 / 大组件照片 / 小组件模板
+   Philos · 3.3
    ========================================================= */
 (function () {
     "use strict";
@@ -72,7 +71,7 @@
     var activeCardKind = "text";
     var activeCat = "全部";
     var editingCardId = null;
-    var heroPanelOpen = false;
+    var activeWidgetTab = "widget";
 
     function $(id) { return document.getElementById(id); }
     function isPlainObject(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
@@ -280,10 +279,6 @@
             var key = rows[j].getAttribute("data-hero-row");
             rows[j].hidden = (key === "img2" && cfg.mode !== "split");
         }
-        var panel = $("heroCfg");
-        if (panel) panel.hidden = !heroPanelOpen;
-        var card = document.querySelector("[data-hero]");
-        if (card) card.classList.toggle("active", !!cfg.mode);
     }
 
     /* ===== 倒数日 ===== */
@@ -299,6 +294,12 @@
         var d = daysFrom(dateStr);
         return d >= 0 ? "第 " + (d + 1) + " 天" : "还有 " + (-d) + " 天";
     }
+    function findAnniversary(id) {
+        for (var i = 0; i < appData.anniversaries.length; i++) {
+            if (appData.anniversaries[i].id === id) return appData.anniversaries[i];
+        }
+        return null;
+    }
 
     function renderCountdown() {
         var list = $("countdownList");
@@ -308,7 +309,7 @@
         if (!appData.anniversaries.length) {
             var empty = document.createElement("div");
             empty.className = "cd-empty";
-            empty.textContent = "还没有倒数日，右下角新建一个";
+            empty.textContent = "还没有倒数日，点右下角 + 新建";
             list.appendChild(empty);
             return;
         }
@@ -327,10 +328,23 @@
             del.setAttribute("data-cd-del", item.id);
             actions.appendChild(del);
 
+            var d = daysFrom(item.date);
+            var isPast = d >= 0;
+            var num = isPast ? d + 1 : -d;
+            var prefix = isPast ? "第" : "还有";
+
             var content = document.createElement("div");
             content.className = "swipe-content cd-item" + (item.id === appData.activeCountdownId ? " active" : "");
             content.innerHTML =
-                '<div class="cd-left"><div class="cd-title">' + esc(item.title) + '</div><div class="cd-days">' + esc(dayLabel(item.date)) + '</div></div>' +
+                '<div class="cd-days">' +
+                    '<span class="cd-prefix">' + prefix + '</span>' +
+                    '<span class="cd-num">' + num + '</span>' +
+                    '<span class="cd-unit">天</span>' +
+                '</div>' +
+                '<div class="cd-meta">' +
+                    '<div class="cd-name">' + esc(item.title) + '</div>' +
+                    '<div class="cd-date">' + esc(String(item.date).replace(/-/g, ".")) + '</div>' +
+                '</div>' +
                 (item.id === appData.activeCountdownId ? '<span class="cd-badge">显示中</span>' : '');
 
             row.appendChild(actions);
@@ -340,12 +354,12 @@
     }
 
     function openCdSheet() {
-        var mask = $("cdMask"), sheet = $("cdSheet");
         if ($("cdTitle")) $("cdTitle").value = "";
         if ($("cdDate")) {
             var now = new Date();
             $("cdDate").value = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
         }
+        var mask = $("cdMask"), sheet = $("cdSheet");
         if (mask) mask.classList.add("show");
         if (sheet) sheet.classList.add("show");
     }
@@ -358,7 +372,7 @@
         var titleEl = $("cdTitle"), dateEl = $("cdDate");
         var title = titleEl ? titleEl.value.trim() : "";
         var date = dateEl ? dateEl.value : "";
-        if (!title || !date) return;
+        if (!title || !date) { alert("请填写标题和日期"); return; }
         var item = { id: uid(), title: title, date: date, createdAt: Date.now() };
         appData.anniversaries.unshift(item);
         if (!appData.activeCountdownId) appData.activeCountdownId = item.id;
@@ -369,7 +383,7 @@
         closeCdSheet();
     }
 
-    /* ===== 小组件 2x2 ===== */
+    /* ===== 小组件 ===== */
     function tplImage(src) {
         return isImageSource(src) ? '<img src="' + escAttr(src) + '" alt="">' : '<span class="ws-img-empty"></span>';
     }
@@ -377,16 +391,25 @@
     function widgetDaysText() {
         var cfg = appData.widgetConfig;
         if (cfg.daysSourceId) {
-            for (var i = 0; i < appData.anniversaries.length; i++) {
-                if (appData.anniversaries[i].id === cfg.daysSourceId) return dayLabel(appData.anniversaries[i].date);
-            }
+            var found = findAnniversary(cfg.daysSourceId);
+            if (found) return dayLabel(found.date);
         }
         return cfg.days || "";
     }
 
+    function widgetTitleText() {
+        var cfg = appData.widgetConfig;
+        if (cfg.title) return cfg.title;
+        if (cfg.daysSourceId) {
+            var found = findAnniversary(cfg.daysSourceId);
+            if (found) return found.title;
+        }
+        return "";
+    }
+
     function tplAHtml(cfg) {
         return '<div class="ws-tpl ws-a">' +
-            '<div class="ws-a-title">' + esc(cfg.title || "我们") + '</div>' +
+            '<div class="ws-a-title">' + esc(widgetTitleText() || "我们") + '</div>' +
             '<div class="ws-a-row">' +
                 '<span class="ws-a-avatar">' + tplImage(cfg.imgLeft) + '</span>' +
                 '<span class="ws-a-heart"></span>' +
@@ -440,12 +463,7 @@
         applyWidgetSkin(cfg);
 
         if (!cfg.template) {
-            var item = null;
-            if (appData.activeCountdownId) {
-                for (var i = 0; i < appData.anniversaries.length; i++) {
-                    if (appData.anniversaries[i].id === appData.activeCountdownId) { item = appData.anniversaries[i]; break; }
-                }
-            }
+            var item = appData.activeCountdownId ? findAnniversary(appData.activeCountdownId) : null;
             el.classList.remove("has-template");
             if (item) {
                 el.innerHTML = '<div class="ws-widget"><div class="ws-widget-title">' + esc(item.title) + '</div><div class="ws-widget-days">' + esc(dayLabel(item.date)) + '</div></div>';
@@ -517,6 +535,18 @@
         updateWVal("blur", cfg.blur);
         fillDaySourceSelect();
         renderHeroConfig();
+        renderWidgetTab();
+    }
+
+    function renderWidgetTab() {
+        var tabs = document.querySelectorAll("[data-wtab]");
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.toggle("active", tabs[i].getAttribute("data-wtab") === activeWidgetTab);
+        }
+        var panes = document.querySelectorAll("[data-wpane]");
+        for (var j = 0; j < panes.length; j++) {
+            panes[j].hidden = panes[j].getAttribute("data-wpane") !== activeWidgetTab;
+        }
     }
 
     function handleWidgetControl(el) {
@@ -527,6 +557,16 @@
         else if (el.type === "range") value = Number(el.value);
         else value = el.value;
         setPath(appData.widgetConfig, key, value);
+
+        if (key === "daysSourceId" && value) {
+            var found = findAnniversary(value);
+            if (found) appData.widgetConfig.title = found.title;
+            saveData();
+            renderWidgetSmall();
+            renderWidgetConfig();
+            return;
+        }
+
         if (el.type === "range") updateWVal(key, value);
         saveData();
         renderWidgetSmall();
@@ -703,9 +743,9 @@
     }
 
     function openCardAdd() {
-        var mask = $("cardModalMask"), sheet = $("cardAddSheet");
         if ($("cardAddText")) $("cardAddText").value = "";
         fillCategorySelect($("cardAddCategory"), "未分类");
+        var mask = $("cardModalMask"), sheet = $("cardAddSheet");
         if (mask) mask.classList.add("show");
         if (sheet) sheet.classList.add("show");
     }
@@ -1404,14 +1444,12 @@
         css.setProperty("--chat-bg-color", hexToRgba(a.chatBg.color, a.chatBg.opacity / 100));
         css.setProperty("--chat-bg-image", a.chatBg.image ? "url(" + a.chatBg.image + ")" : "none");
 
-        /* 聊天头像：只作用于消息流与预览（顶部头像已被 CSS 写死 48px） */
         var size = a.avatar.size || 36;
         var radius = (a.avatar.radius === undefined ? 50 : a.avatar.radius);
         var offsetY = a.avatar.offsetY || 0;
         css.setProperty("--msg-avatar-size", size + "px");
         css.setProperty("--msg-avatar-radius", radius + "px");
         css.setProperty("--avatar-offset-y", offsetY + "px");
-        /* 旧变量保留，兼容其他引用 */
         css.setProperty("--chat-avatar-size", size + "px");
         css.setProperty("--chat-avatar-radius", radius + "px");
         css.setProperty("--chat-avatar-offset-y", offsetY + "px");
@@ -1700,14 +1738,10 @@
             var insideSwipe = t.closest(".swipe-row");
             if (!insideSwipe) closeAllSwipe();
 
-            // 大组件照片卡片
-            var heroCard = t.closest("[data-hero]");
-            if (heroCard) {
-                heroPanelOpen = !heroPanelOpen;
-                renderHeroConfig();
-                if (heroPanelOpen && $("heroCfg") && $("heroCfg").scrollIntoView) {
-                    $("heroCfg").scrollIntoView({ behavior: "smooth", block: "nearest" });
-                }
+            var wtab = t.closest("[data-wtab]");
+            if (wtab) {
+                activeWidgetTab = wtab.getAttribute("data-wtab");
+                renderWidgetTab();
                 return;
             }
 
