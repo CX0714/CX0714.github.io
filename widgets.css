@@ -73,7 +73,7 @@
     width: 100px;
     height: 100px;
     max-width: 100px;
-    border: 5px solid #ffffff;
+    border: 3px solid #ffffff;
     border-radius: 50%;
     background: var(--widget-avatar-bg);
     box-shadow: 0 14px 32px rgba(62, 86, 114, 0.28),
@@ -99,28 +99,28 @@
     font-size: 30px;
 }
 
-/* ===== 4. 四行文字：贴着大头像下方，底部留白 ===== */
+/* ===== 4. 四行文字：贴着头像下方，间距放宽，底部留白 ===== */
 .widget-text-area {
-    top: 62%;
-    bottom: 8.5%;
+    top: 61%;
+    bottom: 7%;
     left: 12%;
     right: 12%;
     padding-top: 0;
     justify-content: flex-start;
-    gap: 3px;
+    gap: 7px;
     z-index: 20;
     overflow: hidden;
 }
 
 .widget-text-area .widget-line-1 {
-    line-height: 1.25;
+    line-height: 1.3;
     margin-bottom: 1px;
 }
 
 .widget-text-area .widget-line-2,
 .widget-text-area .widget-line-3,
 .widget-text-area .widget-line-4 {
-    line-height: 1.2;
+    line-height: 1.25;
 }
 
 /* 自定义文字颜色（四行共用） */
