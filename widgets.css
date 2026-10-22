@@ -1,5 +1,5 @@
 /* =========================================================
-   Philos · 3.5
+   Philos · 3.6
    ========================================================= */
 
 /* ===== 头像作用域 ===== */
@@ -113,32 +113,31 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
 .kind-seg.two { grid-template-columns: repeat(2, 1fr); }
 .segment.seg-3 { grid-template-columns: repeat(3, 1fr); }
 
-/* 行内动作组 */
 .row-actions { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
 .clear-text { font-size: 14px; color: #ff3b30; padding: 0; }
 .clear-text:active { opacity: 0.6; }
 
-/* ===== 大组件照片 ===== */
+/* =========================================================
+   大组件：上下两半完全独立（颜色 / 透明度 / 磨砂度）
+   ========================================================= */
 .widget-large { background-size: cover; background-position: center; }
 
 .widget-large.hero-single .widget-half {
-    background-color: transparent !important;
     background-image: none !important;
-}
-.widget-large.hero-single .widget-half-bottom {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
 }
 
 .widget-large.hero-split .widget-half {
-    background-color: transparent !important;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 }
 
+.widget-half {
+    transition: background-color 0.18s ease, backdrop-filter 0.18s ease;
+}
+
 /* =========================================================
-   倒数日（仿系统 App，点按菜单）
+   倒数日（点按菜单）
    ========================================================= */
 .cd-card {
     margin-bottom: 10px;
@@ -169,7 +168,6 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
 .cd-item.active .cd-badge { color: #5b7fa6; opacity: 1; }
 .cd-empty { text-align: center; font-size: 13px; color: var(--text-secondary); padding: 60px 0; }
 
-/* 倒数日菜单 */
 .cd-menu {
     position: fixed;
     z-index: 420;
@@ -194,7 +192,6 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
 .cd-menu-btn.danger { color: #ff453a; }
 .cd-menu-btn:active { background: rgba(255, 255, 255, 0.12); transform: none; }
 
-/* 表情包删除角标 */
 .sticker-cell { position: relative; }
 .sticker-del {
     position: absolute;
@@ -209,4 +206,13 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
     line-height: 18px;
     text-align: center;
     z-index: 3;
+}
+
+/* 大组件上下分组标题 */
+.hero-group-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+    padding: 14px 16px 4px;
 }
