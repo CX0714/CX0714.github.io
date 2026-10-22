@@ -57,7 +57,6 @@
         <div class="splash-title">☆ Philos</div>
     </div>
 
-    <!-- ===== 主屏幕 ===== -->
     <div class="screen desktop-view active" id="desktopView">
         <div class="desktop-content">
             <section class="widget-large" id="widgetLarge">
@@ -348,6 +347,7 @@
                 </div>
             </section>
 
+            <!-- 权限（含回复句数 / 拍一拍概率） -->
             <section class="set-page" data-page="permission">
                 <div class="sub-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -356,6 +356,21 @@
                 <div class="group-card control-card">
                     <div class="control-row"><span class="control-label">回复延迟</span><span class="control-value" data-val="permission.replyDelay" data-unit="s">3s</span></div>
                     <div class="control-block"><input type="range" class="slider" data-key="permission.replyDelay" data-unit="s" min="0" max="60" step="1"></div>
+                </div>
+                <div class="group-card control-card">
+                    <div class="card-title">他回复的条数（从字卡随机取）</div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">最少</span><span class="control-value" data-val="permission.replyMin" data-unit="句">1句</span></div>
+                        <input type="range" class="slider" data-key="permission.replyMin" data-unit="句" min="1" max="10" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">最多</span><span class="control-value" data-val="permission.replyMax" data-unit="句">3句</span></div>
+                        <input type="range" class="slider" data-key="permission.replyMax" data-unit="句" min="1" max="10" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">拍一拍概率</span><span class="control-value" data-val="permission.patChance" data-unit="%">30%</span></div>
+                        <input type="range" class="slider" data-key="permission.patChance" data-unit="%" min="0" max="100" step="5">
+                    </div>
                 </div>
                 <div class="group-card control-card">
                     <div class="control-row"><span class="control-label">主动发消息</span><label class="switch"><input type="checkbox" data-key="permission.activeEnabled"><span class="switch-track"></span></label></div>
@@ -437,7 +452,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">3.6</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.7</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -608,8 +623,9 @@
         <div class="cat-scroll" id="cardCats"></div>
         <button class="card-add-row" id="btnCardAdd" type="button">
             <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg>
-            <span>批量添加字卡…</span>
+            <span id="cardAddLabel">批量添加字卡…</span>
         </button>
+        <input type="file" id="cardStickerFile" accept="image/*" hidden>
         <div class="card-scroll" id="cardList"></div>
         <div class="cards-menu" id="cardsMenu" hidden>
             <button class="msg-menu-item" id="btnExportCards" type="button">导出字卡</button>
@@ -721,7 +737,6 @@
                 </div>
             </div>
 
-            <!-- 大组件 -->
             <div data-wpane="hero" hidden>
                 <div class="group-card control-card">
                     <div class="card-title">大组件照片</div>
