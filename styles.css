@@ -1,5 +1,6 @@
 /* =========================================================
-   Philos · 2.5
+   Philos · 2.5.1
+   聊天头像设置与大组件彻底解耦
    ========================================================= */
 
 :root {
@@ -19,12 +20,20 @@
     --chat-bg-color: transparent;
     --chat-bg-image: none;
     --icon-bg-color: rgba(255, 255, 255, 0.85);
-    --icon-blur: 11px;
+    --icon-blur: 6px;
     --app-label-size: 11px;
-    --avatar-size: 84px;
-    --avatar-radius: 50px;
-    --avatar-offset-y: 0px;
-    --avatar-bg: rgba(255, 255, 255, 0.74);
+
+    /* 聊天头像（设置页控制） */
+    --chat-avatar-size: 36px;
+    --chat-avatar-radius: 50px;
+    --chat-avatar-offset-y: 0px;
+
+    /* 主屏大组件头像（独立，不受聊天头像设置影响） */
+    --widget-avatar-size: 84px;
+    --widget-avatar-radius: 50px;
+    --widget-avatar-bg: rgba(255, 255, 255, 0.74);
+    --widget-avatar-border: rgba(255, 255, 255, 0.95);
+
     --bubble-bg: #5b7fa6;
     --bubble-radius: 16px;
     --bubble-pad-y: 10px;
@@ -44,7 +53,6 @@
     --r-md: 16px;
     --r-sm: 12px;
     --blur: blur(20px);
-    --avatar-border: rgba(255, 255, 255, 0.95);
     --switch-off: rgba(120, 132, 148, 0.28);
     --slider-track: rgba(120, 132, 148, 0.22);
     --input-bg: rgba(255, 255, 255, 0.72);
@@ -68,13 +76,13 @@
     --widget-divider: rgba(255, 255, 255, 0.14);
     --dock-item-active: rgba(255, 255, 255, 0.14);
     --icon-bg-color: rgba(38, 40, 45, 0.85);
-    --avatar-bg: rgba(42, 44, 49, 0.75);
+    --widget-avatar-bg: rgba(42, 44, 49, 0.75);
+    --widget-avatar-border: rgba(255, 255, 255, 0.30);
     --text-primary: #f2f3f6;
     --text-secondary: #8b909a;
     --icon-color: #c7cbd3;
     --shadow-soft: 0 12px 30px rgba(0, 0, 0, 0.45);
     --shadow-card: 0 2px 10px rgba(0, 0, 0, 0.30);
-    --avatar-border: rgba(255, 255, 255, 0.30);
     --switch-off: rgba(140, 150, 165, 0.32);
     --slider-track: rgba(140, 150, 165, 0.28);
     --input-bg: rgba(255, 255, 255, 0.06);
@@ -141,15 +149,18 @@ input, textarea { font-family: inherit; color: var(--text-primary); -webkit-user
 .widget-half-top { top: 0; background: var(--widget-top); }
 .widget-half-bottom { bottom: 0; background: var(--widget-bottom); -webkit-backdrop-filter: blur(var(--home-blur)); backdrop-filter: blur(var(--home-blur)); }
 .widget-divider { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--widget-divider); z-index: 6; }
+
+/* 大组件头像：完全独立，不受聊天头像设置影响 */
 .widget-avatar {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 20;
-    width: var(--avatar-size); height: var(--avatar-size);
-    border-radius: var(--avatar-radius);
+    width: var(--widget-avatar-size); height: var(--widget-avatar-size);
+    border-radius: var(--widget-avatar-radius);
     display: flex; align-items: center; justify-content: center; overflow: hidden;
-    background: var(--avatar-bg); border: 2px solid var(--avatar-border);
+    background: var(--widget-avatar-bg);
+    border: 2px solid var(--widget-avatar-border);
     box-shadow: 0 10px 24px rgba(70, 95, 125, 0.18);
 }
-.widget-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.widget-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: inherit; }
 .widget-avatar .avatar-text { font-size: 24px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-secondary); }
 .widget-text-area { position: absolute; top: 50%; bottom: 34px; left: 18px; right: 18px; padding-top: 52px; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-align: center; cursor: pointer; overflow: hidden; }
 .widget-text-area:active { transform: scale(0.985); }
@@ -166,8 +177,6 @@ input, textarea { font-family: inherit; color: var(--text-primary); -webkit-user
 
 .app-grid-small { width: 100%; aspect-ratio: 1 / 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 15px; min-width: 0; min-height: 0; }
 .app-icon { display: grid; grid-template-rows: 1fr auto; justify-items: center; align-items: center; gap: 4px; min-width: 0; min-height: 0; padding: 0; background: none; border: none; }
-
-/* 图标底座：颜色 / 透明度 / 磨砂全部走全局变量 */
 .app-icon-box {
     height: 100%; aspect-ratio: 1 / 1; max-width: 100%; min-height: 0;
     border-radius: 18px;
@@ -183,18 +192,12 @@ input, textarea { font-family: inherit; color: var(--text-primary); -webkit-user
     overflow: hidden;
 }
 .app-icon-box .svg-icon { width: 22px; height: 22px; }
-
-/* 有自定义图片时：隐藏线框和文字，图片铺满 */
-.app-icon-box.has-image { background-color: var(--icon-bg-color); }
 .app-icon-box.has-image .svg-icon { display: none; }
 .app-icon.has-image .app-label { display: none; }
-
 .app-label { font-size: var(--app-label-size); line-height: 1.2; font-weight: 500; letter-spacing: 0.2px; color: var(--text-secondary); }
 html.hide-app-label .app-label { display: none; }
 
 .dock { flex: 0 0 80px; height: 80px; margin-top: auto; border-radius: 40px; background: var(--glass-bg); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border: 1px solid var(--glass-border); box-shadow: var(--shadow-soft); display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; justify-items: center; padding: 0 8px; }
-
-/* Dock 图标同样受「图标背景」控制 */
 .dock-btn {
     width: 60px; height: 60px; border-radius: 18px;
     display: flex; align-items: center; justify-content: center;
@@ -253,21 +256,23 @@ html.hide-app-label .app-label { display: none; }
     cursor: default;
 }
 
+/* 顶部头像：跟随聊天头像设置，尺寸按大小 +12 自动跟随，钳在 24-60 */
 .chat-avatar {
-    width: 48px; height: 48px;
-    border-radius: 50%;
+    width: clamp(24px, calc(var(--chat-avatar-size) + 12px), 60px);
+    height: clamp(24px, calc(var(--chat-avatar-size) + 12px), 60px);
+    border-radius: var(--chat-avatar-radius);
     overflow: hidden;
     flex: 0 0 auto;
     display: flex; align-items: center; justify-content: center;
     background: var(--glass-bg-strong);
     border: none;
     font-size: 14px; font-weight: 600; color: var(--text-secondary);
-    transform: translateY(var(--avatar-offset-y));
+    transform: translateY(var(--chat-avatar-offset-y));
 }
 .chat-avatar img {
     width: 100%; height: 100%;
     object-fit: cover;
-    border-radius: 50%;
+    border-radius: inherit;
     display: block;
 }
 
@@ -305,21 +310,23 @@ html.hide-app-label .app-label { display: none; }
 .msg-row.ta { justify-content: flex-start; flex-direction: row; }
 .msg-row.me { justify-content: flex-start; flex-direction: row-reverse; }
 
+/* 消息头像：直接用聊天头像的尺寸/圆角/偏移 */
 .msg-avatar {
-    width: 36px; height: 36px;
-    border-radius: 50%;
+    width: var(--chat-avatar-size);
+    height: var(--chat-avatar-size);
+    border-radius: var(--chat-avatar-radius);
     overflow: hidden;
     flex: 0 0 auto;
     display: flex; align-items: center; justify-content: center;
     background: var(--glass-bg-strong);
     border: none;
     font-size: 11px; font-weight: 600; color: var(--text-secondary);
-    transform: translateY(var(--avatar-offset-y));
+    transform: translateY(var(--chat-avatar-offset-y));
 }
 .msg-avatar img {
     width: 100%; height: 100%;
     object-fit: cover;
-    border-radius: 50%;
+    border-radius: inherit;
     display: block;
 }
 .msg-avatar.ghost { visibility: hidden; }
@@ -532,33 +539,31 @@ label.settings-item { cursor: pointer; }
 .mini-btn.danger { color: #ff3b30; }
 .mini-btn:active { opacity: 0.75; }
 
-/* 预览：头像位置联动 */
+/* 实时预览（聊天头像） */
 .preview-card { position: sticky; bottom: 8px; margin-top: 4px; padding: 14px; border-radius: 20px; background: var(--glass-bg-strong); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); box-shadow: 0 -2px 26px rgba(70, 95, 125, 0.12); }
 .preview-title { font-size: 12px; font-weight: 500; letter-spacing: 0.4px; color: var(--text-secondary); margin-bottom: 12px; padding-left: 2px; }
-.pv-chat { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-.pv-row { display: flex; align-items: flex-end; gap: 8px; }
+.pv-row { display: flex; align-items: flex-end; gap: 8px; margin-bottom: 10px; }
+.pv-row:last-child { margin-bottom: 0; }
+.pv-row.ta { justify-content: flex-start; }
 .pv-row.me { justify-content: flex-end; }
+
+.pv-avatar {
+    width: var(--chat-avatar-size);
+    height: var(--chat-avatar-size);
+    border-radius: var(--chat-avatar-radius);
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    background: var(--glass-bg-strong);
+    border: none;
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    transform: translateY(var(--chat-avatar-offset-y));
+}
+.pv-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
+
 .pv-bubble { padding: var(--bubble-pad-y) 14px; border-radius: var(--bubble-radius); border: var(--bubble-border); font-size: 14px; line-height: 1.5; max-width: 70%; }
 .pv-row.ta .pv-bubble { background: var(--bubble-ta-bg); color: var(--bubble-ta-text); border-bottom-left-radius: 5px; }
 .pv-row.me .pv-bubble { background: var(--bubble-bg); color: var(--bubble-me-text); border-bottom-right-radius: 5px; }
-.pv-avatar { width: 30px; height: 30px; border-radius: 50%; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--glass-bg-strong); border: 1px solid var(--glass-border); font-size: 11px; color: var(--text-secondary); transform: translateY(var(--avatar-offset-y)); }
-.pv-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pv-avatar-row { display: flex; align-items: center; justify-content: space-around; gap: 16px; padding: 6px 0 10px; }
-.pv-avatar-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.pv-avatar-lg {
-    width: var(--avatar-size); height: var(--avatar-size);
-    border-radius: var(--avatar-radius);
-    display: flex; align-items: center; justify-content: center;
-    overflow: hidden;
-    background: var(--avatar-bg);
-    border: 2px solid var(--avatar-border);
-    box-shadow: 0 6px 16px rgba(70, 95, 125, 0.14);
-    font-size: 24px; font-weight: 600; color: var(--text-secondary);
-    transform: translateY(var(--avatar-offset-y));
-}
-.pv-avatar-lg img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.pv-avatar-tag { font-size: 11px; color: var(--text-secondary); }
-html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 
 .profile-page { display: flex; flex-direction: column; align-items: center; padding: 44px 20px 0; }
 .profile-avatar { width: 100px; height: 100px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: rgba(140, 152, 168, 0.14); border: 1px solid var(--glass-border); box-shadow: 0 8px 22px rgba(70, 95, 125, 0.14); color: rgba(120, 132, 148, 0.8); font-size: 42px; line-height: 1; }

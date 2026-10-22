@@ -1,6 +1,6 @@
 /* =========================================================
-   Philos · 2.5
-   头像垂直位置 + 8 图标独立图片
+   Philos · 2.5.1
+   聊天头像设置独立；大组件头像不再受影响
    ========================================================= */
 (function () {
     "use strict";
@@ -34,7 +34,7 @@
                 homeBg: { color: "#e9edf2", image: "", opacity: 100, blur: 20 },
                 iconBg: { color: "#ffffff", image: "", opacity: 85, blur: 20, showLabel: true, labelSize: 11, icons: JSON.parse(JSON.stringify(EMPTY_ICONS)) },
                 chatBg: { color: "#f2f4f7", image: "", opacity: 100, blur: 20 },
-                avatar: { color: "#dfe5ec", image: "", opacity: 100, blur: 0, size: 84, radius: 50, offsetY: 0, mode: "each" }
+                avatar: { color: "#dfe5ec", image: "", opacity: 100, blur: 0, size: 36, radius: 50, offsetY: 0, mode: "each" }
             },
             status: { color: "#8b909a", bgEnabled: false, bgColor: "#ffffff", bgOpacity: 60, bgBlur: 40 },
             bubble: { preset: "tail", radius: 16, height: 10, opacity: 100, bg: "#5b7fa6", border: false, borderColor: "#ffffff", css: "" },
@@ -65,6 +65,8 @@
 
     function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
+    function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
     function loadData() {
         var defaults = clone(DEFAULTS);
         appData = defaults;
@@ -85,9 +87,16 @@
             if (!Array.isArray(merged.pats)) merged.pats = defaults.pats.slice();
             if (!Array.isArray(merged.cards)) merged.cards = [];
             if (!isPlainObject(merged.settings.appearance.iconBg.icons)) merged.settings.appearance.iconBg.icons = JSON.parse(JSON.stringify(EMPTY_ICONS));
-            ICON_KEYS.forEach(function (k) {
-                if (typeof merged.settings.appearance.iconBg.icons[k] !== "string") merged.settings.appearance.iconBg.icons[k] = "";
+            ICON_KEYS.forEach(function (key) {
+                if (typeof merged.settings.appearance.iconBg.icons[key] !== "string") merged.settings.appearance.iconBg.icons[key] = "";
             });
+
+            /* 旧数据迁移：头像尺寸以前是大组件用的 84，现在只服务聊天头像 */
+            var av = merged.settings.appearance.avatar;
+            if (!(av.size >= 24 && av.size <= 60)) av.size = 36;
+            if (!(av.offsetY >= -20 && av.offsetY <= 20)) av.offsetY = 0;
+            av.radius = clamp(Number(av.radius) || 0, 0, 50);
+
             appData = merged;
         } catch (e) {
             appData = defaults;
@@ -178,9 +187,7 @@
     }
 
     function widgetAvatarMarkup() {
-        var av = appData.settings.appearance.avatar;
-        var src = isImageSource(appData.taAvatar) ? appData.taAvatar : (isImageSource(av.image) ? av.image : "");
-        if (src) return '<img src="' + escAttr(src) + '" alt="">';
+        if (isImageSource(appData.taAvatar)) return '<img src="' + escAttr(appData.taAvatar) + '" alt="">';
         return '<span class="avatar-text">Me</span>';
     }
 
@@ -244,13 +251,14 @@
         }
     }
 
+    /* 预览：只更新头像内容，位置/尺寸靠 CSS 变量 */
     function renderPreview() {
         var taMarkup = avatarMarkup(appData.taAvatar, "他");
         var myMarkup = avatarMarkup(appData.myAvatar, "Me");
-        ["pvTaAvatar", "pvChatTa1", "pvChatTa2", "pvBubbleTa"].forEach(function (id) {
+        ["pvAvatarTa", "pvBubbleTa"].forEach(function (id) {
             var el = $(id); if (el) el.innerHTML = taMarkup;
         });
-        ["pvMyAvatar", "pvBubbleMe"].forEach(function (id) {
+        ["pvAvatarMe", "pvBubbleMe"].forEach(function (id) {
             var el = $(id); if (el) el.innerHTML = myMarkup;
         });
     }
@@ -266,8 +274,7 @@
             var has = isImageSource(src);
             var box = el.querySelector(".app-icon-box");
             if (box) {
-                if (has) box.style.backgroundImage = 'url("' + src + '")';
-                else box.style.backgroundImage = "";
+                box.style.backgroundImage = has ? 'url("' + src + '")' : "";
                 box.classList.toggle("has-image", has);
             }
             el.classList.toggle("has-image", has);
@@ -279,13 +286,11 @@
             if (!el) return;
             var src = icons[dockMap[id]];
             var has = isImageSource(src);
-            if (has) el.style.backgroundImage = 'url("' + src + '")';
-            else el.style.backgroundImage = "";
+            el.style.backgroundImage = has ? 'url("' + src + '")' : "";
             el.classList.toggle("has-image", has);
         });
     }
 
-    /* 图标配置列表 */
     function renderIconConfigs() {
         var grid = $("iconCfgGrid");
         if (!grid) return;
@@ -805,7 +810,6 @@
         css.setProperty("--home-bg-image", a.homeBg.image ? "url(" + a.homeBg.image + ")" : "none");
         css.setProperty("--home-blur", (a.homeBg.blur / 100 * 30) + "px");
 
-        /* 图标背景：颜色 / 透明度 / 磨砂度 → 8 个图标共用 */
         css.setProperty("--icon-bg-color", hexToRgba(a.iconBg.color, a.iconBg.opacity / 100));
         css.setProperty("--icon-blur", (a.iconBg.blur / 100 * 30) + "px");
         css.setProperty("--app-label-size", (a.iconBg.labelSize || 11) + "px");
@@ -814,10 +818,10 @@
         css.setProperty("--chat-bg-color", hexToRgba(a.chatBg.color, a.chatBg.opacity / 100));
         css.setProperty("--chat-bg-image", a.chatBg.image ? "url(" + a.chatBg.image + ")" : "none");
 
-        css.setProperty("--avatar-size", (a.avatar.size || 84) + "px");
-        css.setProperty("--avatar-radius", (a.avatar.radius === undefined ? 50 : a.avatar.radius) + "px");
-        css.setProperty("--avatar-offset-y", (a.avatar.offsetY || 0) + "px");
-        css.setProperty("--avatar-bg", hexToRgba(a.avatar.color, a.avatar.opacity / 100));
+        /* 聊天头像（唯一对外暴露的三个变量） */
+        css.setProperty("--chat-avatar-size", (a.avatar.size || 36) + "px");
+        css.setProperty("--chat-avatar-radius", (a.avatar.radius === undefined ? 50 : a.avatar.radius) + "px");
+        css.setProperty("--chat-avatar-offset-y", (a.avatar.offsetY || 0) + "px");
 
         css.setProperty("--bubble-bg", hexToRgba(s.bubble.bg, s.bubble.opacity / 100));
         css.setProperty("--bubble-radius", s.bubble.radius + "px");
@@ -1069,7 +1073,6 @@
             });
         }
 
-        /* 图标配置：上传 / 清除 */
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
@@ -1132,14 +1135,13 @@
 
             var iconKey = el.getAttribute("data-icon-upload");
             if (iconKey) {
-                var self = el;
                 readImageFile(el.files && el.files[0], function (result) {
                     appData.settings.appearance.iconBg.icons[iconKey] = result;
                     saveData();
                     applySettings();
                     renderIconConfigs();
                 });
-                self.value = "";
+                el.value = "";
                 return;
             }
 
