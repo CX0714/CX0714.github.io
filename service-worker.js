@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v35";
+const CACHE_NAME = "philos-v36";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
    运行时补丁：回复方式 / 气泡 / 表情包 / Typing / 输入栏 /
-   自定义 CSS / 拍一拍弹窗。app.js 原文件不动。
+   自定义 CSS / 拍一拍弹窗 / 深色模式开关。app.js 原文件不动。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -440,6 +440,43 @@ function rmSetupPatSettings() {
     });
 }
 
+function rmSyncDarkToggle() {
+    var el = document.querySelector("[data-rm-dark]");
+    if (!el) return;
+    el.checked = document.documentElement.getAttribute("data-theme") === "dark";
+}
+
+function rmSetupThemeToggle() {
+    var page = document.querySelector('[data-page="main"]');
+    if (!page || page.querySelector("[data-rm-dark-card]")) return;
+
+    var card = document.createElement("div");
+    card.className = "group-card";
+    card.setAttribute("data-rm-dark-card", "");
+    card.innerHTML = '<div class="settings-item"><span>深色模式</span>' +
+        '<label class="switch"><input type="checkbox" data-rm-dark><span class="switch-track"></span></label></div>';
+
+    var account = page.querySelector(".account-card");
+    if (account && account.parentNode) account.parentNode.insertBefore(card, account.nextSibling);
+    else page.appendChild(card);
+
+    var input = card.querySelector("[data-rm-dark]");
+    input.addEventListener("change", function () {
+        appData.themeMode = input.checked ? "dark" : "light";
+        saveData();
+        applyTheme();
+        applySettings();
+        rmSyncDarkToggle();
+    });
+
+    rmSyncDarkToggle();
+
+    if (window.MutationObserver) {
+        var mo = new MutationObserver(rmSyncDarkToggle);
+        mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    }
+}
+
 function rmSyncBubblePreset() {
     var b = appData.settings && appData.settings.bubble;
     var preset = b && b.preset ? b.preset : "tail";
@@ -592,6 +629,7 @@ function rmInit() {
     rmTrimPresets();
     rmSyncBubblePreset();
     rmSetupPatSettings();
+    rmSetupThemeToggle();
     rmBuildUI();
     rmBind();
     rmRender();
