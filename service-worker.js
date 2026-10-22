@@ -124,8 +124,7 @@ function rmBuildMessage(p, pool) {
     if (mode === "combo") {
         var max = clamp(Number(p.comboMax) || 3, 2, 6);
         var count = 2 + Math.floor(Math.random() * (max - 1));
-        var cards = rmTakeCards(pool, count);
-        return { from: "ta", type: "text", text: cards.join("，"), status: "" };
+        return { from: "ta", type: "text", text: rmTakeCards(pool, count).join("，"), status: "" };
     }
     return null;
 }
@@ -233,13 +232,13 @@ function rmRender() {
         if (wEl) wEl.value = p.replyModes[key].weight;
     }
     var combo = document.querySelector("[data-rm-combo]");
-    var lmax = document.querySelector("[data-rm-lettermax]");
-    var lmin = document.querySelector("[data-rm-lettermin]");
-    var lmaxT = document.querySelector("[data-rm-lettermax]");
+    var letterCount = document.querySelector("[data-rm-lettercount]");
+    var delayMin = document.querySelector("[data-rm-lettermin]");
+    var delayMax = document.querySelector("[data-rm-lettermax]");
     if (combo) combo.value = p.comboMax;
-    if (lmax) lmax.value = p.letterMax;
-    if (lmin) lmin.value = p.letterDelayMin;
-    if (lmaxT) lmaxT.value = p.letterDelayMax;
+    if (letterCount) letterCount.value = p.letterMax;
+    if (delayMin) delayMin.value = p.letterDelayMin;
+    if (delayMax) delayMax.value = p.letterDelayMax;
     rmUpdatePct();
 }
 
@@ -286,7 +285,7 @@ function rmBuildUI() {
     card2.innerHTML =
         '<div class="card-title">组合与信笺</div>' +
         '<div class="control-row"><span class="control-label">多条组合最多</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="2" max="6" step="1" data-rm-combo><span class="control-label">条</span></div></div>' +
-        '<div class="control-row"><span class="control-label">信笺最多字卡</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="3" max="12" step="1" data-rm-lettermax><span class="control-label">条</span></div></div>' +
+        '<div class="control-row"><span class="control-label">信笺最多字卡</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="3" max="12" step="1" data-rm-lettercount><span class="control-label">条</span></div></div>' +
         '<div class="control-row"><span class="control-label">回信最短间隔</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="0" max="86400" step="1" data-rm-lettermin><span class="control-label">秒</span></div></div>' +
         '<div class="control-row"><span class="control-label">回信最长间隔</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="0" max="86400" step="1" data-rm-lettermax><span class="control-label">秒</span></div></div>' +
         '<p class="about-note" style="padding:0 16px 14px;">信笺只用文字字卡回信，固定格式：称呼 / 见字如晤 / 正文 / 落款和日期。</p>';
@@ -326,8 +325,8 @@ function rmBind() {
             return;
         }
 
-        if (t.getAttribute("data-rm-weight")) {
-            var wKey = t.getAttribute("data-rm-weight");
+        var wKey = t.getAttribute("data-rm-weight");
+        if (wKey && p.replyModes[wKey]) {
             p.replyModes[wKey].weight = Math.round(Number(t.value) || 0);
             rmUpdatePct();
             saveData();
@@ -339,7 +338,7 @@ function rmBind() {
             saveData();
             return;
         }
-        if (t.getAttribute("data-rm-lettermax")) {
+        if (t.getAttribute("data-rm-lettercount")) {
             p.letterMax = rmClampInput(t, 3, 12);
             saveData();
             return;
