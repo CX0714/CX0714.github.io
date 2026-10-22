@@ -67,19 +67,20 @@
 /* 不再用死板直线分割 */
 .widget-divider { display: none; }
 
-/* ===== 3. 头像：放大成视觉焦点，压在交界线上 ===== */
+/* ===== 3. 头像：固定 100px 正圆，压在交界线上 ===== */
 .widget-avatar {
     top: 45.5%;
-    width: 40%;
-    max-width: 170px;
-    height: auto;
-    aspect-ratio: 1 / 1;
+    width: 100px;
+    height: 100px;
+    max-width: 100px;
     border: 5px solid #ffffff;
     border-radius: 50%;
     background: var(--widget-avatar-bg);
     box-shadow: 0 14px 32px rgba(62, 86, 114, 0.28),
                 0 2px 6px rgba(62, 86, 114, 0.12);
     z-index: 30;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 [data-theme="dark"] .widget-avatar {
@@ -95,12 +96,12 @@
 }
 
 .widget-avatar .avatar-text {
-    font-size: 32px;
+    font-size: 30px;
 }
 
 /* ===== 4. 四行文字：贴着大头像下方，底部留白 ===== */
 .widget-text-area {
-    top: 67%;
+    top: 62%;
     bottom: 8.5%;
     left: 12%;
     right: 12%;
