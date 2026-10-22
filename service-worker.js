@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v20";
+const CACHE_NAME = "philos-v21";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {

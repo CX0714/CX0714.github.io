@@ -1,8 +1,8 @@
 /* =========================================================
-   Philos · 3.3
+   Philos · 3.4
    ========================================================= */
 
-/* ===== 头像作用域 ===== */
+/* ===== 头像：顶部写死，消息流独立 ===== */
 .chat-avatar {
     width: 48px !important;
     height: 48px !important;
@@ -27,6 +27,31 @@
 }
 
 html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
+
+/* ===== 气泡：我 / 对方完全分开 ===== */
+.msg-bubble {
+    transition: background-color 0.18s ease, color 0.18s ease, border-radius 0.18s ease, padding 0.18s ease;
+}
+
+.msg-row.me .msg-bubble {
+    background: var(--bubble-bg-me, #5b7fa6);
+    color: var(--bubble-text-me, #ffffff);
+}
+
+.msg-row.ta .msg-bubble {
+    background: var(--bubble-bg-ta, rgba(255, 255, 255, 0.86));
+    color: var(--bubble-text-ta, #1b1d21);
+}
+
+.pv-row.me .pv-bubble {
+    background: var(--bubble-bg-me, #5b7fa6);
+    color: var(--bubble-text-me, #ffffff);
+}
+
+.pv-row.ta .pv-bubble {
+    background: var(--bubble-bg-ta, rgba(255, 255, 255, 0.86));
+    color: var(--bubble-text-ta, #1b1d21);
+}
 
 /* ===== 主屏 2x2 ===== */
 .widget-small {
@@ -177,13 +202,10 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: right; padding-right: 10px; }
 .cfg-input::placeholder { color: var(--text-secondary); }
 
-/* 两列分段（小组件 / 大组件） */
 .kind-seg.two { grid-template-columns: repeat(2, 1fr); }
 .segment.seg-3 { grid-template-columns: repeat(3, 1fr); }
 
-/* =========================================================
-   大组件照片
-   ========================================================= */
+/* ===== 大组件照片 ===== */
 .widget-large { background-size: cover; background-position: center; }
 
 .widget-large.hero-single .widget-half {
@@ -202,9 +224,7 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
     background-repeat: no-repeat;
 }
 
-/* =========================================================
-   倒数日（仿系统倒数日 App）
-   ========================================================= */
+/* ===== 倒数日 ===== */
 .cd-row {
     display: flex;
     align-items: center;
