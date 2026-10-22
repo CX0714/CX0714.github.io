@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v29";
+const CACHE_NAME = "philos-v30";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
-   回复方式补丁：在 app.js 的 IIFE 尾部注入一套新的
-   scheduleReply / maybeReply 与权限页控件，原文件保持不动。
+   运行时补丁：注入回复方式系统、气泡预设样式与高度下限，
+   并包裹 applySettings 让预设真正生效。app.js 原文件不动。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -250,15 +250,41 @@ function rmClampInput(el, min, max) {
     return v;
 }
 
+function rmInjectStyles() {
+    if (document.getElementById("rm-style")) return;
+    var st = document.createElement("style");
+    st.id = "rm-style";
+    st.textContent =
+        ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}" +
+        "html[data-bubble-preset=\"large\"] .msg-bubble,html[data-bubble-preset=\"large\"] .pv-bubble{border-radius:calc(var(--bubble-radius,16px) + 10px) !important;}" +
+        "html[data-bubble-preset=\"small\"] .msg-bubble,html[data-bubble-preset=\"small\"] .pv-bubble{border-radius:max(3px,calc(var(--bubble-radius,16px) * 0.5)) !important;}" +
+        "html[data-bubble-preset=\"square\"] .msg-bubble,html[data-bubble-preset=\"square\"] .pv-bubble{border-radius:3px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}";
+    document.head.appendChild(st);
+}
+
+function rmSyncBubblePreset() {
+    var b = appData.settings && appData.settings.bubble;
+    var preset = b && b.preset ? b.preset : "tail";
+    document.documentElement.setAttribute("data-bubble-preset", preset);
+}
+
+function rmTuneBubble() {
+    var el = document.querySelector('[data-key="bubble.height"]');
+    if (!el) return;
+    el.setAttribute("min", "0");
+    el.min = "0";
+}
+
 function rmBuildUI() {
     var page = document.querySelector('[data-page="permission"]');
     if (!page || page.querySelector("[data-rm-card]")) return;
     var p = rmSettings();
     if (!p) return;
-
-    var style = document.createElement("style");
-    style.textContent = ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}";
-    document.head.appendChild(style);
 
     var rows = "";
     for (var i = 0; i < RM_MODES.length; i++) {
@@ -356,7 +382,16 @@ function rmBind() {
     });
 }
 
+var rmBaseApplySettings = applySettings;
+applySettings = function () {
+    rmBaseApplySettings.apply(null, arguments);
+    rmSyncBubblePreset();
+};
+
 function rmInit() {
+    rmInjectStyles();
+    rmTuneBubble();
+    rmSyncBubblePreset();
     rmSettings();
     rmBuildUI();
     rmBind();
