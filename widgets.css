@@ -1,11 +1,8 @@
 /* =========================================================
-   Philos · 3.2
-   ① 头像作用域隔离：顶部写死 48px，只管消息流
-   ② 垂直位置改用独立变量 --avatar-offset-y
-   ③ 大组件照片（整张 / 上下两张）
+   Philos · 3.3
    ========================================================= */
 
-/* ===== ① 顶部导航头像：固定 48px，不受任何设置影响 ===== */
+/* ===== 头像作用域 ===== */
 .chat-avatar {
     width: 48px !important;
     height: 48px !important;
@@ -13,7 +10,6 @@
     transform: none !important;
 }
 
-/* ===== ② 消息流头像：唯一受设置影响的位置 ===== */
 .msg-avatar {
     width: var(--msg-avatar-size, 36px);
     height: var(--msg-avatar-size, 36px);
@@ -22,7 +18,6 @@
     transition: width 0.16s ease, height 0.16s ease, border-radius 0.16s ease, transform 0.16s ease;
 }
 
-/* ===== 预览：和消息流用同一套变量 ===== */
 .pv-avatar {
     width: var(--msg-avatar-size, 36px);
     height: var(--msg-avatar-size, 36px);
@@ -33,43 +28,29 @@
 
 html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 
-/* =========================================================
-   主屏 2x2 容器
-   ========================================================= */
+/* ===== 主屏 2x2 ===== */
 .widget-small {
     background-color: rgba(255, 255, 255, var(--ws-bg-alpha, 0.5));
     -webkit-backdrop-filter: blur(var(--ws-blur, 20px));
     backdrop-filter: blur(var(--ws-blur, 20px));
 }
-
-[data-theme="dark"] .widget-small {
-    background-color: rgba(32, 34, 38, var(--ws-bg-alpha, 0.55));
-}
-
+[data-theme="dark"] .widget-small { background-color: rgba(32, 34, 38, var(--ws-bg-alpha, 0.55)); }
 .widget-small.has-template { padding: 0; }
 
-/* ===== 模板容器 ===== */
 .ws-tpl {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    overflow: hidden;
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px; overflow: hidden;
     border-radius: inherit;
     opacity: var(--ws-content-opacity, 1);
 }
-
 .ws-img-empty {
-    display: block;
-    width: 100%;
-    height: 100%;
+    display: block; width: 100%; height: 100%;
     background: linear-gradient(135deg, rgba(200, 212, 224, 0.55), rgba(232, 238, 244, 0.35));
 }
 
-/* 模板 A：双头像纪念日 */
+/* 模板 A */
 .ws-a { padding: 12px; gap: 9px; }
 .ws-a-title {
     font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
@@ -84,26 +65,17 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
     box-shadow: 0 3px 10px rgba(70, 95, 125, 0.14);
 }
 .ws-a-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
 .ws-a-heart {
-    position: relative;
-    width: 8px; height: 8px;
-    background: #e7a3ab;
-    transform: rotate(-45deg);
-    margin: 0 1px;
-    flex: 0 0 auto;
+    position: relative; width: 8px; height: 8px;
+    background: #e7a3ab; transform: rotate(-45deg);
+    margin: 0 1px; flex: 0 0 auto;
 }
-.ws-a-heart::before,
-.ws-a-heart::after {
-    content: "";
-    position: absolute;
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: inherit;
+.ws-a-heart::before, .ws-a-heart::after {
+    content: ""; position: absolute; width: 8px; height: 8px;
+    border-radius: 50%; background: inherit;
 }
 .ws-a-heart::before { top: -4px; left: 0; }
 .ws-a-heart::after { top: 0; left: 4px; }
-
 .ws-a-days {
     font-size: 20px; font-weight: 700; letter-spacing: -0.4px;
     color: var(--text-primary);
@@ -112,7 +84,7 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 [data-theme="dark"] .ws-a-title { color: rgba(200, 208, 220, 0.7); }
 [data-theme="dark"] .ws-a-avatar { background: rgba(255, 255, 255, 0.12); }
 
-/* 模板 B：黑胶唱片 */
+/* 模板 B */
 .ws-b { padding: 12px; gap: 10px; }
 .ws-b-title {
     font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
@@ -121,22 +93,19 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 }
 [data-theme="dark"] .ws-b-title { color: rgba(200, 208, 220, 0.7); }
 .ws-b-card {
-    width: 76px; height: 76px;
-    border-radius: 9px; overflow: hidden;
-    background: #ffffff;
-    transform: rotate(-8deg);
+    width: 76px; height: 76px; border-radius: 9px; overflow: hidden;
+    background: #ffffff; transform: rotate(-8deg);
     box-shadow: 0 10px 22px rgba(60, 82, 108, 0.22);
     display: flex; align-items: center; justify-content: center;
 }
 .ws-b-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* 模板 C：海报进度条 */
+/* 模板 C */
 .ws-c { padding: 0; justify-content: flex-start; gap: 0; align-items: stretch; }
 .ws-c-img { width: 100%; height: 52%; overflow: hidden; background: rgba(200, 212, 224, 0.4); }
 .ws-c-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .ws-c-body {
-    flex: 1; min-height: 0; width: 100%;
-    padding: 10px 12px;
+    flex: 1; min-height: 0; width: 100%; padding: 10px 12px;
     display: flex; flex-direction: column; justify-content: center; gap: 4px;
     text-align: left;
 }
@@ -147,23 +116,20 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 [data-theme="dark"] .ws-c-sub { color: rgba(180, 190, 202, 0.6); }
 [data-theme="dark"] .ws-c-bar { background: rgba(255, 255, 255, 0.14); }
 
-/* 模板 D：纯图片 */
+/* 模板 D */
 .ws-d { padding: 0; position: relative; justify-content: flex-end; align-items: stretch; gap: 0; }
 .ws-d-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
 .ws-d-text {
-    position: relative; z-index: 2;
-    padding: 0 12px 14px;
+    position: relative; z-index: 2; padding: 0 12px 14px;
     font-size: 13px; font-weight: 600; line-height: 1.4;
-    color: #ffffff;
-    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+    color: #ffffff; text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
     text-align: center;
     max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 /* ===== 模板选择卡 ===== */
 .tpl-scroll {
-    display: flex; gap: 12px;
-    overflow-x: auto;
+    display: flex; gap: 12px; overflow-x: auto;
     padding: 4px 16px 16px;
     -webkit-overflow-scrolling: touch;
     flex: 0 0 auto;
@@ -174,8 +140,7 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
     padding: 0; background: none;
 }
 .tpl-thumb {
-    width: 92px; height: 92px;
-    border-radius: 18px;
+    width: 92px; height: 92px; border-radius: 18px;
     background: var(--card-bg);
     border: 2px solid transparent;
     box-shadow: var(--shadow-card);
@@ -204,8 +169,7 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 /* ===== 配置输入 ===== */
 .cfg-input {
     flex: 0 0 56%; min-width: 0; height: 36px;
-    padding: 0 10px;
-    border: none; border-radius: 10px;
+    padding: 0 10px; border: none; border-radius: 10px;
     background: var(--input-bg);
     font-size: 14px; color: var(--text-primary);
     outline: none; text-align: right;
@@ -213,18 +177,15 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: right; padding-right: 10px; }
 .cfg-input::placeholder { color: var(--text-secondary); }
 
-/* 三段分段控件（大组件照片模式） */
+/* 两列分段（小组件 / 大组件） */
+.kind-seg.two { grid-template-columns: repeat(2, 1fr); }
 .segment.seg-3 { grid-template-columns: repeat(3, 1fr); }
 
 /* =========================================================
-   主屏大组件照片
+   大组件照片
    ========================================================= */
-.widget-large {
-    background-size: cover;
-    background-position: center;
-}
+.widget-large { background-size: cover; background-position: center; }
 
-/* 整张模式：上下两半区透明，让大卡背景图透出来 */
 .widget-large.hero-single .widget-half {
     background-color: transparent !important;
     background-image: none !important;
@@ -234,10 +195,82 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
     backdrop-filter: none;
 }
 
-/* 上下两张：上下半区各自铺图 */
 .widget-large.hero-split .widget-half {
     background-color: transparent !important;
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+}
+
+/* =========================================================
+   倒数日（仿系统倒数日 App）
+   ========================================================= */
+.cd-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+}
+
+.cd-days {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    min-width: 80px;
+}
+
+.cd-prefix, .cd-unit {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.cd-num {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -1.2px;
+    line-height: 1;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.cd-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.cd-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.cd-date {
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    letter-spacing: 0.2px;
+}
+
+.cd-badge {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.85;
+}
+
+.cd-item.active { background: var(--active-row-bg); }
+.cd-item.active .cd-badge { color: #5b7fa6; opacity: 1; }
+
+.cd-empty {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 60px 0;
 }
