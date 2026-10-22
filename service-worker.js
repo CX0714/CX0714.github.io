@@ -1,9 +1,9 @@
-const CACHE_NAME = "philos-v36";
+const CACHE_NAME = "philos-v37";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
    运行时补丁：回复方式 / 气泡 / 表情包 / Typing / 输入栏 /
-   自定义 CSS / 拍一拍弹窗 / 深色模式开关。app.js 原文件不动。
+   自定义 CSS / 拍一拍弹窗 / 深色开关 / 消息通知 / 聊天置底。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -135,6 +135,39 @@ function rmSetTyping(on) {
     el.textContent = on ? "Typing..." : (appData.taName || "他");
 }
 
+function rmNotify(text) {
+    var p = appData.settings && appData.settings.permission;
+    if (!p || !p.notify) return;
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    var title = appData.taName || "他";
+    try {
+        if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+            navigator.serviceWorker.ready.then(function (reg) {
+                reg.showNotification(title, {
+                    body: text,
+                    icon: "icon-192.png",
+                    badge: "icon-192.png",
+                    tag: "philos-msg"
+                });
+            }).catch(function () {});
+        } else {
+            new Notification(title, { body: text, icon: "icon-192.png" });
+        }
+    } catch (e) {}
+}
+
+function rmScrollChatBottom() {
+    var box = $("chatMessages");
+    if (!box) return;
+    box.scrollTop = box.scrollHeight;
+}
+
+function rmAutoScrollChat() {
+    rmScrollChatBottom();
+    setTimeout(rmScrollChatBottom, 60);
+    setTimeout(rmScrollChatBottom, 240);
+}
+
 function rmApplyPatBlur() {
     var b = appData.settings && appData.settings.bubble;
     var v = b && typeof b.patBlur === "number" ? b.patBlur : 70;
@@ -189,6 +222,7 @@ function rmShowPat(text) {
         rmHidePat();
         showScreen("chatView");
         renderChat();
+        rmAutoScrollChat();
     });
 
     actions.appendChild(later);
@@ -218,11 +252,13 @@ scheduleReply = function () {
     replyTimer = setTimeout(function () {
         var now = Date.now();
         var added = 0;
+        var notice = "";
         for (var i = 0; i < count; i++) {
             var msg = rmBuildMessage(p, pool);
             if (!msg) break;
             msg.time = now + i;
             appData.chatHistory.push(msg);
+            if (!notice) notice = msg.type === "sticker" ? "给你发了一个表情包" : (msg.text || "");
             added++;
         }
         rmSetTyping(false);
@@ -239,7 +275,13 @@ scheduleReply = function () {
         }
 
         saveData();
-        if ($("chatView") && $("chatView").classList.contains("active")) renderChat();
+        var inChat = $("chatView") && $("chatView").classList.contains("active");
+        if (inChat) {
+            renderChat();
+            rmAutoScrollChat();
+        } else if (notice) {
+            rmNotify(notice);
+        }
     }, delay);
 };
 
@@ -342,9 +384,10 @@ function rmInjectStyles() {
         "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px;}" +
         "#chatMessages .msg-bubble.rm-sticker-bubble{background:transparent !important;border:none !important;padding:0 !important;box-shadow:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;}" +
         "#chatMessages .rm-sticker-bubble img{max-width:112px !important;border-radius:10px;}" +
-        ".chat-input-box{min-height:44px;padding:4px 8px 4px 16px;}" +
+        ".chat-input-box{min-height:44px;padding:4px 8px 4px 16px;background:var(--glass-bg);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:none;}" +
         ".chat-input-box .input-row{align-items:center;}" +
         ".chat-input-box textarea{padding:0;line-height:1.5;}" +
+        ".chat-circle-btn,.nav-back{background:var(--glass-bg);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-border);}" +
         ".pat-pop{position:fixed;inset:0;z-index:620;display:flex;align-items:center;justify-content:center;padding:24px;}" +
         ".pat-pop-mask{position:absolute;inset:0;background:rgba(16,20,26,.34);}" +
         ".pat-pop-card{position:relative;z-index:1;width:80%;max-width:320px;padding:28px 20px 18px;border-radius:30px;text-align:center;background:rgba(255,255,255,.55);-webkit-backdrop-filter:blur(var(--pat-blur,21px)) saturate(120%);backdrop-filter:blur(var(--pat-blur,21px)) saturate(120%);border:1px solid rgba(255,255,255,.55);box-shadow:0 24px 60px rgba(20,30,45,.28);}" +
@@ -374,6 +417,7 @@ var rmBaseRenderChat = renderChat;
 renderChat = function () {
     rmBaseRenderChat.apply(null, arguments);
     rmDecorateChat();
+    rmAutoScrollChat();
 };
 
 function rmApplyCustomCss() {
@@ -638,6 +682,14 @@ function rmInit() {
     var input = $("chatInput");
     if (input) input.placeholder = "iMessage";
     rmDecorateChat();
+
+    var chatBtn = $("appChat");
+    if (chatBtn) {
+        chatBtn.addEventListener("click", function () {
+            setTimeout(rmScrollChatBottom, 80);
+            setTimeout(rmScrollChatBottom, 300);
+        });
+    }
 }
 
 if (document.readyState === "loading") {
