@@ -45,6 +45,7 @@
         <symbol id="ic-down-double" viewBox="0 0 24 24"><path d="M6 8.5 12 14l6-5.5M6 14.5 12 20l6-5.5"/></symbol>
         <symbol id="ic-image" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3.4"/><circle cx="8.6" cy="10" r="1.6"/><path d="M4.5 17 9.8 12l3.4 3 2.4-2.2 3.9 4.2"/></symbol>
         <symbol id="ic-camera" viewBox="0 0 24 24"><path d="M4 8.5h3l1.4-2h7.2L17 8.5h3a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 20 18.5H4A1.5 1.5 0 0 1 2.5 17v-7A1.5 1.5 0 0 1 4 8.5z"/><circle cx="12" cy="13.2" r="3.2"/></symbol>
+        <symbol id="ic-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
     </svg>
 
     <div class="splash" id="splash">
@@ -75,7 +76,7 @@
             </section>
 
             <div class="icon-grid">
-                <div class="widget-small" id="widgetSmallArea"><span class="ws-placeholder">Select Widget</span></div>
+                <div class="widget-small" id="widgetSmallArea" role="button" tabindex="0"></div>
                 <div class="app-grid-small">
                     <button class="app-icon" id="appLetter" type="button">
                         <span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-mail"></use></svg></span>
@@ -108,7 +109,6 @@
     <!-- ===== 设置 ===== -->
     <div class="screen settings-view" id="settingsView">
         <div class="settings-shell">
-
             <section class="set-page active" data-page="main">
                 <div class="settings-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回主屏幕"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -206,7 +206,6 @@
                 </div>
             </section>
 
-            <!-- 图标背景 -->
             <section class="set-page" data-page="appearance.icon">
                 <div class="sub-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -222,10 +221,7 @@
                         <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-val="appearance.iconBg.blur" data-unit="%">20%</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.blur" data-unit="%" min="0" max="100" step="1">
                     </div>
-                    <div class="control-row">
-                        <span class="control-label">图标文字显示</span>
-                        <label class="switch"><input type="checkbox" data-key="appearance.iconBg.showLabel"><span class="switch-track"></span></label>
-                    </div>
+                    <div class="control-row"><span class="control-label">图标文字显示</span><label class="switch"><input type="checkbox" data-key="appearance.iconBg.showLabel"><span class="switch-track"></span></label></div>
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">文字大小</span><span class="control-value" data-val="appearance.iconBg.labelSize" data-unit="px">11px</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.labelSize" data-unit="px" min="8" max="16" step="1">
@@ -256,13 +252,11 @@
                 </div>
             </section>
 
-            <!-- 聊天头像（只留聊天头像相关） -->
             <section class="set-page" data-page="appearance.avatar">
                 <div class="sub-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">聊天头像</span>
                 </div>
-
                 <div class="group-card control-card">
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">头像大小</span><span class="control-value" data-val="appearance.avatar.size" data-unit="px">36px</span></div>
@@ -284,18 +278,10 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 实时预览：真实聊天气泡场景 -->
                 <div class="preview-card">
                     <div class="preview-title">实时预览</div>
-                    <div class="pv-row ta">
-                        <span class="pv-avatar" id="pvAvatarTa">他</span>
-                        <span class="pv-bubble">我在</span>
-                    </div>
-                    <div class="pv-row me">
-                        <span class="pv-bubble">刚到家</span>
-                        <span class="pv-avatar" id="pvAvatarMe">Me</span>
-                    </div>
+                    <div class="pv-row ta"><span class="pv-avatar" id="pvAvatarTa">他</span><span class="pv-bubble">我在</span></div>
+                    <div class="pv-row me"><span class="pv-bubble">刚到家</span><span class="pv-avatar" id="pvAvatarMe">Me</span></div>
                 </div>
             </section>
 
@@ -432,12 +418,11 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">2.5.1</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.0</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
             </section>
-
         </div>
         <style id="bubbleCustom"></style>
     </div>
@@ -459,31 +444,22 @@
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-phone"></use></svg>
             </button>
         </header>
-
         <div class="chat-messages" id="chatMessages"></div>
-
         <div class="chat-input-wrapper">
-            <button class="chat-plus" id="btnChatMore" type="button" aria-label="更多">
-                <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg>
-            </button>
+            <button class="chat-plus" id="btnChatMore" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg></button>
             <div class="chat-input-box">
                 <div class="quote-bar" id="quoteBar" hidden>
                     <span class="quote-text" id="quoteText"></span>
-                    <button class="quote-close" id="quoteClose" type="button" aria-label="取消引用">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-x"></use></svg>
-                    </button>
+                    <button class="quote-close" id="quoteClose" type="button" aria-label="取消引用"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-x"></use></svg></button>
                 </div>
                 <div class="input-row">
                     <textarea id="chatInput" rows="1" placeholder="发消息..."></textarea>
-                    <button class="send-btn" id="btnChatSend" type="button" aria-label="发送">
-                        <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-up"></use></svg>
-                    </button>
+                    <button class="send-btn" id="btnChatSend" type="button" aria-label="发送"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-up"></use></svg></button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== 抽屉 ===== -->
     <div class="drawer-mask" id="drawerMask"></div>
     <div class="drawer" id="chatDrawer">
         <div class="drawer-handle"></div>
@@ -544,15 +520,11 @@
         </div>
         <div class="call-actions">
             <div class="call-btn-wrap">
-                <button class="call-btn" id="callMin" type="button">
-                    <svg class="svg-icon" viewBox="0 0 24 24" id="callMinIcon"><use href="#ic-down-double"></use></svg>
-                </button>
+                <button class="call-btn" id="callMin" type="button"><svg class="svg-icon" viewBox="0 0 24 24" id="callMinIcon"><use href="#ic-down-double"></use></svg></button>
                 <span class="call-btn-label" id="callMinLabel">最小化</span>
             </div>
             <div class="call-btn-wrap">
-                <button class="call-btn hangup" id="callEnd" type="button">
-                    <svg class="svg-icon" viewBox="0 0 24 24" id="callEndIcon"><use href="#ic-phone"></use></svg>
-                </button>
+                <button class="call-btn hangup" id="callEnd" type="button"><svg class="svg-icon" viewBox="0 0 24 24" id="callEndIcon"><use href="#ic-phone"></use></svg></button>
                 <span class="call-btn-label">挂断</span>
             </div>
         </div>
@@ -563,40 +535,122 @@
         <span class="call-pill-time" id="callPillTime">00:00</span>
     </button>
 
-    <div class="screen cards-view" id="cardsView">
-        <header class="app-header">
-            <button class="glass-btn" id="btnCardsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
-            <span class="app-title">字卡库</span>
-            <span class="header-spacer"></span>
+    <!-- ===== 倒数日 ===== -->
+    <div class="screen app-view" id="countdownView">
+        <header class="app-nav">
+            <button class="nav-back" id="btnCountdownBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
+            <span class="app-nav-title">倒数日</span>
+            <span class="nav-spacer"></span>
         </header>
-        <div class="app-content"><p class="empty-hint">字卡列表将在下个阶段更新。</p></div>
+        <div class="app-scroll" id="countdownList"></div>
+        <button class="fab" id="btnAddCountdown" type="button" aria-label="添加倒数日"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg></button>
     </div>
 
-    <div class="screen countdown-view" id="countdownView">
-        <header class="app-header">
-            <button class="glass-btn" id="btnCountdownBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
-            <span class="app-title">倒数日</span>
-            <span class="header-spacer"></span>
+    <!-- ===== 信箱 ===== -->
+    <div class="screen app-view" id="letterView">
+        <header class="app-nav">
+            <button class="nav-back" id="btnLetterBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
+            <span class="app-nav-title">信箱</span>
+            <span class="nav-spacer"></span>
         </header>
-        <div class="app-content"><p class="empty-hint">倒数日列表将在下个阶段更新。</p></div>
+        <div class="app-scroll">
+            <button class="compose-entry" id="btnCompose" type="button">写点什么给他…</button>
+            <div id="letterList"></div>
+        </div>
+
+        <div class="compose-panel" id="letterCompose" hidden>
+            <header class="app-nav">
+                <button class="nav-text" id="btnComposeCancel" type="button">取消</button>
+                <span class="app-nav-title">写信</span>
+                <span class="nav-spacer"></span>
+            </header>
+            <div class="letter-paper">
+                <textarea id="letterInput" spellcheck="false"></textarea>
+            </div>
+            <div class="compose-footer">
+                <span class="letter-hint">他会在 48 小时内回信</span>
+                <button class="send-text" id="btnSendLetter" type="button">寄出</button>
+            </div>
+        </div>
     </div>
 
-    <div class="screen letter-view" id="letterView">
-        <header class="app-header">
-            <button class="glass-btn" id="btnLetterBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
-            <span class="app-title">信箱</span>
-            <span class="header-spacer"></span>
+    <!-- ===== 字卡库 ===== -->
+    <div class="screen app-view" id="cardsView">
+        <header class="app-nav">
+            <button class="nav-back" id="btnCardsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
+            <span class="app-nav-title">字卡库</span>
+            <button class="nav-back" id="btnCardsMore" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button>
         </header>
-        <div class="app-content"><p class="empty-hint">信件列表将在下个阶段更新。</p></div>
+
+        <div class="kind-seg" id="cardKindSeg">
+            <button class="kind-btn active" data-kind="text" type="button">文字</button>
+            <button class="kind-btn" data-kind="emoji" type="button">emoji</button>
+            <button class="kind-btn" data-kind="sticker" type="button">表情包</button>
+            <button class="kind-btn" data-kind="status" type="button">状态</button>
+        </div>
+
+        <div class="cat-scroll" id="cardCats"></div>
+
+        <button class="card-add-row" id="btnCardAdd" type="button">
+            <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg>
+            <span>批量添加字卡…</span>
+        </button>
+
+        <div class="card-scroll" id="cardList"></div>
+
+        <div class="cards-menu" id="cardsMenu" hidden>
+            <button class="msg-menu-item" id="btnExportCards" type="button">导出字卡</button>
+            <label class="msg-menu-item" for="importCardsFile">导入字卡</label>
+            <input type="file" id="importCardsFile" accept="application/json,.json" hidden>
+        </div>
     </div>
 
-    <div class="screen widgets-view" id="widgetsView">
-        <header class="app-header">
-            <button class="glass-btn" id="btnWidgetsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
-            <span class="app-title">小组件</span>
-            <span class="header-spacer"></span>
-        </header>
-        <div class="app-content"><p class="empty-hint">组件模板将在下个阶段更新。</p></div>
+    <!-- ===== 倒数日添加弹窗 ===== -->
+    <div class="modal-mask" id="cdMask" hidden></div>
+    <div class="modal-sheet" id="cdSheet" hidden>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">新建倒数日</div>
+        <div class="field-row"><input type="text" id="cdTitle" maxlength="20" placeholder="标题，如：和老公认识"></div>
+        <div class="field-row"><input type="date" id="cdDate"></div>
+        <div class="sheet-actions">
+            <button class="sheet-btn" id="cdCancel" type="button">取消</button>
+            <button class="sheet-btn primary" id="cdSave" type="button">添加</button>
+        </div>
+    </div>
+
+    <!-- ===== 字卡弹窗 ===== -->
+    <div class="modal-mask" id="cardModalMask" hidden></div>
+
+    <div class="modal-sheet" id="cardAddSheet" hidden>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">批量添加字卡</div>
+        <div class="field-row"><textarea id="cardAddText" rows="4" placeholder="一行一条，可一次贴很多条"></textarea></div>
+        <div class="field-row picker-row"><span>分类</span><select id="cardAddCategory"></select></div>
+        <div class="sheet-actions">
+            <button class="sheet-btn" id="cardAddCancel" type="button">取消</button>
+            <button class="sheet-btn primary" id="cardAddSave" type="button">添加</button>
+        </div>
+    </div>
+
+    <div class="modal-sheet" id="cardEditSheet" hidden>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">编辑字卡</div>
+        <div class="field-row"><textarea id="cardEditText" rows="4"></textarea></div>
+        <div class="field-row picker-row"><span>分类</span><select id="cardEditCategory"></select></div>
+        <div class="sheet-actions">
+            <button class="sheet-btn" id="cardEditCancel" type="button">取消</button>
+            <button class="sheet-btn primary" id="cardEditSave" type="button">保存</button>
+        </div>
+    </div>
+
+    <div class="modal-sheet" id="catSheet" hidden>
+        <div class="sheet-handle"></div>
+        <div class="sheet-title">新建分类</div>
+        <div class="field-row"><input type="text" id="catName" maxlength="12" placeholder="分类名称"></div>
+        <div class="sheet-actions">
+            <button class="sheet-btn" id="catCancel" type="button">取消</button>
+            <button class="sheet-btn primary" id="catSave" type="button">创建</button>
+        </div>
     </div>
 
     <div class="sheet-mask" id="sheetMask"></div>
