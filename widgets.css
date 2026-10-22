@@ -6,48 +6,62 @@
 .widget-large {
     position: relative;
     border-radius: 40px;
-    border: 1px solid rgba(255, 255, 255, 0.55);
-    background: rgba(255, 255, 255, 0.16);
-    -webkit-backdrop-filter: blur(18px) saturate(115%);
-    backdrop-filter: blur(18px) saturate(115%);
-    box-shadow: 0 20px 44px rgba(70, 95, 125, 0.13),
-                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.62);
+    background-color: rgba(255, 255, 255, 0.52);
+    -webkit-backdrop-filter: blur(24px) saturate(118%);
+    backdrop-filter: blur(24px) saturate(118%);
+    box-shadow: 0 18px 42px rgba(66, 90, 120, 0.16),
+                inset 0 1px 0 rgba(255, 255, 255, 0.75);
     isolation: isolate;
+    overflow: hidden;
     background-size: cover;
     background-position: center;
 }
 
 [data-theme="dark"] .widget-large {
-    border-color: rgba(255, 255, 255, 0.14);
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.16);
+    background-color: rgba(30, 32, 37, 0.55);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.50),
+                inset 0 1px 0 rgba(255, 255, 255, 0.09);
 }
 
 /* ===== 2. 上下层次：下半是有圆角的叠卡 ===== */
-.widget-half {
-    height: auto;
-}
-
 .widget-half-top {
     top: 0;
-    bottom: 34%;
+    bottom: auto;
+    height: 48%;
     border-radius: 0;
+    z-index: 1;
 }
 
 /* 下半：从下方叠上来，左上右上大圆角 */
 .widget-half-bottom {
-    top: 47%;
+    top: 45.5%;
     bottom: 0;
     height: auto;
-    border-radius: 38px 38px 0 0;
-    box-shadow: 0 -14px 32px rgba(70, 92, 118, 0.12),
-                inset 0 1px 0 rgba(255, 255, 255, 0.40);
+    border-radius: 36px 36px 0 0;
+    z-index: 2;
+    box-shadow: 0 -18px 30px -14px rgba(66, 90, 120, 0.30),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 
 [data-theme="dark"] .widget-half-bottom {
-    box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.40),
-                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow: 0 -18px 30px -14px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+/* 下半卡统一垫一层半透明白玻璃；split 模式有下半照片，保留照片本身 */
+.widget-large:not(.hero-split) .widget-half-bottom::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.13));
+    pointer-events: none;
+}
+
+[data-theme="dark"] .widget-large:not(.hero-split) .widget-half-bottom::after {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.03));
 }
 
 /* 不再用死板直线分割 */
@@ -55,15 +69,16 @@
 
 /* ===== 3. 头像：放大成视觉焦点，压在交界线上 ===== */
 .widget-avatar {
-    top: 47%;
+    top: 45.5%;
     width: 40%;
-    max-width: 152px;
+    max-width: 170px;
     height: auto;
     aspect-ratio: 1 / 1;
-    border: 4px solid #ffffff;
+    border: 5px solid #ffffff;
     border-radius: 50%;
     background: var(--widget-avatar-bg);
-    box-shadow: 0 14px 30px rgba(66, 90, 118, 0.24);
+    box-shadow: 0 14px 32px rgba(62, 86, 114, 0.28),
+                0 2px 6px rgba(62, 86, 114, 0.12);
     z-index: 30;
 }
 
@@ -80,26 +95,71 @@
 }
 
 .widget-avatar .avatar-text {
-    font-size: 30px;
+    font-size: 32px;
 }
 
 /* ===== 4. 四行文字：贴着大头像下方，底部留白 ===== */
 .widget-text-area {
-    top: 68%;
-    bottom: 10%;
+    top: 67%;
+    bottom: 8.5%;
     left: 12%;
     right: 12%;
     padding-top: 0;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 3px;
     z-index: 20;
+    overflow: hidden;
 }
 
-/* 自定义文字颜色 */
-.widget-large.hero-text-custom .widget-line { color: var(--hero-text, currentColor); }
+.widget-text-area .widget-line-1 {
+    line-height: 1.25;
+    margin-bottom: 1px;
+}
+
+.widget-text-area .widget-line-2,
+.widget-text-area .widget-line-3,
+.widget-text-area .widget-line-4 {
+    line-height: 1.2;
+}
+
+/* 自定义文字颜色（四行共用） */
+.widget-large.hero-text-custom .widget-line,
+.widget-large.hero-text-custom .widget-line-1,
 .widget-large.hero-text-custom .widget-line-2,
 .widget-large.hero-text-custom .widget-line-3,
-.widget-large.hero-text-custom .widget-line-4 { opacity: 0.82; }
+.widget-large.hero-text-custom .widget-line-4 {
+    color: var(--hero-text, currentColor);
+}
+
+/* 文字颜色控件：预设色块 */
+.hero-color-presets {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 16px 16px;
+}
+
+.hero-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 9px;
+    border: 1px solid rgba(0, 0, 0, 0.10);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    padding: 0;
+    flex: 0 0 auto;
+    transition: transform 0.15s ease;
+}
+
+.hero-swatch.active {
+    outline: 2px solid #5b7fa6;
+    outline-offset: 2px;
+}
+
+.hero-swatch:active { transform: scale(0.92); }
+
+[data-theme="dark"] .hero-swatch {
+    border-color: rgba(255, 255, 255, 0.18);
+}
 
 /* ===== 5. 其余沿用 ===== */
 .widget-small {
