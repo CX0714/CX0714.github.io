@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v32";
+const CACHE_NAME = "philos-v33";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -275,7 +275,7 @@ function rmInjectStyles() {
         "#chatMessages .rm-sticker-bubble img{max-width:112px !important;border-radius:10px;}" +
         ".chat-input-box{min-height:44px;padding:4px 8px 4px 16px;}" +
         ".chat-input-box .input-row{align-items:center;}" +
-        ".chat-input-box textarea{padding:0;line-height:1.5;max-height:44px;}";
+        ".chat-input-box textarea{padding:0;line-height:1.5;}";
     document.head.appendChild(st);
 }
 
