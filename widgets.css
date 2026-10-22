@@ -1,8 +1,115 @@
 /* =========================================================
-   Philos · 3.8
+   Philos · 3.9  大组件层次重做
    ========================================================= */
 
-/* ===== 头像作用域 ===== */
+/* ===== 1. 整体实体卡片（不再是幽灵） ===== */
+.widget-large {
+    position: relative;
+    border-radius: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.16);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
+    backdrop-filter: blur(18px) saturate(115%);
+    box-shadow: 0 20px 44px rgba(70, 95, 125, 0.13),
+                inset 0 1px 0 rgba(255, 255, 255, 0.55);
+    isolation: isolate;
+    background-size: cover;
+    background-position: center;
+}
+
+[data-theme="dark"] .widget-large {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 20px 44px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ===== 2. 上下层次：下半是有圆角的叠卡 ===== */
+.widget-half {
+    height: auto;
+}
+
+.widget-half-top {
+    top: 0;
+    bottom: 34%;
+    border-radius: 0;
+}
+
+/* 下半：从下方叠上来，左上右上大圆角 */
+.widget-half-bottom {
+    top: 47%;
+    bottom: 0;
+    height: auto;
+    border-radius: 38px 38px 0 0;
+    box-shadow: 0 -14px 32px rgba(70, 92, 118, 0.12),
+                inset 0 1px 0 rgba(255, 255, 255, 0.40);
+}
+
+[data-theme="dark"] .widget-half-bottom {
+    box-shadow: 0 -14px 32px rgba(0, 0, 0, 0.40),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* 不再用死板直线分割 */
+.widget-divider { display: none; }
+
+/* ===== 3. 头像：放大成视觉焦点，压在交界线上 ===== */
+.widget-avatar {
+    top: 47%;
+    width: 40%;
+    max-width: 152px;
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border: 4px solid #ffffff;
+    border-radius: 50%;
+    background: var(--widget-avatar-bg);
+    box-shadow: 0 14px 30px rgba(66, 90, 118, 0.24);
+    z-index: 30;
+}
+
+[data-theme="dark"] .widget-avatar {
+    border-color: rgba(255, 255, 255, 0.88);
+}
+
+.widget-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 50%;
+}
+
+.widget-avatar .avatar-text {
+    font-size: 30px;
+}
+
+/* ===== 4. 四行文字：贴着大头像下方，底部留白 ===== */
+.widget-text-area {
+    top: 68%;
+    bottom: 10%;
+    left: 12%;
+    right: 12%;
+    padding-top: 0;
+    justify-content: center;
+    gap: 3px;
+    z-index: 20;
+}
+
+/* 自定义文字颜色 */
+.widget-large.hero-text-custom .widget-line { color: var(--hero-text, currentColor); }
+.widget-large.hero-text-custom .widget-line-2,
+.widget-large.hero-text-custom .widget-line-3,
+.widget-large.hero-text-custom .widget-line-4 { opacity: 0.82; }
+
+/* ===== 5. 其余沿用 ===== */
+.widget-small {
+    background-color: rgba(255, 255, 255, var(--ws-bg-alpha, 0.5));
+    -webkit-backdrop-filter: blur(var(--ws-blur, 20px));
+    backdrop-filter: blur(var(--ws-blur, 20px));
+}
+[data-theme="dark"] .widget-small { background-color: rgba(32, 34, 38, var(--ws-bg-alpha, 0.55)); }
+.widget-small.has-template { padding: 0; }
+
 .chat-avatar {
     width: 48px !important;
     height: 48px !important;
@@ -28,10 +135,7 @@
 
 html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 
-/* =========================================================
-   消息行：让两边头像的基线一致
-   “已送达”不再参与布局，避免我这边头像被顶高
-   ========================================================= */
+/* 消息行：两侧头像基线一致 */
 .msg-wrap { position: relative; }
 
 .msg-status-text {
@@ -45,19 +149,9 @@ html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 }
 
 .msg-row.me { padding-bottom: 17px; }
-
-/* 对方气泡右侧没有小字，用同样的内边距留给错觉 —— 保证两行等高 */
 .msg-row.ta { padding-bottom: 17px; }
 
-/* ===== 主屏 2x2 ===== */
-.widget-small {
-    background-color: rgba(255, 255, 255, var(--ws-bg-alpha, 0.5));
-    -webkit-backdrop-filter: blur(var(--ws-blur, 20px));
-    backdrop-filter: blur(var(--ws-blur, 20px));
-}
-[data-theme="dark"] .widget-small { background-color: rgba(32, 34, 38, var(--ws-bg-alpha, 0.55)); }
-.widget-small.has-template { padding: 0; }
-
+/* 2x2 模板 */
 .ws-tpl {
     width: 100%; height: 100%;
     display: flex; flex-direction: column;
@@ -133,8 +227,7 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
 .clear-text { font-size: 14px; color: #ff3b30; padding: 0; }
 .clear-text:active { opacity: 0.6; }
 
-/* 大组件：上下两半独立 */
-.widget-large { background-size: cover; background-position: center; }
+/* 大组件图片模式 */
 .widget-large.hero-single .widget-half { background-image: none !important; }
 .widget-large.hero-split .widget-half { background-size: cover; background-position: center; background-repeat: no-repeat; }
 .widget-half { transition: background-color 0.18s ease, backdrop-filter 0.18s ease; }
