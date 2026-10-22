@@ -1,12 +1,28 @@
 /* =========================================================
-   Philos · 2.4.1
-   修复：顶部头像 48px 且不可点、消息头像左右方向、抽屉入口
+   Philos · 2.5
+   头像垂直位置 + 8 图标独立图片
    ========================================================= */
 (function () {
     "use strict";
 
     var STORAGE_KEY = "private_chat_app_v1";
     var BLANK = "______";
+
+    var ICON_KEYS = ["letter", "settings", "countdown", "widgets", "chat", "cards", "appearance", "permission"];
+
+    var ICON_LIST = [
+        { key: "letter", label: "信箱", symbol: "ic-mail" },
+        { key: "settings", label: "设置", symbol: "ic-gear" },
+        { key: "countdown", label: "倒数日", symbol: "ic-calendar" },
+        { key: "widgets", label: "小组件", symbol: "ic-grid" },
+        { key: "chat", label: "聊天", symbol: "ic-chat" },
+        { key: "cards", label: "字卡", symbol: "ic-card" },
+        { key: "appearance", label: "外观", symbol: "ic-palette" },
+        { key: "permission", label: "权限", symbol: "ic-key" }
+    ];
+
+    var EMPTY_ICONS = {};
+    ICON_KEYS.forEach(function (k) { EMPTY_ICONS[k] = ""; });
 
     var DEFAULTS = {
         taName: "他", taAvatar: "", myName: "your账户名", myAvatar: "",
@@ -16,9 +32,9 @@
         settings: {
             appearance: {
                 homeBg: { color: "#e9edf2", image: "", opacity: 100, blur: 20 },
-                iconBg: { color: "#ffffff", image: "", opacity: 85, blur: 20, showLabel: true, labelSize: 11 },
+                iconBg: { color: "#ffffff", image: "", opacity: 85, blur: 20, showLabel: true, labelSize: 11, icons: JSON.parse(JSON.stringify(EMPTY_ICONS)) },
                 chatBg: { color: "#f2f4f7", image: "", opacity: 100, blur: 20 },
-                avatar: { color: "#dfe5ec", image: "", opacity: 100, blur: 0, size: 84, radius: 50, mode: "each" }
+                avatar: { color: "#dfe5ec", image: "", opacity: 100, blur: 0, size: 84, radius: 50, offsetY: 0, mode: "each" }
             },
             status: { color: "#8b909a", bgEnabled: false, bgColor: "#ffffff", bgOpacity: 60, bgBlur: 40 },
             bubble: { preset: "tail", radius: 16, height: 10, opacity: 100, bg: "#5b7fa6", border: false, borderColor: "#ffffff", css: "" },
@@ -68,6 +84,10 @@
             if (!Array.isArray(merged.stickers)) merged.stickers = [];
             if (!Array.isArray(merged.pats)) merged.pats = defaults.pats.slice();
             if (!Array.isArray(merged.cards)) merged.cards = [];
+            if (!isPlainObject(merged.settings.appearance.iconBg.icons)) merged.settings.appearance.iconBg.icons = JSON.parse(JSON.stringify(EMPTY_ICONS));
+            ICON_KEYS.forEach(function (k) {
+                if (typeof merged.settings.appearance.iconBg.icons[k] !== "string") merged.settings.appearance.iconBg.icons[k] = "";
+            });
             appData = merged;
         } catch (e) {
             appData = defaults;
@@ -235,6 +255,88 @@
         });
     }
 
+    /* 8 个图标的图片应用 */
+    function applyIconImages() {
+        var icons = appData.settings.appearance.iconBg.icons || {};
+        var mainMap = { appLetter: "letter", appSettings: "settings", appCountdown: "countdown", appWidgets: "widgets" };
+        Object.keys(mainMap).forEach(function (id) {
+            var el = $(id);
+            if (!el) return;
+            var src = icons[mainMap[id]];
+            var has = isImageSource(src);
+            var box = el.querySelector(".app-icon-box");
+            if (box) {
+                if (has) box.style.backgroundImage = 'url("' + src + '")';
+                else box.style.backgroundImage = "";
+                box.classList.toggle("has-image", has);
+            }
+            el.classList.toggle("has-image", has);
+        });
+
+        var dockMap = { appChat: "chat", appCards: "cards", dockAppearance: "appearance", dockPermission: "permission" };
+        Object.keys(dockMap).forEach(function (id) {
+            var el = $(id);
+            if (!el) return;
+            var src = icons[dockMap[id]];
+            var has = isImageSource(src);
+            if (has) el.style.backgroundImage = 'url("' + src + '")';
+            else el.style.backgroundImage = "";
+            el.classList.toggle("has-image", has);
+        });
+    }
+
+    /* 图标配置列表 */
+    function renderIconConfigs() {
+        var grid = $("iconCfgGrid");
+        if (!grid) return;
+        var icons = appData.settings.appearance.iconBg.icons || {};
+        grid.innerHTML = "";
+
+        ICON_LIST.forEach(function (item) {
+            var src = icons[item.key];
+            var has = isImageSource(src);
+
+            var row = document.createElement("div");
+            row.className = "icon-cfg";
+
+            var preview = document.createElement("span");
+            preview.className = "icon-cfg-preview" + (has ? " has-image" : "");
+            if (has) preview.style.backgroundImage = 'url("' + src + '")';
+            preview.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + item.symbol + '"></use></svg>';
+
+            var name = document.createElement("span");
+            name.className = "icon-cfg-name";
+            name.textContent = item.label;
+
+            var actions = document.createElement("div");
+            actions.className = "icon-cfg-actions";
+
+            var upload = document.createElement("label");
+            upload.className = "mini-btn";
+            upload.textContent = "上传";
+            var file = document.createElement("input");
+            file.type = "file";
+            file.accept = "image/*";
+            file.hidden = true;
+            file.setAttribute("data-icon-upload", item.key);
+            upload.appendChild(file);
+
+            var clear = document.createElement("button");
+            clear.type = "button";
+            clear.className = "mini-btn danger";
+            clear.textContent = "清除";
+            clear.setAttribute("data-icon-clear", item.key);
+
+            actions.appendChild(upload);
+            actions.appendChild(clear);
+
+            row.appendChild(preview);
+            row.appendChild(name);
+            row.appendChild(actions);
+            grid.appendChild(row);
+        });
+    }
+
     /* 聊天渲染 */
     function fmtTime(ts) {
         var d = new Date(ts);
@@ -332,7 +434,6 @@
                 wrap.appendChild(s);
             }
 
-            // DOM 顺序固定为 [头像, 内容]；`.msg-row.me` 用 row-reverse 把头像翻到最右
             row.appendChild(av);
             row.appendChild(wrap);
             container.appendChild(row);
@@ -521,7 +622,7 @@
         input.value = "";
     }
 
-    /* 拍一拍弹窗（保留，无入口） */
+    /* 拍一拍弹窗 */
     function openPeek() { var m = $("peekMask"); if (m) m.hidden = false; }
     function closePeek() { var m = $("peekMask"); if (m) m.hidden = true; }
     function sendPeek() {
@@ -703,27 +804,38 @@
         css.setProperty("--home-bg-color", hexToRgba(a.homeBg.color, a.homeBg.opacity / 100));
         css.setProperty("--home-bg-image", a.homeBg.image ? "url(" + a.homeBg.image + ")" : "none");
         css.setProperty("--home-blur", (a.homeBg.blur / 100 * 30) + "px");
+
+        /* 图标背景：颜色 / 透明度 / 磨砂度 → 8 个图标共用 */
         css.setProperty("--icon-bg-color", hexToRgba(a.iconBg.color, a.iconBg.opacity / 100));
-        css.setProperty("--icon-bg-image", a.iconBg.image ? "url(" + a.iconBg.image + ")" : "none");
         css.setProperty("--icon-blur", (a.iconBg.blur / 100 * 30) + "px");
         css.setProperty("--app-label-size", (a.iconBg.labelSize || 11) + "px");
         root.classList.toggle("hide-app-label", a.iconBg.showLabel === false);
+
         css.setProperty("--chat-bg-color", hexToRgba(a.chatBg.color, a.chatBg.opacity / 100));
         css.setProperty("--chat-bg-image", a.chatBg.image ? "url(" + a.chatBg.image + ")" : "none");
+
         css.setProperty("--avatar-size", (a.avatar.size || 84) + "px");
         css.setProperty("--avatar-radius", (a.avatar.radius === undefined ? 50 : a.avatar.radius) + "px");
+        css.setProperty("--avatar-offset-y", (a.avatar.offsetY || 0) + "px");
         css.setProperty("--avatar-bg", hexToRgba(a.avatar.color, a.avatar.opacity / 100));
+
         css.setProperty("--bubble-bg", hexToRgba(s.bubble.bg, s.bubble.opacity / 100));
         css.setProperty("--bubble-radius", s.bubble.radius + "px");
         css.setProperty("--bubble-pad-y", s.bubble.height + "px");
         css.setProperty("--bubble-border", s.bubble.border ? ("1px solid " + s.bubble.borderColor) : "none");
+
         css.setProperty("--status-color", s.status.color);
         css.setProperty("--status-bg", s.status.bgEnabled ? hexToRgba(s.status.bgColor, s.status.bgOpacity / 100) : "transparent");
         css.setProperty("--status-blur", (s.status.bgBlur / 100 * 30) + "px");
+
         css.setProperty("--font-chat", s.font.chat + "px");
         css.setProperty("--font-home", s.font.home + "px");
         css.setProperty("--home-scale", s.font.home / 16);
+
         root.setAttribute("data-avatar-mode", a.avatar.mode || "each");
+
+        applyIconImages();
+
         var custom = $("bubbleCustom");
         if (custom) custom.textContent = s.bubble.css || "";
     }
@@ -838,6 +950,7 @@
         renderStickers();
         renderPats();
         renderControls();
+        renderIconConfigs();
         applySettings();
     }
 
@@ -873,9 +986,7 @@
             on(id, "click", goDesktop);
         });
 
-        // 顶部头像组不再绑定任何点击（拍一拍入口已取消）
         on("btnChatCall", "click", startCall);
-
         on("callMin", "click", minimizeCall);
         on("callEnd", "click", endCallByMe);
         on("callPill", "click", restoreCall);
@@ -958,9 +1069,20 @@
             });
         }
 
+        /* 图标配置：上传 / 清除 */
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
+
+            var clearBtn = t.closest("[data-icon-clear]");
+            if (clearBtn) {
+                var key = clearBtn.getAttribute("data-icon-clear");
+                appData.settings.appearance.iconBg.icons[key] = "";
+                saveData();
+                applySettings();
+                renderIconConfigs();
+                return;
+            }
 
             if (!t.closest("#msgMenu") && !t.closest(".msg-bubble")) closeMsgMenu();
 
@@ -1007,6 +1129,20 @@
         document.addEventListener("change", function (e) {
             var el = e.target;
             if (!el || !el.getAttribute) return;
+
+            var iconKey = el.getAttribute("data-icon-upload");
+            if (iconKey) {
+                var self = el;
+                readImageFile(el.files && el.files[0], function (result) {
+                    appData.settings.appearance.iconBg.icons[iconKey] = result;
+                    saveData();
+                    applySettings();
+                    renderIconConfigs();
+                });
+                self.value = "";
+                return;
+            }
+
             if (el.getAttribute("data-upload")) handleUpload(el);
         });
 
@@ -1072,6 +1208,7 @@
         renderChat();
         renderStickers();
         renderPats();
+        renderIconConfigs();
         renderControls();
         applySettings();
         bindEvents();

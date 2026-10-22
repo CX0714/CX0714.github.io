@@ -206,14 +206,15 @@
                 </div>
             </section>
 
+            <!-- 图标背景（重写） -->
             <section class="set-page" data-page="appearance.icon">
                 <div class="sub-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
                     <span class="sub-title">图标背景</span>
                 </div>
+
                 <div class="group-card control-card">
                     <div class="control-row"><span class="control-label">颜色填充</span><label class="color-dot"><input type="color" data-key="appearance.iconBg.color"></label></div>
-                    <div class="control-row"><span class="control-label">上传图片</span><label class="text-btn">选择图片<input type="file" accept="image/*" data-upload="appearance.iconBg.image" hidden></label></div>
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-val="appearance.iconBg.opacity" data-unit="%">85%</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.opacity" data-unit="%" min="0" max="100" step="1">
@@ -222,11 +223,19 @@
                         <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-val="appearance.iconBg.blur" data-unit="%">20%</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.blur" data-unit="%" min="0" max="100" step="1">
                     </div>
-                    <div class="control-row"><span class="control-label">图标文字显示</span><label class="switch"><input type="checkbox" data-key="appearance.iconBg.showLabel"><span class="switch-track"></span></label></div>
+                    <div class="control-row">
+                        <span class="control-label">图标文字显示</span>
+                        <label class="switch"><input type="checkbox" data-key="appearance.iconBg.showLabel"><span class="switch-track"></span></label>
+                    </div>
                     <div class="control-block">
                         <div class="control-head"><span class="control-label">文字大小</span><span class="control-value" data-val="appearance.iconBg.labelSize" data-unit="px">11px</span></div>
                         <input type="range" class="slider" data-key="appearance.iconBg.labelSize" data-unit="px" min="8" max="16" step="1">
                     </div>
+                </div>
+
+                <div class="group-card control-card">
+                    <div class="card-title">自定义图标图片（8 个，可单独设置）</div>
+                    <div class="icon-cfg-grid" id="iconCfgGrid"></div>
                 </div>
             </section>
 
@@ -249,6 +258,7 @@
                 </div>
             </section>
 
+            <!-- 头像（含垂直位置） -->
             <section class="set-page" data-page="appearance.avatar">
                 <div class="sub-topbar">
                     <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -274,6 +284,10 @@
                         <input type="range" class="slider" data-key="appearance.avatar.radius" data-unit="px" min="0" max="50" step="1">
                     </div>
                     <div class="control-block">
+                        <div class="control-head"><span class="control-label">头像垂直位置</span><span class="control-value" data-val="appearance.avatar.offsetY" data-unit="px">0px</span></div>
+                        <input type="range" class="slider" data-key="appearance.avatar.offsetY" data-unit="px" min="-50" max="50" step="1">
+                    </div>
+                    <div class="control-block">
                         <div class="control-head"><span class="control-label">头像显示模式</span></div>
                         <div class="segment" data-segment="appearance.avatar.mode">
                             <button class="segment-btn active" data-mode="each" type="button">每条显示</button>
@@ -281,6 +295,7 @@
                         </div>
                     </div>
                 </div>
+
                 <div class="preview-card">
                     <div class="preview-title">实时预览</div>
                     <div class="pv-avatar-row">
@@ -427,7 +442,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">2.4.1</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">2.5</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -443,7 +458,6 @@
             <button class="chat-circle-btn" id="btnChatBack" type="button" aria-label="返回">
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
             </button>
-
             <div class="chat-center" aria-hidden="true">
                 <span class="chat-avatar" id="headerAvatar">Me</span>
                 <span class="chat-name-pill">
@@ -451,7 +465,6 @@
                     <svg class="svg-icon chat-chevron" viewBox="0 0 24 24"><use href="#ic-chevron-down"></use></svg>
                 </span>
             </div>
-
             <button class="chat-circle-btn" id="btnChatCall" type="button" aria-label="通话">
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-phone"></use></svg>
             </button>
@@ -532,13 +545,11 @@
         </div>
     </div>
 
-    <!-- ===== 消息菜单 ===== -->
     <div class="msg-menu" id="msgMenu" hidden>
         <button class="msg-menu-item" data-act="quote" type="button">引用</button>
         <button class="msg-menu-item danger" data-act="delete" type="button">删除</button>
     </div>
 
-    <!-- ===== 拍一拍弹窗（保留样式，无入口） ===== -->
     <div class="peek-mask" id="peekMask" hidden>
         <div class="peek-card">
             <div class="peek-avatar" id="peekAvatar">Me</div>
@@ -550,7 +561,6 @@
         </div>
     </div>
 
-    <!-- ===== 通话 ===== -->
     <div class="call-screen" id="callScreen" hidden>
         <div class="call-bg"></div>
         <div class="call-overlay"></div>
@@ -581,7 +591,6 @@
         <span class="call-pill-time" id="callPillTime">00:00</span>
     </button>
 
-    <!-- ===== 字卡库 ===== -->
     <div class="screen cards-view" id="cardsView">
         <header class="app-header">
             <button class="glass-btn" id="btnCardsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -591,7 +600,6 @@
         <div class="app-content"><p class="empty-hint">字卡列表将在下个阶段更新。</p></div>
     </div>
 
-    <!-- ===== 倒数日 ===== -->
     <div class="screen countdown-view" id="countdownView">
         <header class="app-header">
             <button class="glass-btn" id="btnCountdownBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -601,7 +609,6 @@
         <div class="app-content"><p class="empty-hint">倒数日列表将在下个阶段更新。</p></div>
     </div>
 
-    <!-- ===== 信箱 ===== -->
     <div class="screen letter-view" id="letterView">
         <header class="app-header">
             <button class="glass-btn" id="btnLetterBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -611,7 +618,6 @@
         <div class="app-content"><p class="empty-hint">信件列表将在下个阶段更新。</p></div>
     </div>
 
-    <!-- ===== 小组件 ===== -->
     <div class="screen widgets-view" id="widgetsView">
         <header class="app-header">
             <button class="glass-btn" id="btnWidgetsBack" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
@@ -621,7 +627,6 @@
         <div class="app-content"><p class="empty-hint">组件模板将在下个阶段更新。</p></div>
     </div>
 
-    <!-- ===== 主页文字编辑面板 ===== -->
     <div class="sheet-mask" id="sheetMask"></div>
     <div class="sheet" id="editSheet" role="dialog" aria-label="编辑主页文字">
         <div class="sheet-handle"></div>
