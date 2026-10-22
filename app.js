@@ -1,6 +1,5 @@
 /* =========================================================
-   Philos · 3.4
-   头像 inline 化 / 双方气泡与文字颜色分开
+   Philos · 3.5
    ========================================================= */
 (function () {
     "use strict";
@@ -33,7 +32,7 @@
         opacity: 100, blur: 20
     };
 
-    var DEFAULT_HERO = { mode: "", img1: "", img2: "" };
+    var DEFAULT_HERO = { mode: "", img1: "", img2: "", color: "", opacity: 40, blur: 67 };
 
     var DEFAULTS = {
         taName: "他", taAvatar: "", myName: "your账户名", myAvatar: "",
@@ -63,6 +62,8 @@
     var activeCat = "全部";
     var editingCardId = null;
     var activeWidgetTab = "widget";
+    var cdEditId = null;
+    var cdMenuId = null;
 
     function $(id) { return document.getElementById(id); }
     function isPlainObject(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
@@ -223,12 +224,12 @@
         goDesktop();
     }
     function goDesktop() {
-        closeSheet(); closeMsgMenu(); closeDrawer(); closeCardsMenu();
+        closeSheet(); closeMsgMenu(); closeDrawer(); closeCardsMenu(); closeCdMenu();
         navStack = [];
         showScreen("desktopView");
     }
 
-    /* 基础渲染 */
+    /* 基础 */
     function isImageSource(value) { return typeof value === "string" && /^(https?:\/\/|data:image\/|blob:)/.test(value); }
     function escAttr(value) { return String(value).replace(/"/g, "&quot;"); }
     function avatarMarkup(value, fallbackText) {
@@ -240,7 +241,6 @@
         return '<span class="avatar-text">Me</span>';
     }
 
-    /* ===== 头像：直接写 inline，不依赖 CSS 变量层叠 ===== */
     function applyAvatarInline() {
         var a = appData.settings.appearance.avatar;
         var size = a.size || 36;
@@ -255,7 +255,7 @@
         }
     }
 
-    /* ===== 大组件照片 ===== */
+    /* ===== 大组件照片 / 下半样式 ===== */
     function applyHeroImages() {
         var big = $("widgetLarge");
         if (!big) return;
@@ -266,7 +266,12 @@
         big.classList.remove("hero-single", "hero-split");
         big.style.backgroundImage = "";
         if (top) { top.style.backgroundImage = ""; top.style.backgroundColor = ""; }
-        if (bottom) { bottom.style.backgroundImage = ""; bottom.style.backgroundColor = ""; }
+        if (bottom) {
+            bottom.style.backgroundImage = "";
+            bottom.style.backgroundColor = "";
+            bottom.style.backdropFilter = "";
+            bottom.style.webkitBackdropFilter = "";
+        }
 
         if (cfg.mode === "single" && isImageSource(cfg.img1)) {
             big.classList.add("hero-single");
@@ -275,6 +280,13 @@
             big.classList.add("hero-split");
             if (top && isImageSource(cfg.img1)) top.style.backgroundImage = 'url("' + cfg.img1 + '")';
             if (bottom && isImageSource(cfg.img2)) bottom.style.backgroundImage = 'url("' + cfg.img2 + '")';
+        } else if (bottom) {
+            var base = cfg.color || (isDarkTheme() ? "#202226" : "#ffffff");
+            var alpha = (cfg.opacity == null ? 40 : cfg.opacity) / 100;
+            var blurPx = (cfg.blur == null ? 67 : cfg.blur) / 100 * 30;
+            bottom.style.backgroundColor = hexToRgba(base, alpha);
+            bottom.style.backdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
+            bottom.style.webkitBackdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
         }
         renderHeroConfig();
     }
@@ -285,11 +297,31 @@
         for (var i = 0; i < btns.length; i++) {
             btns[i].classList.toggle("active", btns[i].getAttribute("data-hero-mode") === (cfg.mode || ""));
         }
+
         var rows = document.querySelectorAll("[data-hero-row]");
         for (var j = 0; j < rows.length; j++) {
             var key = rows[j].getAttribute("data-hero-row");
-            rows[j].hidden = (key === "img2" && cfg.mode !== "split");
+            if (key === "style") rows[j].hidden = !!cfg.mode;
+            else if (key === "img2") rows[j].hidden = cfg.mode !== "split";
+            else rows[j].hidden = !cfg.mode;
         }
+
+        var op = cfg.opacity == null ? 40 : cfg.opacity;
+        var bl = cfg.blur == null ? 67 : cfg.blur;
+
+        var colorInput = document.querySelector("[data-hero-color]");
+        if (colorInput && document.activeElement !== colorInput) {
+            colorInput.value = cfg.color || (isDarkTheme() ? "#202226" : "#ffffff");
+        }
+        var opInput = document.querySelector("[data-hero-opacity]");
+        if (opInput && document.activeElement !== opInput) opInput.value = op;
+        var blInput = document.querySelector("[data-hero-blur]");
+        if (blInput && document.activeElement !== blInput) blInput.value = bl;
+
+        var opLabel = document.querySelector('[data-hero-val="opacity"]');
+        if (opLabel) opLabel.textContent = op + "%";
+        var blLabel = document.querySelector('[data-hero-val="blur"]');
+        if (blLabel) blLabel.textContent = bl + "%";
     }
 
     /* ===== 倒数日 ===== */
@@ -326,49 +358,71 @@
         }
 
         appData.anniversaries.forEach(function (item) {
-            var row = document.createElement("div");
-            row.className = "swipe-row";
-            row.setAttribute("data-swipe-width", "76");
-            row.setAttribute("data-cd-id", item.id);
-
-            var actions = document.createElement("div");
-            actions.className = "swipe-actions";
-            var del = document.createElement("button");
-            del.className = "swipe-btn danger";
-            del.textContent = "删除";
-            del.setAttribute("data-cd-del", item.id);
-            actions.appendChild(del);
-
             var d = daysFrom(item.date);
             var isPast = d >= 0;
             var num = isPast ? d + 1 : -d;
             var prefix = isPast ? "第" : "还有";
+            var active = item.id === appData.activeCountdownId;
 
-            var content = document.createElement("div");
-            content.className = "swipe-content cd-item" + (item.id === appData.activeCountdownId ? " active" : "");
-            content.innerHTML =
-                '<div class="cd-days">' +
-                    '<span class="cd-prefix">' + prefix + '</span>' +
-                    '<span class="cd-num">' + num + '</span>' +
-                    '<span class="cd-unit">天</span>' +
-                '</div>' +
-                '<div class="cd-meta">' +
-                    '<div class="cd-name">' + esc(item.title) + '</div>' +
-                    '<div class="cd-date">' + esc(String(item.date).replace(/-/g, ".")) + '</div>' +
-                '</div>' +
-                (item.id === appData.activeCountdownId ? '<span class="cd-badge">显示中</span>' : '');
-
-            row.appendChild(actions);
-            row.appendChild(content);
-            list.appendChild(row);
+            var card = document.createElement("div");
+            card.className = "cd-card";
+            card.setAttribute("data-cd-id", item.id);
+            card.innerHTML =
+                '<div class="cd-item' + (active ? " active" : "") + '">' +
+                    '<div class="cd-days">' +
+                        '<span class="cd-prefix">' + prefix + '</span>' +
+                        '<span class="cd-num">' + num + '</span>' +
+                        '<span class="cd-unit">天</span>' +
+                    '</div>' +
+                    '<div class="cd-meta">' +
+                        '<div class="cd-name">' + esc(item.title) + '</div>' +
+                        '<div class="cd-date">' + esc(String(item.date).replace(/-/g, ".")) + '</div>' +
+                    '</div>' +
+                    (active ? '<span class="cd-badge">显示中</span>' : '') +
+                '</div>';
+            list.appendChild(card);
         });
     }
 
-    function openCdSheet() {
-        if ($("cdTitle")) $("cdTitle").value = "";
+    function openCdMenu(id, el) {
+        var menu = $("cdMenu");
+        if (!menu || !el) return;
+        cdMenuId = id;
+        menu.hidden = false;
+        menu.style.visibility = "hidden";
+        menu.style.left = "0px";
+        menu.style.top = "0px";
+
+        var mw = menu.offsetWidth, mh = menu.offsetHeight;
+        var rect = el.getBoundingClientRect();
+        var left = rect.left + rect.width - mw;
+        left = Math.max(12, Math.min(left, window.innerWidth - mw - 12));
+        var top = rect.top - mh - 8;
+        if (top < 60) top = rect.bottom + 8;
+
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        menu.style.visibility = "";
+    }
+    function closeCdMenu() {
+        var menu = $("cdMenu");
+        if (menu) menu.hidden = true;
+        cdMenuId = null;
+    }
+
+    function openCdSheet(id) {
+        cdEditId = id || null;
+        var item = id ? findAnniversary(id) : null;
+        if ($("cdSheetTitle")) $("cdSheetTitle").textContent = item ? "编辑倒数日" : "新建倒数日";
+        if ($("cdSave")) $("cdSave").textContent = item ? "保存" : "添加";
+        if ($("cdTitle")) $("cdTitle").value = item ? item.title : "";
         if ($("cdDate")) {
-            var now = new Date();
-            $("cdDate").value = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+            if (item) {
+                $("cdDate").value = item.date;
+            } else {
+                var now = new Date();
+                $("cdDate").value = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
+            }
         }
         var mask = $("cdMask"), sheet = $("cdSheet");
         if (mask) mask.classList.add("show");
@@ -378,15 +432,22 @@
         var mask = $("cdMask"), sheet = $("cdSheet");
         if (mask) mask.classList.remove("show");
         if (sheet) sheet.classList.remove("show");
+        cdEditId = null;
     }
     function saveCountdown() {
         var titleEl = $("cdTitle"), dateEl = $("cdDate");
         var title = titleEl ? titleEl.value.trim() : "";
         var date = dateEl ? dateEl.value : "";
         if (!title || !date) { alert("请填写标题和日期"); return; }
-        var item = { id: uid(), title: title, date: date, createdAt: Date.now() };
-        appData.anniversaries.unshift(item);
-        if (!appData.activeCountdownId) appData.activeCountdownId = item.id;
+
+        if (cdEditId) {
+            var item = findAnniversary(cdEditId);
+            if (item) { item.title = title; item.date = date; }
+        } else {
+            var created = { id: uid(), title: title, date: date, createdAt: Date.now() };
+            appData.anniversaries.unshift(created);
+            if (!appData.activeCountdownId) appData.activeCountdownId = created.id;
+        }
         saveData();
         renderCountdown();
         renderWidgetSmall();
@@ -869,7 +930,7 @@
         reader.readAsText(file);
     }
 
-    /* ===== 左滑 ===== */
+    /* ===== 左滑（仅字卡） ===== */
     var swipeState = null;
     function bindSwipe(container) {
         if (!container) return;
@@ -1253,6 +1314,11 @@
             var img = document.createElement("img");
             img.src = src; img.alt = "";
             btn.appendChild(img);
+            var del = document.createElement("span");
+            del.className = "sticker-del";
+            del.textContent = "×";
+            del.setAttribute("data-sticker-del", String(i));
+            btn.appendChild(del);
             grid.appendChild(btn);
         });
     }
@@ -1426,7 +1492,6 @@
         var dark = isDarkTheme();
         if (key === "font.colorTa") return dark ? "#f2f3f6" : "#1b1d21";
         if (key === "bubble.bgTa") return dark ? "#2a2c31" : "#ffffff";
-        if (key === "font.colorMe") return "#ffffff";
         return "#ffffff";
     }
     function renderControls() {
@@ -1479,7 +1544,6 @@
         css.setProperty("--chat-avatar-radius", radius + "px");
         css.setProperty("--chat-avatar-offset-y", offsetY + "px");
 
-        /* 气泡：我的 / 对方 分开 */
         var b = s.bubble;
         var bop = b.opacity / 100;
         css.setProperty("--bubble-bg", hexToRgba(b.bg, bop));
@@ -1489,7 +1553,6 @@
         css.setProperty("--bubble-pad-y", b.height + "px");
         css.setProperty("--bubble-border", b.border ? ("1px solid " + b.borderColor) : "none");
 
-        /* 文字颜色：我的 / 对方 分开 */
         css.setProperty("--bubble-me-text", s.font.colorMe || "#ffffff");
         if (s.font.colorTa) css.setProperty("--bubble-ta-text", s.font.colorTa);
         else css.removeProperty("--bubble-ta-text");
@@ -1503,6 +1566,7 @@
         root.setAttribute("data-avatar-mode", a.avatar.mode || "each");
         applyIconImages();
         applyAvatarInline();
+        applyHeroImages();
         var custom = $("bubbleCustom");
         if (custom) custom.textContent = s.bubble.css || "";
     }
@@ -1658,10 +1722,19 @@
 
         on("widgetSmallArea", "click", function () { renderWidgetConfig(); showScreen("widgetsView"); });
 
-        on("btnAddCountdown", "click", openCdSheet);
+        on("btnAddCountdown", "click", function () { openCdSheet(null); });
         on("cdCancel", "click", closeCdSheet);
         on("cdMask", "click", closeCdSheet);
         on("cdSave", "click", saveCountdown);
+
+        on("myAvatarClear", "click", function () {
+            appData.myAvatar = "";
+            saveData(); renderWidget(); renderProfile(); renderPreview(); renderChat();
+        });
+        on("taAvatarClear", "click", function () {
+            appData.taAvatar = "";
+            saveData(); renderWidget(); renderProfile(); renderPreview(); renderChat();
+        });
 
         on("btnCompose", "click", openCompose);
         on("btnComposeCancel", "click", closeCompose);
@@ -1765,15 +1838,43 @@
             });
         }
 
-        bindSwipe($("countdownList"));
         bindSwipe($("cardList"));
 
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
 
-            var insideSwipe = t.closest(".swipe-row");
-            if (!insideSwipe) closeAllSwipe();
+            if (!t.closest(".swipe-row")) closeAllSwipe();
+            if (!t.closest("#cdMenu") && !t.closest("[data-cd-id]")) closeCdMenu();
+
+            /* 清除按钮 */
+            var clearSetting = t.closest("[data-clear-setting]");
+            if (clearSetting) {
+                setPath(appData.settings, clearSetting.getAttribute("data-clear-setting"), "");
+                saveData(); applySettings(); renderWidget(); renderPreview();
+                return;
+            }
+            var clearWidget = t.closest("[data-clear-widget]");
+            if (clearWidget) {
+                setPath(appData.widgetConfig, clearWidget.getAttribute("data-clear-widget"), "");
+                saveData(); renderWidgetSmall();
+                return;
+            }
+            var clearHero = t.closest("[data-clear-hero]");
+            if (clearHero) {
+                setPath(appData.heroConfig, clearHero.getAttribute("data-clear-hero"), "");
+                saveData(); applyHeroImages();
+                return;
+            }
+
+            /* 表情删除 */
+            var sdel = t.closest("[data-sticker-del]");
+            if (sdel) {
+                var sIdx = Number(sdel.getAttribute("data-sticker-del"));
+                appData.stickers.splice(sIdx, 1);
+                saveData(); renderStickers();
+                return;
+            }
 
             var wtab = t.closest("[data-wtab]");
             if (wtab) {
@@ -1804,13 +1905,30 @@
                 return;
             }
 
-            var cdDel = t.closest("[data-cd-del]");
-            if (cdDel) {
-                var cdId = cdDel.getAttribute("data-cd-del");
-                appData.anniversaries = appData.anniversaries.filter(function (a) { return a.id !== cdId; });
-                if (appData.activeCountdownId === cdId) appData.activeCountdownId = "";
-                if (appData.widgetConfig.daysSourceId === cdId) appData.widgetConfig.daysSourceId = "";
-                saveData(); renderCountdown(); renderWidgetSmall(); fillDaySourceSelect();
+            /* 倒数日菜单 */
+            var actBtn = t.closest("[data-cd-act]");
+            if (actBtn) {
+                var act = actBtn.getAttribute("data-cd-act");
+                var id = cdMenuId;
+                closeCdMenu();
+                if (!id) return;
+                if (act === "show") {
+                    appData.activeCountdownId = id;
+                    saveData(); renderCountdown(); renderWidgetSmall();
+                } else if (act === "edit") {
+                    openCdSheet(id);
+                } else if (act === "delete") {
+                    appData.anniversaries = appData.anniversaries.filter(function (a) { return a.id !== id; });
+                    if (appData.activeCountdownId === id) appData.activeCountdownId = "";
+                    if (appData.widgetConfig.daysSourceId === id) appData.widgetConfig.daysSourceId = "";
+                    saveData(); renderCountdown(); renderWidgetSmall(); fillDaySourceSelect();
+                }
+                return;
+            }
+
+            var cdCard = t.closest("[data-cd-id]");
+            if (cdCard) {
+                openCdMenu(cdCard.getAttribute("data-cd-id"), cdCard);
                 return;
             }
 
@@ -1837,14 +1955,6 @@
                 renderCards();
                 return;
             }
-
-            var cdRow = t.closest("[data-cd-id]");
-            if (cdRow && !cdRow.getAttribute("data-skip-click")) {
-                appData.activeCountdownId = cdRow.getAttribute("data-cd-id");
-                saveData(); renderCountdown(); renderWidgetSmall();
-                return;
-            }
-            if (cdRow) cdRow.removeAttribute("data-skip-click");
 
             if (!t.closest("#cardsMenu") && !t.closest("#btnCardsMore")) closeCardsMenu();
             if (!t.closest("#msgMenu") && !t.closest(".msg-bubble")) closeMsgMenu();
@@ -1886,6 +1996,23 @@
         document.addEventListener("input", function (e) {
             var el = e.target;
             if (!el || !el.getAttribute) return;
+
+            if (el.hasAttribute("data-hero-color")) {
+                appData.heroConfig.color = el.value;
+                saveData(); applyHeroImages();
+                return;
+            }
+            if (el.hasAttribute("data-hero-opacity")) {
+                appData.heroConfig.opacity = Number(el.value);
+                saveData(); applyHeroImages();
+                return;
+            }
+            if (el.hasAttribute("data-hero-blur")) {
+                appData.heroConfig.blur = Number(el.value);
+                saveData(); applyHeroImages();
+                return;
+            }
+
             if (el.getAttribute("data-key")) { handleControl(el); return; }
             if (el.getAttribute("data-wcfg")) { handleWidgetControl(el); }
         });
