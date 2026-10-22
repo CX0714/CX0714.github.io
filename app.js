@@ -1,5 +1,5 @@
 /* =========================================================
-   Philos · 3.6
+   Philos · 3.7
    ========================================================= */
 (function () {
     "use strict";
@@ -56,7 +56,11 @@
             },
             status: { color: "#8b909a", bgEnabled: false, bgColor: "#ffffff", bgOpacity: 60, bgBlur: 40 },
             bubble: { preset: "tail", radius: 16, height: 10, opacity: 100, bg: "#5b7fa6", bgTa: "", border: false, borderColor: "#ffffff", css: "" },
-            permission: { replyDelay: 3, activeEnabled: false, activeMin: 30, activeMax: 120, callEnabled: false, callMin: 60, callMax: 240, notify: false },
+            permission: {
+                replyDelay: 3, replyMin: 1, replyMax: 3, patChance: 30,
+                activeEnabled: false, activeMin: 30, activeMax: 120,
+                callEnabled: false, callMin: 60, callMax: 240, notify: false
+            },
             font: { chat: 15, home: 16, colorMe: "#ffffff", colorTa: "" }
         }
     };
@@ -68,6 +72,7 @@
     var activeWidgetTab = "widget";
     var cdEditId = null;
     var cdMenuId = null;
+    var replyTimer = null;
 
     function $(id) { return document.getElementById(id); }
     function isPlainObject(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
@@ -151,7 +156,6 @@
                 };
             }).filter(Boolean);
 
-            /* 旧版大组件字段迁移 */
             var hc = merged.heroConfig;
             if (!isPlainObject(hc.top)) hc.top = { color: "", opacity: 100, blur: 0 };
             if (!isPlainObject(hc.bottom)) hc.bottom = { color: "", opacity: 40, blur: 67 };
@@ -267,7 +271,7 @@
         }
     }
 
-    /* ===== 大组件：上下两半完全独立 ===== */
+    /* ===== 大组件：上下两半独立 ===== */
     function heroDefaultColor(side) {
         var dark = isDarkTheme();
         if (side === "top") return dark ? "#1e2024" : "#eef1f5";
@@ -276,12 +280,15 @@
 
     function paintHalf(el, cfg, imgSrc, fallbackColor) {
         if (!el) return;
-        el.style.backgroundImage = "";
+        /* 关键：先把 CSS 里的渐变清成 none，否则颜色被渐变盖住 */
+        el.style.backgroundImage = "none";
         el.style.backgroundColor = "";
         el.style.backdropFilter = "";
         el.style.webkitBackdropFilter = "";
 
-        if (imgSrc) el.style.backgroundImage = 'url("' + imgSrc + '")';
+        if (imgSrc) {
+            el.style.backgroundImage = 'url("' + imgSrc + '")';
+        }
 
         var base = cfg.color || fallbackColor || "";
         var alpha = (cfg.opacity == null ? 100 : cfg.opacity) / 100;
@@ -291,6 +298,13 @@
         if (blurPx > 0.1) {
             el.style.backdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
             el.style.webkitBackdropFilter = "blur(" + blurPx.toFixed(1) + "px)";
+
+            /* 无图时背景太“干净”，模糊看不出来 —— 叠一层雾，保证肉眼可见 */
+            if (!imgSrc) {
+                var maxFog = isDarkTheme() ? 0.14 : 0.28;
+                var fog = (blurPx / 30 * maxFog).toFixed(3);
+                el.style.backgroundImage = "linear-gradient(rgba(255,255,255," + fog + "), rgba(255,255,255," + fog + "))";
+            }
         }
     }
 
@@ -485,7 +499,40 @@
         closeCdSheet();
     }
 
-    /* ===== 小组件 ===== */
+    /* ===== 聊天自动回复 ===== */
+    function scheduleReply() {
+        var p = appData.settings.permission || {};
+        var pool = appData.cards.filter(function (c) {
+            return (c.kind === "text" || c.kind === "emoji") && c.content;
+        });
+        if (!pool.length) return;
+
+        var min = clamp(Number(p.replyMin) || 1, 1, 10);
+        var max = clamp(Number(p.replyMax) || min, min, 10);
+        var count = min + Math.floor(Math.random() * (max - min + 1));
+        var delay = Math.max(0, Number(p.replyDelay) || 0) * 1000;
+
+        if (replyTimer) clearTimeout(replyTimer);
+        replyTimer = setTimeout(function () {
+            var now = Date.now();
+            for (var i = 0; i < count; i++) {
+                var item = pool[Math.floor(Math.random() * pool.length)];
+                appData.chatHistory.push({ from: "ta", type: "text", text: item.content, time: now + i, status: "" });
+            }
+
+            var patPool = appData.cards.filter(function (c) { return c.kind === "status" && c.content; });
+            var chance = p.patChance == null ? 30 : Number(p.patChance);
+            if (patPool.length && Math.random() * 100 < chance) {
+                var pat = patPool[Math.floor(Math.random() * patPool.length)];
+                appData.chatHistory.push({ type: "status", text: "—— " + pat.content + " ——", time: now + count });
+            }
+
+            saveData();
+            if ($("chatView") && $("chatView").classList.contains("active")) renderChat();
+        }, delay);
+    }
+
+    /* ===== 小组件 2x2 ===== */
     function tplImage(src) {
         return isImageSource(src) ? '<img src="' + escAttr(src) + '" alt="">' : '<span class="ws-img-empty"></span>';
     }
@@ -768,6 +815,11 @@
         for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-kind") === activeCardKind);
     }
 
+    function renderCardAddRow() {
+        var label = $("cardAddLabel");
+        if (label) label.textContent = activeCardKind === "sticker" ? "上传表情照片…" : "批量添加字卡…";
+    }
+
     function renderCats() {
         var wrap = $("cardCats");
         if (!wrap) return;
@@ -829,7 +881,7 @@
         });
     }
 
-    function renderCards() { renderKindSeg(); renderCats(); renderCardList(); }
+    function renderCards() { renderKindSeg(); renderCardAddRow(); renderCats(); renderCardList(); }
 
     function fillCategorySelect(select, current) {
         if (!select) return;
@@ -842,6 +894,15 @@
             if (name === current) opt.selected = true;
             select.appendChild(opt);
         });
+    }
+
+    function handleCardAddClick() {
+        if (activeCardKind === "sticker") {
+            var f = $("cardStickerFile");
+            if (f) f.click();
+            return;
+        }
+        openCardAdd();
     }
 
     function openCardAdd() {
@@ -1303,6 +1364,7 @@
         saveData();
         input.value = ""; input.style.height = "auto";
         clearQuote(); updateSendBtn(); renderChat();
+        scheduleReply();
     }
 
     /* 抽屉 */
@@ -1778,7 +1840,16 @@
         on("btnExportCards", "click", function () { exportCards(); closeCardsMenu(); });
         on("importCardsFile", "change", function () { importCards(this.files && this.files[0]); this.value = ""; closeCardsMenu(); });
 
-        on("btnCardAdd", "click", openCardAdd);
+        on("btnCardAdd", "click", handleCardAddClick);
+        on("cardStickerFile", "change", function () {
+            var self = this;
+            readImageFile(this.files && this.files[0], function (result) {
+                var cat = activeCat === "全部" ? "未分类" : activeCat;
+                appData.cards.unshift({ id: uid(), kind: "sticker", content: result, category: cat, createdAt: Date.now() });
+                saveData(); renderCards();
+            });
+            self.value = "";
+        });
         on("cardAddCancel", "click", closeCardModals);
         on("cardAddSave", "click", saveNewCards);
         on("cardEditCancel", "click", closeCardModals);
