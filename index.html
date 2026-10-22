@@ -427,7 +427,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">2.4</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">2.4.1</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -444,13 +444,13 @@
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg>
             </button>
 
-            <button class="chat-center" id="btnChatProfile" type="button" aria-label="拍一拍">
+            <div class="chat-center" aria-hidden="true">
                 <span class="chat-avatar" id="headerAvatar">Me</span>
                 <span class="chat-name-pill">
                     <span class="chat-name" id="headerName">他</span>
                     <svg class="svg-icon chat-chevron" viewBox="0 0 24 24"><use href="#ic-chevron-down"></use></svg>
                 </span>
-            </button>
+            </div>
 
             <button class="chat-circle-btn" id="btnChatCall" type="button" aria-label="通话">
                 <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-phone"></use></svg>
@@ -485,8 +485,8 @@
     <div class="drawer" id="chatDrawer">
         <div class="drawer-handle"></div>
         <div class="drawer-tabs">
-            <button class="drawer-tab active" data-tab="media" type="button">图片</button>
-            <button class="drawer-tab" data-tab="sticker" type="button">表情</button>
+            <button class="drawer-tab active" data-tab="media" type="button">图片 / 相机</button>
+            <button class="drawer-tab" data-tab="sticker" type="button">表情包</button>
             <button class="drawer-tab" data-tab="pat" type="button">拍一拍</button>
         </div>
 
@@ -495,11 +495,11 @@
                 <div class="media-row">
                     <button class="media-btn" id="pickGallery" type="button">
                         <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg>
-                        <span>相册</span>
+                        <span>图片</span>
                     </button>
                     <button class="media-btn" id="pickCamera" type="button">
                         <svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-camera"></use></svg>
-                        <span>拍照</span>
+                        <span>相机</span>
                     </button>
                 </div>
                 <input type="file" id="mediaFile" accept="image/*" hidden>
@@ -538,7 +538,7 @@
         <button class="msg-menu-item danger" data-act="delete" type="button">删除</button>
     </div>
 
-    <!-- ===== 拍一拍弹窗 ===== -->
+    <!-- ===== 拍一拍弹窗（保留样式，无入口） ===== -->
     <div class="peek-mask" id="peekMask" hidden>
         <div class="peek-card">
             <div class="peek-avatar" id="peekAvatar">Me</div>

@@ -1,5 +1,5 @@
 /* =========================================================
-   Philos · 2.4
+   Philos · 2.4.1
    ========================================================= */
 
 :root {
@@ -194,7 +194,7 @@ html.hide-app-label .app-label { display: none; }
 
 .chat-header {
     position: absolute; top: 0; left: 0; right: 0;
-    height: calc(env(safe-area-inset-top) + 98px);
+    height: calc(env(safe-area-inset-top) + 112px);
     padding: env(safe-area-inset-top) 16px 0;
     display: flex; align-items: flex-start; justify-content: space-between;
     z-index: 30;
@@ -214,7 +214,7 @@ html.hide-app-label .app-label { display: none; }
 .chat-circle-btn {
     position: relative; z-index: 2;
     width: 38px; height: 38px; border-radius: 50%;
-    margin-top: 2px;
+    margin-top: 10px;
     display: flex; align-items: center; justify-content: center;
     color: var(--text-primary);
     background: var(--glass-bg);
@@ -223,19 +223,34 @@ html.hide-app-label .app-label { display: none; }
 }
 .chat-circle-btn .svg-icon { width: 18px; height: 18px; }
 
+/* 顶部头像组：纯展示，无任何点击 */
 .chat-center {
     position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
     padding: 2px 8px 0;
     background: none; border: none;
+    pointer-events: none;
+    cursor: default;
 }
+
+/* 顶部头像 48px */
 .chat-avatar {
-    width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex: 0 0 auto;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex: 0 0 auto;
     display: flex; align-items: center; justify-content: center;
-    background: var(--glass-bg-strong); border: none;
-    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+    background: var(--glass-bg-strong);
+    border: none;
+    font-size: 14px; font-weight: 600; color: var(--text-secondary);
 }
-.chat-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
+.chat-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
+
 .chat-name-pill {
     display: inline-flex; align-items: center; gap: 4px;
     max-width: 150px;
@@ -250,7 +265,7 @@ html.hide-app-label .app-label { display: none; }
 
 .chat-messages {
     flex: 1;
-    padding: calc(env(safe-area-inset-top) + 112px) 16px calc(env(safe-area-inset-bottom) + 100px);
+    padding: calc(env(safe-area-inset-top) + 128px) 16px calc(env(safe-area-inset-bottom) + 100px);
     overflow-y: auto;
     display: flex; flex-direction: column; gap: 10px;
     overscroll-behavior: contain;
@@ -265,12 +280,39 @@ html.hide-app-label .app-label { display: none; }
     -webkit-backdrop-filter: blur(var(--status-blur)); backdrop-filter: blur(var(--status-blur));
     text-align: center;
 }
+
+/* 消息行：左右方向严格锁定 */
 .msg-row { display: flex; align-items: flex-end; gap: 8px; width: 100%; }
-.msg-row.ta { justify-content: flex-start; }
-.msg-row.me { justify-content: flex-end; }
-.msg-avatar { width: 28px; height: 28px; border-radius: 50%; overflow: hidden; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; background: var(--glass-bg-strong); border: none; font-size: 10px; color: var(--text-secondary); }
-.msg-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.msg-row.ta {
+    align-self: flex-start;
+    justify-content: flex-start;
+    flex-direction: row;            /* 头像在左，气泡在右 */
+}
+.msg-row.me {
+    align-self: flex-end;
+    justify-content: flex-end;
+    flex-direction: row-reverse;    /* 气泡在左，我的头像在最右 */
+}
+
+/* 消息流头像 36px，无边框 */
+.msg-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--glass-bg-strong);
+    border: none;
+    font-size: 11px; font-weight: 600; color: var(--text-secondary);
+}
+.msg-avatar img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+}
 .msg-avatar.ghost { visibility: hidden; }
+
 .msg-wrap { display: flex; flex-direction: column; max-width: 75%; min-width: 0; }
 .msg-row.me .msg-wrap { align-items: flex-end; }
 .msg-bubble {

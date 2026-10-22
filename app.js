@@ -1,6 +1,6 @@
 /* =========================================================
-   Philos · 2.4
-   聊天 / 抽屉 / 通话状态机
+   Philos · 2.4.1
+   修复：顶部头像 48px 且不可点、消息头像左右方向、抽屉入口
    ========================================================= */
 (function () {
     "use strict";
@@ -9,17 +9,9 @@
     var BLANK = "______";
 
     var DEFAULTS = {
-        taName: "他",
-        taAvatar: "",
-        myName: "your账户名",
-        myAvatar: "",
-        chatHistory: [],
-        cards: [],
-        stickers: [],
-        pats: ["要抱抱"],
-        anniversaries: [],
-        letters: [],
-        themeMode: "auto",
+        taName: "他", taAvatar: "", myName: "your账户名", myAvatar: "",
+        chatHistory: [], cards: [], stickers: [], pats: ["要抱抱"],
+        anniversaries: [], letters: [], themeMode: "auto",
         widgetLines: [BLANK, BLANK, BLANK, BLANK],
         settings: {
             appearance: {
@@ -340,6 +332,7 @@
                 wrap.appendChild(s);
             }
 
+            // DOM 顺序固定为 [头像, 内容]；`.msg-row.me` 用 row-reverse 把头像翻到最右
             row.appendChild(av);
             row.appendChild(wrap);
             container.appendChild(row);
@@ -528,7 +521,7 @@
         input.value = "";
     }
 
-    /* 拍一拍弹窗 */
+    /* 拍一拍弹窗（保留，无入口） */
     function openPeek() { var m = $("peekMask"); if (m) m.hidden = false; }
     function closePeek() { var m = $("peekMask"); if (m) m.hidden = true; }
     function sendPeek() {
@@ -536,15 +529,10 @@
         saveData(); renderChat(); closePeek();
     }
 
-    /* ===== 通话状态机 ===== */
+    /* 通话状态机 */
     var call = {
-        state: "idle",
-        seconds: 0,
-        connectTimer: null,
-        rejectTimer: null,
-        taTimer: null,
-        tickTimer: null,
-        closeTimer: null
+        state: "idle", seconds: 0,
+        connectTimer: null, rejectTimer: null, taTimer: null, tickTimer: null, closeTimer: null
     };
 
     function pad(n) { return n < 10 ? "0" + n : "" + n; }
@@ -566,30 +554,19 @@
     }
 
     function updateCallClock() {
-        var text;
-        if (call.state === "calling") text = "呼叫中…";
-        else text = fmtDuration(call.seconds);
+        var text = call.state === "calling" ? "呼叫中…" : fmtDuration(call.seconds);
         var t = $("callTimer");
         if (t) t.textContent = text;
         var p = $("callPillTime");
         if (p) p.textContent = text;
     }
-
-    function setCallStateText(text) {
-        var el = $("callState");
-        if (el) el.textContent = text;
-    }
-
+    function setCallStateText(text) { var el = $("callState"); if (el) el.textContent = text; }
     function showCallScreen() {
         var screen = $("callScreen"), pill = $("callPill");
         if (screen) screen.hidden = false;
         if (pill) pill.hidden = true;
     }
-
-    function hideCallScreen() {
-        var screen = $("callScreen");
-        if (screen) screen.hidden = true;
-    }
+    function hideCallScreen() { var screen = $("callScreen"); if (screen) screen.hidden = true; }
 
     function startCall() {
         clearCallTimers();
@@ -599,12 +576,11 @@
         updateCallClock();
         showCallScreen();
 
-        var connectDelay = (1 + Math.random() * 29) * 1000;   // 1-30 秒
+        var connectDelay = (1 + Math.random() * 29) * 1000;
         var willReject = Math.random() < 0.28;
         var rejectDelay = Math.max(2000, connectDelay * (0.25 + Math.random() * 0.6));
 
         call.connectTimer = setTimeout(onCallConnected, connectDelay);
-
         if (willReject && rejectDelay < connectDelay) {
             call.rejectTimer = setTimeout(function () {
                 if (call.state !== "calling") return;
@@ -618,14 +594,13 @@
         call.state = "ongoing";
         setCallStateText("通话中");
         updateCallClock();
-
         call.tickTimer = setInterval(function () {
             call.seconds++;
             updateCallClock();
         }, 1000);
 
         if (Math.random() < 0.7) {
-            var after = (15 + Math.random() * 45) * 1000;    // 15-60 秒
+            var after = (15 + Math.random() * 45) * 1000;
             call.taTimer = setTimeout(function () {
                 if (call.state !== "ongoing") return;
                 finishCall("taHangup");
@@ -642,25 +617,15 @@
         var label = "通话结束";
         var record = "";
 
-        if (reason === "rejected") {
-            label = "对方已拒绝";
-            record = "对方已拒绝";
-        } else if (reason === "cancelled") {
-            label = "已取消";
-            record = "已取消";
-        } else if (reason === "taHangup") {
+        if (reason === "rejected") { label = "对方已拒绝"; record = "对方已拒绝"; }
+        else if (reason === "cancelled") { label = "已取消"; record = "已取消"; }
+        else if (reason === "taHangup") { label = "通话结束"; record = "语音通话 时长 " + fmtDuration(call.seconds) + " · 对方已挂断"; }
+        else {
             label = "通话结束";
-            record = "语音通话 时长 " + fmtDuration(call.seconds) + " · 对方已挂断";
-        } else {
-            label = "通话结束";
-            record = wasOngoing
-                ? "语音通话 时长 " + fmtDuration(call.seconds)
-                : "已取消";
+            record = wasOngoing ? "语音通话 时长 " + fmtDuration(call.seconds) : "已取消";
         }
 
         setCallStateText(label);
-        if (call.tickTimer) { clearInterval(call.tickTimer); call.tickTimer = null; }
-
         appData.chatHistory.push({ type: "call", text: record, time: Date.now() });
         saveData();
 
@@ -678,7 +643,6 @@
         if (call.state === "calling") { finishCall("cancelled"); return; }
         if (call.state === "ongoing") { finishCall("meHangup"); return; }
     }
-
     function minimizeCall() {
         if (call.state !== "calling" && call.state !== "ongoing") return;
         hideCallScreen();
@@ -686,7 +650,6 @@
         if (pill) pill.hidden = false;
         updateCallClock();
     }
-
     function restoreCall() {
         var pill = $("callPill");
         if (pill) pill.hidden = true;
@@ -910,11 +873,8 @@
             on(id, "click", goDesktop);
         });
 
+        // 顶部头像组不再绑定任何点击（拍一拍入口已取消）
         on("btnChatCall", "click", startCall);
-        on("btnChatProfile", "click", openPeek);
-        on("peekLater", "click", closePeek);
-        on("peekGo", "click", sendPeek);
-        on("peekMask", "click", function (e) { if (e.target === this) closePeek(); });
 
         on("callMin", "click", minimizeCall);
         on("callEnd", "click", endCallByMe);
@@ -927,7 +887,6 @@
         on("mediaFile", "change", function () { sendMedia(this); });
         on("cameraFile", "change", function () { sendMedia(this); });
         on("patAdd", "click", addPat);
-
         on("patInput", "keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addPat(); } });
 
         on("stickerFile", "change", function () {
