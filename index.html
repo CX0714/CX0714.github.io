@@ -279,7 +279,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="preview-card">
                     <div class="preview-title">实时预览</div>
                     <div class="pv-row ta"><span class="pv-avatar" id="pvAvatarTa">他</span><span class="pv-bubble">我在</span></div>
@@ -421,7 +420,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">3.2</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.3</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -562,9 +561,7 @@
                 <span class="app-nav-title">写信</span>
                 <span class="nav-spacer"></span>
             </header>
-            <div class="letter-paper">
-                <textarea id="letterInput" spellcheck="false"></textarea>
-            </div>
+            <div class="letter-paper"><textarea id="letterInput" spellcheck="false"></textarea></div>
             <div class="compose-footer">
                 <span class="letter-hint">他会在 48 小时内回信</span>
                 <button class="send-text" id="btnSendLetter" type="button">寄出</button>
@@ -606,87 +603,93 @@
             <span class="nav-spacer"></span>
         </header>
 
+        <div class="kind-seg two" id="widgetSeg">
+            <button class="kind-btn active" data-wtab="widget" type="button">小组件</button>
+            <button class="kind-btn" data-wtab="hero" type="button">大组件</button>
+        </div>
+
         <div class="app-scroll">
-            <div class="tpl-scroll" id="tplScroll">
-                <button class="tpl-card" data-tpl="A" type="button">
-                    <span class="tpl-thumb">
-                        <span class="mini-row"><i class="mini-circle"></i><i class="mini-heart"></i><i class="mini-circle"></i></span>
-                        <span class="mini-line"></span>
-                    </span>
-                    <span class="tpl-name">双头像纪念日</span>
-                </button>
-                <button class="tpl-card" data-tpl="B" type="button">
-                    <span class="tpl-thumb"><span class="mini-tilt"></span></span>
-                    <span class="tpl-name">黑胶唱片</span>
-                </button>
-                <button class="tpl-card" data-tpl="C" type="button">
-                    <span class="tpl-thumb"><span class="mini-half"></span><span class="mini-line"></span></span>
-                    <span class="tpl-name">海报进度条</span>
-                </button>
-                <button class="tpl-card" data-tpl="D" type="button">
-                    <span class="tpl-thumb"><span class="mini-fill"></span></span>
-                    <span class="tpl-name">纯图片</span>
-                </button>
-                <button class="tpl-card" data-hero="1" type="button">
-                    <span class="tpl-thumb"><span class="mini-fill"></span></span>
-                    <span class="tpl-name">大组件照片</span>
-                </button>
-            </div>
+            <!-- 小组件面板 -->
+            <div data-wpane="widget">
+                <div class="tpl-scroll">
+                    <button class="tpl-card" data-tpl="A" type="button">
+                        <span class="tpl-thumb">
+                            <span class="mini-row"><i class="mini-circle"></i><i class="mini-heart"></i><i class="mini-circle"></i></span>
+                            <span class="mini-line"></span>
+                        </span>
+                        <span class="tpl-name">双头像纪念日</span>
+                    </button>
+                    <button class="tpl-card" data-tpl="B" type="button">
+                        <span class="tpl-thumb"><span class="mini-tilt"></span></span>
+                        <span class="tpl-name">黑胶唱片</span>
+                    </button>
+                    <button class="tpl-card" data-tpl="C" type="button">
+                        <span class="tpl-thumb"><span class="mini-half"></span><span class="mini-line"></span></span>
+                        <span class="tpl-name">海报进度条</span>
+                    </button>
+                    <button class="tpl-card" data-tpl="D" type="button">
+                        <span class="tpl-thumb"><span class="mini-fill"></span></span>
+                        <span class="tpl-name">纯图片</span>
+                    </button>
+                </div>
 
-            <div class="group-card control-card cfg-group" data-cfg="A" hidden>
-                <div class="control-row"><span class="control-label">主标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="我们"></div>
-                <div class="control-row"><span class="control-label">天数</span><input class="cfg-input" data-wcfg="days" maxlength="16" placeholder="第 615 天"></div>
-                <div class="control-row"><span class="control-label">联动倒数日</span><select class="cfg-input" data-wcfg="daysSourceId" id="wsDaySource"></select></div>
-                <div class="control-row"><span class="control-label">左侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgLeft" hidden></label></div>
-                <div class="control-row"><span class="control-label">右侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgRight" hidden></label></div>
-            </div>
+                <div class="group-card control-card cfg-group" data-cfg="A" hidden>
+                    <div class="control-row"><span class="control-label">选择倒数日</span><select class="cfg-input" data-wcfg="daysSourceId" id="wsDaySource"></select></div>
+                    <div class="control-row"><span class="control-label">标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="自动跟随倒数日"></div>
+                    <div class="control-row"><span class="control-label">天数（手填）</span><input class="cfg-input" data-wcfg="days" maxlength="16" placeholder="第 615 天"></div>
+                    <div class="control-row"><span class="control-label">左侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgLeft" hidden></label></div>
+                    <div class="control-row"><span class="control-label">右侧图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgRight" hidden></label></div>
+                </div>
 
-            <div class="group-card control-card cfg-group" data-cfg="B" hidden>
-                <div class="control-row"><span class="control-label">标题文字</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今日单曲"></div>
-                <div class="control-row"><span class="control-label">卡片图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgCard" hidden></label></div>
-            </div>
+                <div class="group-card control-card cfg-group" data-cfg="B" hidden>
+                    <div class="control-row"><span class="control-label">标题文字</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今日单曲"></div>
+                    <div class="control-row"><span class="control-label">卡片图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgCard" hidden></label></div>
+                </div>
 
-            <div class="group-card control-card cfg-group" data-cfg="C" hidden>
-                <div class="control-row"><span class="control-label">主标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今天也想你"></div>
-                <div class="control-row"><span class="control-label">副标题</span><input class="cfg-input" data-wcfg="subtitle" maxlength="20" placeholder="距离见面还有…"></div>
-                <div class="control-row"><span class="control-label">顶部大图</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgTop" hidden></label></div>
-            </div>
+                <div class="group-card control-card cfg-group" data-cfg="C" hidden>
+                    <div class="control-row"><span class="control-label">主标题</span><input class="cfg-input" data-wcfg="title" maxlength="16" placeholder="今天也想你"></div>
+                    <div class="control-row"><span class="control-label">副标题</span><input class="cfg-input" data-wcfg="subtitle" maxlength="20" placeholder="距离见面还有…"></div>
+                    <div class="control-row"><span class="control-label">顶部大图</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgTop" hidden></label></div>
+                </div>
 
-            <div class="group-card control-card cfg-group" data-cfg="D" hidden>
-                <div class="control-row"><span class="control-label">背景图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgBg" hidden></label></div>
-                <div class="control-row"><span class="control-label">中心文字</span><input class="cfg-input" data-wcfg="centerText" maxlength="20" placeholder="今天也在想你"></div>
-            </div>
+                <div class="group-card control-card cfg-group" data-cfg="D" hidden>
+                    <div class="control-row"><span class="control-label">背景图片</span><label class="text-btn">上传<input type="file" accept="image/*" data-wupload="imgBg" hidden></label></div>
+                    <div class="control-row"><span class="control-label">中心文字</span><input class="cfg-input" data-wcfg="centerText" maxlength="20" placeholder="今天也在想你"></div>
+                </div>
 
-            <!-- 大组件照片 -->
-            <div class="group-card control-card" id="heroCfg" hidden>
-                <div class="card-title">大组件照片</div>
-                <div class="control-block">
-                    <div class="segment seg-3">
-                        <button class="segment-btn" data-hero-mode="" type="button">不用</button>
-                        <button class="segment-btn" data-hero-mode="single" type="button">整张</button>
-                        <button class="segment-btn" data-hero-mode="split" type="button">上下两张</button>
+                <div class="group-card control-card">
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-wval="opacity" data-wunit="%">100%</span></div>
+                        <input type="range" class="slider" data-wcfg="opacity" data-wunit="%" min="0" max="100" step="1">
+                    </div>
+                    <div class="control-block">
+                        <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-wval="blur" data-wunit="%">20%</span></div>
+                        <input type="range" class="slider" data-wcfg="blur" data-wunit="%" min="0" max="100" step="1">
                     </div>
                 </div>
-                <div class="control-row" data-hero-row="img1"><span class="control-label">照片</span><label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img1" hidden></label></div>
-                <div class="control-row" data-hero-row="img2" hidden><span class="control-label">下半照片</span><label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img2" hidden></label></div>
             </div>
 
-            <div class="group-card control-card">
-                <div class="control-block">
-                    <div class="control-head"><span class="control-label">透明度</span><span class="control-value" data-wval="opacity" data-wunit="%">100%</span></div>
-                    <input type="range" class="slider" data-wcfg="opacity" data-wunit="%" min="0" max="100" step="1">
-                </div>
-                <div class="control-block">
-                    <div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-wval="blur" data-wunit="%">20%</span></div>
-                    <input type="range" class="slider" data-wcfg="blur" data-wunit="%" min="0" max="100" step="1">
+            <!-- 大组件面板 -->
+            <div data-wpane="hero" hidden>
+                <div class="group-card control-card">
+                    <div class="card-title">大组件照片</div>
+                    <div class="control-block">
+                        <div class="segment seg-3">
+                            <button class="segment-btn" data-hero-mode="" type="button">不用</button>
+                            <button class="segment-btn" data-hero-mode="single" type="button">整张</button>
+                            <button class="segment-btn" data-hero-mode="split" type="button">上下两张</button>
+                        </div>
+                    </div>
+                    <div class="control-row" data-hero-row="img1"><span class="control-label">照片</span><label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img1" hidden></label></div>
+                    <div class="control-row" data-hero-row="img2" hidden><span class="control-label">下半照片</span><label class="text-btn">上传<input type="file" accept="image/*" data-hero-upload="img2" hidden></label></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ===== 弹窗 ===== -->
-    <div class="modal-mask" id="cdMask" hidden></div>
-    <div class="modal-sheet" id="cdSheet" hidden>
+    <!-- ===== 弹窗（不加 hidden，靠 .show 控制） ===== -->
+    <div class="modal-mask" id="cdMask"></div>
+    <div class="modal-sheet" id="cdSheet">
         <div class="sheet-handle"></div>
         <div class="sheet-title">新建倒数日</div>
         <div class="field-row"><input type="text" id="cdTitle" maxlength="20" placeholder="标题，如：和老公认识"></div>
@@ -697,9 +700,9 @@
         </div>
     </div>
 
-    <div class="modal-mask" id="cardModalMask" hidden></div>
+    <div class="modal-mask" id="cardModalMask"></div>
 
-    <div class="modal-sheet" id="cardAddSheet" hidden>
+    <div class="modal-sheet" id="cardAddSheet">
         <div class="sheet-handle"></div>
         <div class="sheet-title">批量添加字卡</div>
         <div class="field-row"><textarea id="cardAddText" rows="4" placeholder="一行一条，可一次贴很多条"></textarea></div>
@@ -710,7 +713,7 @@
         </div>
     </div>
 
-    <div class="modal-sheet" id="cardEditSheet" hidden>
+    <div class="modal-sheet" id="cardEditSheet">
         <div class="sheet-handle"></div>
         <div class="sheet-title">编辑字卡</div>
         <div class="field-row"><textarea id="cardEditText" rows="4"></textarea></div>
@@ -721,7 +724,7 @@
         </div>
     </div>
 
-    <div class="modal-sheet" id="catSheet" hidden>
+    <div class="modal-sheet" id="catSheet">
         <div class="sheet-handle"></div>
         <div class="sheet-title">新建分类</div>
         <div class="field-row"><input type="text" id="catName" maxlength="12" placeholder="分类名称"></div>
