@@ -1,7 +1,8 @@
 /* =========================================================
-   Philos · 3.7
+   Philos · 3.8
    ========================================================= */
 
+/* ===== 头像作用域 ===== */
 .chat-avatar {
     width: 48px !important;
     height: 48px !important;
@@ -27,6 +28,28 @@
 
 html[data-avatar-mode="first"] .pv-avatar-ghost { visibility: hidden; }
 
+/* =========================================================
+   消息行：让两边头像的基线一致
+   “已送达”不再参与布局，避免我这边头像被顶高
+   ========================================================= */
+.msg-wrap { position: relative; }
+
+.msg-status-text {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 3px;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.msg-row.me { padding-bottom: 17px; }
+
+/* 对方气泡右侧没有小字，用同样的内边距留给错觉 —— 保证两行等高 */
+.msg-row.ta { padding-bottom: 17px; }
+
+/* ===== 主屏 2x2 ===== */
 .widget-small {
     background-color: rgba(255, 255, 255, var(--ws-bg-alpha, 0.5));
     -webkit-backdrop-filter: blur(var(--ws-blur, 20px));
