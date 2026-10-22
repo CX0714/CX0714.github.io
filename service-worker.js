@@ -2,8 +2,8 @@ const CACHE_NAME = "philos-v31";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
-   运行时补丁：回复方式系统 / 气泡两类预设 / 高度下限 0 /
-   圆角上限 60。app.js 原文件不动。
+   运行时补丁：回复方式系统、气泡预设（尾巴 / 大圆角）、
+   高度下限 0、圆角 0–60（最大即胶囊）。app.js 原文件不动。
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -103,9 +103,16 @@ function rmTakeCards(pool, count) {
 function rmBuildMessage(p, pool) {
     var mode = rmPickMode(p, pool);
     if (!mode) return null;
-    if (mode === "text") return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
-    if (mode === "emoji") return { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
-    if (mode === "sticker") return { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
+
+    if (mode === "text") {
+        return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
+    }
+    if (mode === "emoji") {
+        return { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
+    }
+    if (mode === "sticker") {
+        return { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
+    }
     if (mode === "textEmoji") {
         var text = rmPick(pool.text);
         var n = 1 + Math.floor(Math.random() * 2);
@@ -249,13 +256,14 @@ function rmInjectStyles() {
     st.id = "rm-style";
     st.textContent =
         ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}" +
-        "html[data-bubble-preset=\"tail\"] .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
-        "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
-        "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px;}" +
-        "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px;}" +
-        "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px;}" +
-        "html[data-bubble-preset=\"large\"] .msg-bubble,html[data-bubble-preset=\"large\"] .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
-        "html[data-bubble-preset=\"large\"] .msg-row.me .msg-bubble,html[data-bubble-preset=\"large\"] .msg-row.ta .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row.me .pv-bubble,html[data-bubble-preset=\"large\"] .pv-row.ta .pv-bubble{border-radius:var(--bubble-radius,16px);}";
+        "html[data-bubble-preset=\"large\"] .msg-bubble,html[data-bubble-preset=\"large\"] .pv-bubble{border-radius:calc(var(--bubble-radius,16px) + 10px) !important;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
+        "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}" +
+        "html[data-bubble-preset=\"small\"] .msg-bubble,html[data-bubble-preset=\"square\"] .msg-bubble," +
+        "html[data-bubble-preset=\"small\"] .pv-bubble,html[data-bubble-preset=\"square\"] .pv-bubble{border-radius:var(--bubble-radius,16px) !important;}";
     document.head.appendChild(st);
 }
 
@@ -265,27 +273,34 @@ function rmSyncBubblePreset() {
     document.documentElement.setAttribute("data-bubble-preset", preset);
 }
 
-function rmPrunePresets() {
-    var nodes = document.querySelectorAll(".preset-card[data-preset]");
-    for (var i = nodes.length - 1; i >= 0; i--) {
-        var p = nodes[i].getAttribute("data-preset");
-        if (p !== "tail" && p !== "large") {
-            nodes[i].parentNode.removeChild(nodes[i]);
-        }
+function rmTuneBubble() {
+    var height = document.querySelector('[data-key="bubble.height"]');
+    if (height) {
+        height.setAttribute("min", "0");
+        height.min = "0";
     }
-    var b = appData.settings && appData.settings.bubble;
-    if (b && b.preset !== "tail" && b.preset !== "large") {
-        b.preset = "large";
-        saveData();
-        if (typeof renderControls === "function") renderControls();
+    var radius = document.querySelector('[data-key="bubble.radius"]');
+    if (radius) {
+        radius.setAttribute("max", "60");
+        radius.max = "60";
     }
 }
 
-function rmTuneBubble() {
-    var h = document.querySelector('[data-key="bubble.height"]');
-    if (h) { h.setAttribute("min", "0"); h.min = "0"; }
-    var r = document.querySelector('[data-key="bubble.radius"]');
-    if (r) { r.setAttribute("max", "60"); r.max = "60"; }
+function rmTrimPresets() {
+    var b = appData.settings && appData.settings.bubble;
+    if (b && (b.preset === "small" || b.preset === "square")) {
+        b.preset = "large";
+        saveData();
+    }
+    var old = document.querySelectorAll('.preset-card[data-preset="small"], .preset-card[data-preset="square"]');
+    for (var i = 0; i < old.length; i++) {
+        if (old[i].parentNode) old[i].parentNode.removeChild(old[i]);
+    }
+    var cards = document.querySelectorAll(".preset-card");
+    var current = b && b.preset ? b.preset : "tail";
+    for (var j = 0; j < cards.length; j++) {
+        cards[j].classList.toggle("selected", cards[j].getAttribute("data-preset") === current);
+    }
 }
 
 function rmBuildUI() {
@@ -367,10 +382,26 @@ function rmBind() {
             return;
         }
 
-        if (t.getAttribute("data-rm-combo")) { p.comboMax = rmClampInput(t, 2, 6); saveData(); return; }
-        if (t.getAttribute("data-rm-lettercount")) { p.letterMax = rmClampInput(t, 3, 12); saveData(); return; }
-        if (t.getAttribute("data-rm-lettermin")) { p.letterDelayMin = rmClampInput(t, 0, 86400); saveData(); return; }
-        if (t.getAttribute("data-rm-lettermax")) { p.letterDelayMax = rmClampInput(t, 0, 86400); saveData(); return; }
+        if (t.getAttribute("data-rm-combo")) {
+            p.comboMax = rmClampInput(t, 2, 6);
+            saveData();
+            return;
+        }
+        if (t.getAttribute("data-rm-lettercount")) {
+            p.letterMax = rmClampInput(t, 3, 12);
+            saveData();
+            return;
+        }
+        if (t.getAttribute("data-rm-lettermin")) {
+            p.letterDelayMin = rmClampInput(t, 0, 86400);
+            saveData();
+            return;
+        }
+        if (t.getAttribute("data-rm-lettermax")) {
+            p.letterDelayMax = rmClampInput(t, 0, 86400);
+            saveData();
+            return;
+        }
     });
 }
 
@@ -383,9 +414,9 @@ applySettings = function () {
 function rmInit() {
     rmInjectStyles();
     rmTuneBubble();
-    rmPrunePresets();
-    rmSyncBubblePreset();
     rmSettings();
+    rmTrimPresets();
+    rmSyncBubblePreset();
     rmBuildUI();
     rmBind();
     rmRender();
