@@ -146,7 +146,7 @@
                     <button class="settings-item" data-goto="appearance.chat" type="button"><span>聊天背景</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                     <button class="settings-item" data-goto="appearance.avatar" type="button"><span>聊天头像</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                     <button class="settings-item" data-goto="status" type="button"><span>状态提示</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
-                    <button class="settings-item" data-goto="display" type="button"><span>显示与字体</span><svg class="svg-icon chevron" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
+                    <button class="settings-item" data-goto="display" type="button"><span>显示与字体</span><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                 </div>
             </section>
 
@@ -164,12 +164,14 @@
                         <div class="control-head"><span class="control-label">主界面字体大小</span><span class="control-value" data-val="font.home" data-unit="px">16px</span></div>
                         <input type="range" class="slider" data-key="font.home" data-unit="px" min="10" max="18" step="1">
                     </div>
+                    <div class="control-row"><span class="control-label">我的文字颜色</span><label class="color-dot"><input type="color" data-key="font.colorMe"></label></div>
+                    <div class="control-row"><span class="control-label">对方文字颜色</span><label class="color-dot"><input type="color" data-key="font.colorTa"></label></div>
                 </div>
             </section>
 
             <section class="set-page" data-page="status">
                 <div class="sub-topbar">
-                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>
+                    <button class="nav-back" data-nav="back" type="button" aria-label="返回"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chevron"></use></svg></button>
                     <span class="sub-title">状态提示</span>
                 </div>
                 <div class="status-preview"><span class="msg-status" id="statusPreview">—— 要抱抱 ——</span></div>
@@ -316,7 +318,8 @@
                     </div>
                 </div>
                 <div class="group-card control-card">
-                    <div class="control-row"><span class="control-label">气泡底色</span><label class="color-dot"><input type="color" data-key="bubble.bg"></label></div>
+                    <div class="control-row"><span class="control-label">我的气泡底色</span><label class="color-dot"><input type="color" data-key="bubble.bg"></label></div>
+                    <div class="control-row"><span class="control-label">对方气泡底色</span><label class="color-dot"><input type="color" data-key="bubble.bgTa"></label></div>
                     <div class="control-row"><span class="control-label">边框</span><label class="switch"><input type="checkbox" data-key="bubble.border"><span class="switch-track"></span></label></div>
                     <div class="control-row"><span class="control-label">边框颜色</span><label class="color-dot"><input type="color" data-key="bubble.borderColor"></label></div>
                 </div>
@@ -420,7 +423,7 @@
                 </div>
                 <div class="group-card">
                     <div class="settings-item"><span>名称</span><span class="control-value">☆Philos</span></div>
-                    <div class="settings-item"><span>版本</span><span class="control-value">3.3</span></div>
+                    <div class="settings-item"><span>版本</span><span class="control-value">3.4</span></div>
                     <div class="settings-item"><span>数据存储</span><span class="control-value">仅本机</span></div>
                 </div>
                 <p class="about-note">只为你们两个人做的网页。</p>
@@ -609,7 +612,6 @@
         </div>
 
         <div class="app-scroll">
-            <!-- 小组件面板 -->
             <div data-wpane="widget">
                 <div class="tpl-scroll">
                     <button class="tpl-card" data-tpl="A" type="button">
@@ -669,7 +671,6 @@
                 </div>
             </div>
 
-            <!-- 大组件面板 -->
             <div data-wpane="hero" hidden>
                 <div class="group-card control-card">
                     <div class="card-title">大组件照片</div>
@@ -687,7 +688,7 @@
         </div>
     </div>
 
-    <!-- ===== 弹窗（不加 hidden，靠 .show 控制） ===== -->
+    <!-- ===== 弹窗 ===== -->
     <div class="modal-mask" id="cdMask"></div>
     <div class="modal-sheet" id="cdSheet">
         <div class="sheet-handle"></div>
