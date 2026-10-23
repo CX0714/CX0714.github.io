@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v44";
+const CACHE_NAME = "philos-v45";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -430,15 +430,6 @@ function rmInjectStyles() {
         ".msg-row.rm-mood-row{padding-bottom:30px;}" +
         ".mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;animation:rmBreath 1.8s ease-in-out infinite;}" +
         "@keyframes rmBreath{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,199,89,.35);}50%{opacity:.55;box-shadow:0 0 0 4px rgba(52,199,89,0);}}" +
-        "html[data-bubble-preset=\"imessage\"] .msg-bubble:not(.rm-sticker-bubble){border-radius:20px !important;box-shadow:none !important;padding:7px 16px !important;position:relative !important;overflow:visible !important;line-height:1.4 !important;}" +
-        "html[data-bubble-preset=\"imessage\"] .msg-row.ta .msg-bubble:not(.rm-sticker-bubble){background:var(--bubble-ta-bg,#F2F2F2) !important;color:var(--bubble-ta-text,#333333) !important;border:none !important;}" +
-        "html[data-bubble-preset=\"imessage\"] .msg-row.me .msg-bubble:not(.rm-sticker-bubble){background:var(--bubble-bg,#E5E5E5) !important;color:var(--bubble-me-text,#333333) !important;border:none !important;}" +
-        "html[data-bubble-preset=\"imessage\"] .msg-bubble:not(.rm-sticker-bubble)::after{content:\"\" !important;position:absolute !important;bottom:1px !important;width:20px !important;height:20px !important;background-color:inherit !important;background-image:none !important;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:contain;mask-size:contain;pointer-events:none;}" +
-        "html[data-bubble-preset=\"imessage\"] .msg-row.ta .msg-bubble:not(.rm-sticker-bubble)::after{left:-8px !important;-webkit-mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0 V20 H0 C10 20 20 15 20 0 Z' fill='%23000'/%3E%3C/svg%3E\");mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0 V20 H0 C10 20 20 15 20 0 Z' fill='%23000'/%3E%3C/svg%3E\");}" +
-        "html[data-bubble-preset=\"imessage\"] .msg-row.me .msg-bubble:not(.rm-sticker-bubble)::after{right:-8px !important;-webkit-mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 V20 H20 C10 20 0 15 0 0 Z' fill='%23000'/%3E%3C/svg%3E\");mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 V20 H20 C10 20 0 15 0 0 Z' fill='%23000'/%3E%3C/svg%3E\");}" +
-        "[data-theme=\"dark\"] html[data-bubble-preset=\"imessage\"] .msg-row .msg-bubble:not(.rm-sticker-bubble){color:#f2f3f6 !important;}" +
-        ".preset-card[data-preset=\"imessage\"] .preset-bubble{border-radius:18px;position:relative;}" +
-        ".preset-card[data-preset=\"imessage\"] .preset-bubble::after{content:\"\";position:absolute;bottom:0;left:-5px;width:12px;height:12px;background-color:inherit;border-radius:0 0 0 8px;}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
@@ -594,38 +585,6 @@ function rmSetupMoodTab() {
     seg.classList.add("seg-5");
 }
 
-function rmSetupBubblePresets() {
-    var any = document.querySelector(".preset-card");
-    if (!any) return;
-    var wrap = any.parentNode;
-    if (!wrap || wrap.querySelector('[data-preset="imessage"]')) return;
-    var card = document.createElement("button");
-    card.type = "button";
-    card.className = "preset-card";
-    card.setAttribute("data-preset", "imessage");
-    var bubble = document.createElement("span");
-    bubble.className = "preset-bubble";
-    card.appendChild(bubble);
-    wrap.appendChild(card);
-
-    card.addEventListener("click", function () {
-        setTimeout(function () {
-            var b = appData.settings && appData.settings.bubble;
-            if (!b || b.preset !== "imessage") return;
-            var changed = false;
-            if (!b.bgTa) { b.bgTa = "#F2F2F2"; changed = true; }
-            if (b.bg === "#5b7fa6") { b.bg = "#E5E5E5"; changed = true; }
-            if (changed) {
-                saveData();
-                renderControls();
-                applySettings();
-                renderPreview();
-                renderChat();
-            }
-        }, 0);
-    });
-}
-
 function rmSetupMoodSettings() {
     var page = document.querySelector('[data-page="display"]');
     if (!page || page.querySelector("[data-mood-size]")) return;
@@ -759,8 +718,11 @@ function rmTuneBubble() {
 
 function rmTrimPresets() {
     var b = appData.settings && appData.settings.bubble;
-    if (b && (b.preset === "small" || b.preset === "square")) { b.preset = "large"; saveData(); }
-    var old = document.querySelectorAll('.preset-card[data-preset="small"], .preset-card[data-preset="square"]');
+    if (b && (b.preset === "small" || b.preset === "square" || b.preset === "imessage")) {
+        b.preset = "tail";
+        saveData();
+    }
+    var old = document.querySelectorAll('.preset-card[data-preset="small"], .preset-card[data-preset="square"], .preset-card[data-preset="imessage"]');
     for (var i = 0; i < old.length; i++) { if (old[i].parentNode) old[i].parentNode.removeChild(old[i]); }
     var cards = document.querySelectorAll(".preset-card");
     var current = b && b.preset ? b.preset : "tail";
@@ -882,7 +844,6 @@ function rmInit() {
     rmApplyMoodStyle();
     rmTrimPresets();
     rmSyncBubblePreset();
-    rmSetupBubblePresets();
     rmSetupMoodTab();
     rmSetupMoodSettings();
     rmSetupPatSettings();
