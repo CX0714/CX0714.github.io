@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v39";
+const CACHE_NAME = "philos-v40";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -41,6 +41,19 @@ function rmSettings() {
     if (typeof p.letterDelayMin !== "number") p.letterDelayMin = 5;
     if (typeof p.letterDelayMax !== "number") p.letterDelayMax = 15;
     return p;
+}
+
+function rmEnsureMoods() {
+    if (!Array.isArray(appData.moods)) appData.moods = [];
+    var f = appData.settings.font;
+    if (typeof f.moodColor !== "string" || !f.moodColor) f.moodColor = "#8b909a";
+    if (typeof f.moodSize !== "number") f.moodSize = 11;
+}
+
+function rmApplyMoodStyle() {
+    var f = appData.settings.font;
+    document.documentElement.style.setProperty("--mood-color", f.moodColor || "#8b909a");
+    document.documentElement.style.setProperty("--mood-size", (f.moodSize || 11) + "px");
 }
 
 function rmPool() {
@@ -102,30 +115,31 @@ function rmTakeCards(pool, count) {
 function rmBuildMessage(p, pool) {
     var mode = rmPickMode(p, pool);
     if (!mode) return null;
+    var msg = null;
 
     if (mode === "text") {
-        return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
-    }
-    if (mode === "emoji") {
-        return { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
-    }
-    if (mode === "sticker") {
-        return { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
-    }
-    if (mode === "textEmoji") {
+        msg = { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
+    } else if (mode === "emoji") {
+        msg = { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
+    } else if (mode === "sticker") {
+        msg = { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
+    } else if (mode === "textEmoji") {
         var text = rmPick(pool.text);
         var n = 1 + Math.floor(Math.random() * 2);
         if (pool.emoji.length) {
             for (var i = 0; i < n; i++) text += rmPick(pool.emoji);
         }
-        return { from: "ta", type: "text", text: text, status: "" };
-    }
-    if (mode === "combo") {
+        msg = { from: "ta", type: "text", text: text, status: "" };
+    } else if (mode === "combo") {
         var max = clamp(Number(p.comboMax) || 3, 2, 6);
         var count = 2 + Math.floor(Math.random() * (max - 1));
-        return { from: "ta", type: "text", text: rmTakeCards(pool, count).join("，"), status: "" };
+        msg = { from: "ta", type: "text", text: rmTakeCards(pool, count).join("，"), status: "" };
     }
-    return null;
+
+    if (msg && appData.moods && appData.moods.length) {
+        msg.mood = rmPick(appData.moods);
+    }
+    return msg;
 }
 
 function rmSetTyping(on) {
@@ -382,6 +396,17 @@ function rmInjectStyles() {
         ".msg-menu-item{height:38px;padding:0 16px;border-radius:11px;color:var(--text-primary);font-size:14px;}" +
         ".msg-menu-item + .msg-menu-item{border-top:none !important;}" +
         ".msg-menu-item.danger{color:#ff3b30;}" +
+        ".kind-seg.seg-5{grid-template-columns:repeat(5,1fr);}" +
+        ".mood-editor{padding:12px 16px 6px;display:flex;flex-direction:column;gap:8px;}" +
+        ".mood-input{width:100%;min-height:68px;padding:12px;border-radius:14px;border:1px solid var(--glass-border);background:var(--input-bg);color:var(--text-primary);font-size:16px;resize:vertical;outline:none;}" +
+        ".mood-add{height:40px;}" +
+        ".mood-list{padding:4px 16px 28px;}" +
+        ".mood-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;margin-bottom:10px;border-radius:16px;background:var(--card-bg);box-shadow:var(--shadow-card);}" +
+        ".mood-row-text{font-size:15px;color:var(--text-primary);word-break:break-word;}" +
+        ".mood-del{font-size:13px;color:#ff3b30;background:none;border:none;padding:4px 0;flex:0 0 auto;}" +
+        ".msg-mood{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:var(--mood-size,11px);line-height:1.3;color:var(--mood-color,#8b909a);}" +
+        ".mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;animation:rmBreath 1.8s ease-in-out infinite;}" +
+        "@keyframes rmBreath{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,199,89,.35);}50%{opacity:.55;box-shadow:0 0 0 4px rgba(52,199,89,0);}}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
@@ -413,8 +438,24 @@ function rmDecorateChat() {
     for (var i = 0; i < bubbles.length; i++) {
         var idx = Number(bubbles[i].getAttribute("data-index"));
         var msg = appData.chatHistory[idx];
-        if (msg && msg.type === "sticker") {
+        if (!msg) continue;
+        if (msg.type === "sticker") {
             bubbles[i].classList.add("rm-sticker-bubble");
+        }
+        if (msg.from === "ta" && msg.mood) {
+            var wrap = bubbles[i].parentNode;
+            if (wrap && !wrap.querySelector(".msg-mood")) {
+                var mood = document.createElement("div");
+                mood.className = "msg-mood";
+                var dot = document.createElement("span");
+                dot.className = "mood-dot";
+                var label = document.createElement("span");
+                label.className = "mood-text";
+                label.textContent = msg.mood;
+                mood.appendChild(dot);
+                mood.appendChild(label);
+                wrap.appendChild(mood);
+            }
         }
     }
 }
@@ -425,6 +466,142 @@ renderChat = function () {
     rmDecorateChat();
     rmAutoScrollChat();
 };
+
+function rmRenderMood() {
+    var view = $("cardsView");
+    if (!view) return;
+    var seg = view.querySelector(".kind-seg");
+    if (seg) {
+        var btns = seg.querySelectorAll("[data-kind]");
+        for (var i = 0; i < btns.length; i++) {
+            btns[i].classList.toggle("active", btns[i].getAttribute("data-kind") === "mood");
+        }
+    }
+    var catBar = view.querySelector(".cat-scroll");
+    if (catBar) catBar.style.display = "none";
+    var addRow = view.querySelector(".card-add-row");
+    if (addRow) addRow.style.display = "none";
+
+    var scroll = view.querySelector(".card-scroll");
+    if (!scroll) return;
+    scroll.innerHTML = "";
+
+    var editor = document.createElement("div");
+    editor.className = "mood-editor";
+    editor.innerHTML = '<textarea class="mood-input" placeholder="一行一条，可一次加多条"></textarea>' +
+        '<button class="wide-btn mood-add" type="button">添加状态</button>';
+    scroll.appendChild(editor);
+
+    var list = document.createElement("div");
+    list.className = "mood-list";
+    scroll.appendChild(list);
+
+    var moods = appData.moods || [];
+    if (!moods.length) {
+        var empty = document.createElement("div");
+        empty.className = "card-empty";
+        empty.textContent = "还没有状态，写几句他的心情吧";
+        list.appendChild(empty);
+    }
+
+    moods.forEach(function (text, idx) {
+        var row = document.createElement("div");
+        row.className = "mood-row";
+        var span = document.createElement("span");
+        span.className = "mood-row-text";
+        span.textContent = text;
+        var del = document.createElement("button");
+        del.type = "button";
+        del.className = "mood-del";
+        del.textContent = "删除";
+        del.addEventListener("click", function () {
+            appData.moods.splice(idx, 1);
+            saveData();
+            rmRenderMood();
+        });
+        row.appendChild(span);
+        row.appendChild(del);
+        list.appendChild(row);
+    });
+
+    var input = editor.querySelector(".mood-input");
+    var addBtn = editor.querySelector(".mood-add");
+    addBtn.addEventListener("click", function () {
+        var lines = input.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!lines.length) return;
+        lines.forEach(function (text) {
+            if (appData.moods.indexOf(text) < 0) appData.moods.push(text);
+        });
+        saveData();
+        rmRenderMood();
+    });
+}
+
+var rmBaseRenderCards = renderCards;
+renderCards = function () {
+    if (typeof activeCardKind !== "undefined" && activeCardKind === "mood") {
+        rmRenderMood();
+        return;
+    }
+    var view = $("cardsView");
+    if (view) {
+        var catBar = view.querySelector(".cat-scroll");
+        if (catBar) catBar.style.display = "";
+        var addRow = view.querySelector(".card-add-row");
+        if (addRow) addRow.style.display = "";
+    }
+    rmBaseRenderCards.apply(null, arguments);
+};
+
+function rmSetupMoodTab() {
+    var view = $("cardsView");
+    if (!view) return;
+    var seg = view.querySelector(".kind-seg");
+    if (!seg) return;
+    var statusBtn = seg.querySelector('[data-kind="status"]');
+    if (statusBtn) statusBtn.textContent = "拍一拍";
+    if (!seg.querySelector('[data-kind="mood"]')) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "kind-btn";
+        btn.setAttribute("data-kind", "mood");
+        btn.textContent = "状态";
+        seg.appendChild(btn);
+    }
+    seg.classList.add("seg-5");
+}
+
+function rmSetupMoodSettings() {
+    var page = document.querySelector('[data-page="display"]');
+    if (!page || page.querySelector("[data-mood-size]")) return;
+    var f = appData.settings.font;
+
+    var card = document.createElement("div");
+    card.className = "group-card control-card";
+    card.innerHTML = '<div class="card-title">状态文字</div>' +
+        '<div class="control-row"><span class="control-label">颜色</span><label class="color-dot"><input type="color" data-mood-color></label></div>' +
+        '<div class="control-block"><div class="control-head"><span class="control-label">大小</span><span class="control-value" data-mood-size-val>' + f.moodSize + 'px</span></div>' +
+        '<input type="range" class="slider" data-mood-size min="9" max="18" step="1"></div>';
+    page.appendChild(card);
+
+    var color = card.querySelector("[data-mood-color]");
+    var size = card.querySelector("[data-mood-size]");
+    var label = card.querySelector("[data-mood-size-val]");
+    color.value = f.moodColor;
+    size.value = f.moodSize;
+
+    color.addEventListener("input", function () {
+        f.moodColor = color.value;
+        rmApplyMoodStyle();
+        saveData();
+    });
+    size.addEventListener("input", function () {
+        f.moodSize = Number(size.value) || 11;
+        label.textContent = f.moodSize + "px";
+        rmApplyMoodStyle();
+        saveData();
+    });
+}
 
 function rmApplyCustomCss() {
     var area = document.querySelector('[data-key="bubble.css"]');
@@ -699,6 +876,7 @@ applySettings = function () {
     rmBaseApplySettings.apply(null, arguments);
     rmSyncBubblePreset();
     rmApplyPatBlur();
+    rmApplyMoodStyle();
 };
 
 function rmInit() {
@@ -707,8 +885,12 @@ function rmInit() {
     rmTuneIntervals();
     rmTuneBubble();
     rmSettings();
+    rmEnsureMoods();
+    rmApplyMoodStyle();
     rmTrimPresets();
     rmSyncBubblePreset();
+    rmSetupMoodTab();
+    rmSetupMoodSettings();
     rmSetupPatSettings();
     rmSetupThemeToggle();
     rmSetupMultiSticker();
