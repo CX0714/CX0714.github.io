@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v42";
+const CACHE_NAME = "philos-v43";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -13,6 +13,8 @@ var RM_MODES = [
     { key: "textEmoji", label: "文字 + emoji" },
     { key: "combo", label: "多条文字组合" }
 ];
+
+var RM_MOOD_KEY = "philos_moods";
 
 function rmDefaults() {
     return {
@@ -56,6 +58,32 @@ function rmEnsureMoods() {
     if (typeof f.moodSize !== "number") f.moodSize = 11;
 }
 
+function rmSaveMoodStore() {
+    try {
+        localStorage.setItem(RM_MOOD_KEY, JSON.stringify({
+            moods: appData.moods || [],
+            state: appData.moodState || { text: "", until: 0 },
+            range: appData.moodRange || { min: 20, max: 120 }
+        }));
+    } catch (e) {}
+}
+
+function rmLoadMoodStore() {
+    var data = null;
+    try { data = JSON.parse(localStorage.getItem(RM_MOOD_KEY) || "null"); } catch (e) {}
+    if (data && typeof data === "object") {
+        if (Array.isArray(data.moods)) appData.moods = data.moods.filter(function (s) { return typeof s === "string" && s; });
+        if (data.state && typeof data.state === "object") {
+            appData.moodState = { text: String(data.state.text || ""), until: Number(data.state.until) || 0 };
+        }
+        if (data.range && typeof data.range === "object") {
+            appData.moodRange = { min: Number(data.range.min) || 20, max: Number(data.range.max) || 120 };
+        }
+    } else {
+        rmSaveMoodStore();
+    }
+}
+
 function rmMoodRange() {
     var r = appData.moodRange;
     if (!r || typeof r !== "object") r = appData.moodRange = { min: 20, max: 120 };
@@ -85,7 +113,7 @@ function rmCurrentMood() {
         }
         st.text = next;
         st.until = now + span;
-        saveData();
+        rmSaveMoodStore();
     }
     return st.text;
 }
@@ -437,8 +465,8 @@ function rmInjectStyles() {
         ".mood-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;margin-bottom:10px;border-radius:16px;background:var(--card-bg);box-shadow:var(--shadow-card);}" +
         ".mood-row-text{font-size:15px;color:var(--text-primary);word-break:break-word;}" +
         ".mood-del{font-size:13px;color:#ff3b30;background:none;border:none;padding:4px 0;flex:0 0 auto;}" +
-        ".msg-mood{position:absolute;top:100%;left:0;margin-top:4px;display:flex;align-items:center;gap:5px;font-size:var(--mood-size,11px);line-height:1.2;color:var(--mood-color,#8b909a);white-space:nowrap;pointer-events:none;}" +
-        ".msg-row.rm-mood-row{padding-bottom:28px;}" +
+        ".msg-mood{position:absolute;top:calc(100% + 4px);left:0;display:flex;align-items:center;gap:5px;font-size:var(--mood-size,11px);line-height:1.2;color:var(--mood-color,#8b909a);white-space:nowrap;pointer-events:none;z-index:5;}" +
+        ".msg-row.rm-mood-row{padding-bottom:30px;}" +
         ".mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;animation:rmBreath 1.8s ease-in-out infinite;}" +
         "@keyframes rmBreath{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,199,89,.35);}50%{opacity:.55;box-shadow:0 0 0 4px rgba(52,199,89,0);}}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
@@ -475,7 +503,8 @@ function rmDecorateChat() {
         var msg = appData.chatHistory[idx];
         if (!msg) continue;
         if (msg.type === "sticker") bubbles[i].classList.add("rm-sticker-bubble");
-        if (msg.from === "ta" && moodText) {
+        var text = moodText || msg.mood || "";
+        if (msg.from === "ta" && text) {
             var row = bubbles[i].closest(".msg-row");
             if (row) row.classList.add("rm-mood-row");
             var wrap = bubbles[i].parentNode;
@@ -486,7 +515,7 @@ function rmDecorateChat() {
                 dot.className = "mood-dot";
                 var label = document.createElement("span");
                 label.className = "mood-text";
-                label.textContent = moodText;
+                label.textContent = text;
                 mood.appendChild(dot);
                 mood.appendChild(label);
                 wrap.appendChild(mood);
@@ -551,7 +580,7 @@ function rmRenderMood() {
         del.textContent = "删除";
         del.addEventListener("click", function () {
             appData.moods.splice(idx, 1);
-            saveData();
+            rmSaveMoodStore();
             rmRenderMood();
         });
         row.appendChild(span);
@@ -567,7 +596,7 @@ function rmRenderMood() {
         lines.forEach(function (text) {
             if (appData.moods.indexOf(text) < 0) appData.moods.push(text);
         });
-        saveData();
+        rmSaveMoodStore();
         rmRenderMood();
     });
 }
@@ -646,12 +675,12 @@ function rmSetupMoodSettings() {
     minEl.addEventListener("change", function () {
         range.min = rmClampInput(minEl, 1, 1440);
         if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; }
-        saveData();
+        rmSaveMoodStore();
     });
     maxEl.addEventListener("change", function () {
         range.max = rmClampInput(maxEl, range.min, 1440);
         if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; }
-        saveData();
+        rmSaveMoodStore();
     });
 }
 
@@ -938,6 +967,7 @@ function rmInit() {
     rmTuneBubble();
     rmSettings();
     rmEnsureMoods();
+    rmLoadMoodStore();
     rmApplyMoodStyle();
     rmTrimPresets();
     rmSyncBubblePreset();
