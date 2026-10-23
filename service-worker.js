@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v43";
+const CACHE_NAME = "philos-v44";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -47,12 +47,8 @@ function rmSettings() {
 
 function rmEnsureMoods() {
     if (!Array.isArray(appData.moods)) appData.moods = [];
-    if (!appData.moodState || typeof appData.moodState !== "object") {
-        appData.moodState = { text: "", until: 0 };
-    }
-    if (!appData.moodRange || typeof appData.moodRange !== "object") {
-        appData.moodRange = { min: 20, max: 120 };
-    }
+    if (!appData.moodState || typeof appData.moodState !== "object") appData.moodState = { text: "", until: 0 };
+    if (!appData.moodRange || typeof appData.moodRange !== "object") appData.moodRange = { min: 20, max: 120 };
     var f = appData.settings.font;
     if (typeof f.moodColor !== "string" || !f.moodColor) f.moodColor = "#8b909a";
     if (typeof f.moodSize !== "number") f.moodSize = 11;
@@ -108,9 +104,7 @@ function rmCurrentMood() {
         var range = rmMoodRange();
         var span = (range.min + Math.random() * (range.max - range.min)) * 60000;
         var next = moods[Math.floor(Math.random() * moods.length)];
-        if (moods.length > 1 && next === st.text) {
-            next = moods[(moods.indexOf(next) + 1) % moods.length];
-        }
+        if (moods.length > 1 && next === st.text) next = moods[(moods.indexOf(next) + 1) % moods.length];
         st.text = next;
         st.until = now + span;
         rmSaveMoodStore();
@@ -178,15 +172,9 @@ function rmBuildMessage(p, pool) {
     var mode = rmPickMode(p, pool);
     if (!mode) return null;
 
-    if (mode === "text") {
-        return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
-    }
-    if (mode === "emoji") {
-        return { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
-    }
-    if (mode === "sticker") {
-        return { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
-    }
+    if (mode === "text") return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
+    if (mode === "emoji") return { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
+    if (mode === "sticker") return { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
     if (mode === "textEmoji") {
         var text = rmPick(pool.text);
         var n = 1 + Math.floor(Math.random() * 2);
@@ -217,12 +205,7 @@ function rmNotify(text) {
     try {
         if (navigator.serviceWorker && navigator.serviceWorker.ready) {
             navigator.serviceWorker.ready.then(function (reg) {
-                reg.showNotification(title, {
-                    body: text,
-                    icon: "icon-192.png",
-                    badge: "icon-192.png",
-                    tag: "philos-msg"
-                });
+                reg.showNotification(title, { body: text, icon: "icon-192.png", badge: "icon-192.png", tag: "philos-msg" });
             }).catch(function () {});
         } else {
             new Notification(title, { body: text, icon: "icon-192.png" });
@@ -232,8 +215,7 @@ function rmNotify(text) {
 
 function rmScrollChatBottom() {
     var box = $("chatMessages");
-    if (!box) return;
-    box.scrollTop = box.scrollHeight;
+    if (box) box.scrollTop = box.scrollHeight;
 }
 
 function rmAutoScrollChat() {
@@ -264,41 +246,29 @@ function rmShowPat(text) {
     var wrap = document.createElement("div");
     wrap.className = "pat-pop";
     wrap.id = "patPop";
-
     var mask = document.createElement("div");
     mask.className = "pat-pop-mask";
-
     var card = document.createElement("div");
     card.className = "pat-pop-card";
-
     var avatar = document.createElement("div");
     avatar.className = "pat-pop-avatar";
     avatar.innerHTML = avatarMarkup(appData.taAvatar, "他");
-
     var body = document.createElement("div");
     body.className = "pat-pop-text";
     body.textContent = text;
-
     var actions = document.createElement("div");
     actions.className = "pat-pop-actions";
-
     var later = document.createElement("button");
-    later.type = "button";
-    later.className = "pat-pop-btn";
-    later.textContent = "等下哦";
+    later.type = "button"; later.className = "pat-pop-btn"; later.textContent = "等下哦";
     later.addEventListener("click", rmHidePat);
-
     var go = document.createElement("button");
-    go.type = "button";
-    go.className = "pat-pop-btn primary";
-    go.textContent = "闪去";
+    go.type = "button"; go.className = "pat-pop-btn primary"; go.textContent = "闪去";
     go.addEventListener("click", function () {
         rmHidePat();
         showScreen("chatView");
         renderChat();
         rmAutoScrollChat();
     });
-
     actions.appendChild(later);
     actions.appendChild(go);
     card.appendChild(avatar);
@@ -321,7 +291,6 @@ scheduleReply = function () {
     var delay = Math.max(0, Number(p.replyDelay) || 0) * 1000;
 
     rmSetTyping(true);
-
     if (replyTimer) clearTimeout(replyTimer);
     replyTimer = setTimeout(function () {
         var now = Date.now();
@@ -343,19 +312,13 @@ scheduleReply = function () {
         if (patPool.length && Math.random() * 100 < chance) {
             var pat = patPool[Math.floor(Math.random() * patPool.length)];
             appData.chatHistory.push({ type: "status", text: "—— " + pat.content + " ——", time: now + added });
-            if (!($("chatView") && $("chatView").classList.contains("active"))) {
-                rmShowPat(pat.content);
-            }
+            if (!($("chatView") && $("chatView").classList.contains("active"))) rmShowPat(pat.content);
         }
 
         saveData();
         var inChat = $("chatView") && $("chatView").classList.contains("active");
-        if (inChat) {
-            renderChat();
-            rmAutoScrollChat();
-        } else if (notice) {
-            rmNotify(notice);
-        }
+        if (inChat) { renderChat(); rmAutoScrollChat(); }
+        else if (notice) rmNotify(notice);
     }, delay);
 };
 
@@ -367,8 +330,7 @@ function rmLetterDate() {
 function rmLetterText(body) {
     var myName = appData.myName && appData.myName !== "your账户名" ? appData.myName : "你";
     var taName = appData.taName && appData.taName !== "他" ? appData.taName : "他";
-    return "亲爱的" + myName + "：\n\n  见字如晤：\n  " + body +
-        "\n\n　　　　　　" + taName + "\n　　　　　" + rmLetterDate();
+    return "亲爱的" + myName + "：\n\n  见字如晤：\n  " + body + "\n\n　　　　　　" + taName + "\n　　　　　" + rmLetterDate();
 }
 
 maybeReply = function (letterId) {
@@ -380,7 +342,6 @@ maybeReply = function (letterId) {
     var max = clamp(Number(p.letterMax) || 8, 3, 12);
     var count = 3 + Math.floor(Math.random() * (max - 2));
     var body = rmTakeCards(pool, count).join("。") + "。";
-
     var dMin = Math.max(0, Number(p.letterDelayMin) || 0);
     var dMax = Math.max(dMin, Number(p.letterDelayMax) || dMin);
     var delay = (dMin + Math.random() * (dMax - dMin)) * 1000;
@@ -469,6 +430,15 @@ function rmInjectStyles() {
         ".msg-row.rm-mood-row{padding-bottom:30px;}" +
         ".mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;animation:rmBreath 1.8s ease-in-out infinite;}" +
         "@keyframes rmBreath{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,199,89,.35);}50%{opacity:.55;box-shadow:0 0 0 4px rgba(52,199,89,0);}}" +
+        "html[data-bubble-preset=\"imessage\"] .msg-bubble:not(.rm-sticker-bubble){border-radius:20px !important;box-shadow:none !important;padding:7px 16px !important;position:relative !important;overflow:visible !important;line-height:1.4 !important;}" +
+        "html[data-bubble-preset=\"imessage\"] .msg-row.ta .msg-bubble:not(.rm-sticker-bubble){background:var(--bubble-ta-bg,#F2F2F2) !important;color:var(--bubble-ta-text,#333333) !important;border:none !important;}" +
+        "html[data-bubble-preset=\"imessage\"] .msg-row.me .msg-bubble:not(.rm-sticker-bubble){background:var(--bubble-bg,#E5E5E5) !important;color:var(--bubble-me-text,#333333) !important;border:none !important;}" +
+        "html[data-bubble-preset=\"imessage\"] .msg-bubble:not(.rm-sticker-bubble)::after{content:\"\" !important;position:absolute !important;bottom:1px !important;width:20px !important;height:20px !important;background-color:inherit !important;background-image:none !important;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:contain;mask-size:contain;pointer-events:none;}" +
+        "html[data-bubble-preset=\"imessage\"] .msg-row.ta .msg-bubble:not(.rm-sticker-bubble)::after{left:-8px !important;-webkit-mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0 V20 H0 C10 20 20 15 20 0 Z' fill='%23000'/%3E%3C/svg%3E\");mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0 V20 H0 C10 20 20 15 20 0 Z' fill='%23000'/%3E%3C/svg%3E\");}" +
+        "html[data-bubble-preset=\"imessage\"] .msg-row.me .msg-bubble:not(.rm-sticker-bubble)::after{right:-8px !important;-webkit-mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 V20 H20 C10 20 0 15 0 0 Z' fill='%23000'/%3E%3C/svg%3E\");mask-image:url(\"data:image/svg+xml,%3Csvg width='20' height='20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 V20 H20 C10 20 0 15 0 0 Z' fill='%23000'/%3E%3C/svg%3E\");}" +
+        "[data-theme=\"dark\"] html[data-bubble-preset=\"imessage\"] .msg-row .msg-bubble:not(.rm-sticker-bubble){color:#f2f3f6 !important;}" +
+        ".preset-card[data-preset=\"imessage\"] .preset-bubble{border-radius:18px;position:relative;}" +
+        ".preset-card[data-preset=\"imessage\"] .preset-bubble::after{content:\"\";position:absolute;bottom:0;left:-5px;width:12px;height:12px;background-color:inherit;border-radius:0 0 0 8px;}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
@@ -537,9 +507,7 @@ function rmRenderMood() {
     var seg = view.querySelector(".kind-seg");
     if (seg) {
         var btns = seg.querySelectorAll("[data-kind]");
-        for (var i = 0; i < btns.length; i++) {
-            btns[i].classList.toggle("active", btns[i].getAttribute("data-kind") === "mood");
-        }
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-kind") === "mood");
     }
     var catBar = view.querySelector(".cat-scroll");
     if (catBar) catBar.style.display = "none";
@@ -552,8 +520,7 @@ function rmRenderMood() {
 
     var editor = document.createElement("div");
     editor.className = "mood-editor";
-    editor.innerHTML = '<textarea class="mood-input" placeholder="一行一条，可一次加多条"></textarea>' +
-        '<button class="wide-btn mood-add" type="button">添加状态</button>';
+    editor.innerHTML = '<textarea class="mood-input" placeholder="一行一条，可一次加多条"></textarea><button class="wide-btn mood-add" type="button">添加状态</button>';
     scroll.appendChild(editor);
 
     var list = document.createElement("div");
@@ -575,9 +542,7 @@ function rmRenderMood() {
         span.className = "mood-row-text";
         span.textContent = text;
         var del = document.createElement("button");
-        del.type = "button";
-        del.className = "mood-del";
-        del.textContent = "删除";
+        del.type = "button"; del.className = "mood-del"; del.textContent = "删除";
         del.addEventListener("click", function () {
             appData.moods.splice(idx, 1);
             rmSaveMoodStore();
@@ -589,13 +554,10 @@ function rmRenderMood() {
     });
 
     var input = editor.querySelector(".mood-input");
-    var addBtn = editor.querySelector(".mood-add");
-    addBtn.addEventListener("click", function () {
+    editor.querySelector(".mood-add").addEventListener("click", function () {
         var lines = input.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
         if (!lines.length) return;
-        lines.forEach(function (text) {
-            if (appData.moods.indexOf(text) < 0) appData.moods.push(text);
-        });
+        lines.forEach(function (text) { if (appData.moods.indexOf(text) < 0) appData.moods.push(text); });
         rmSaveMoodStore();
         rmRenderMood();
     });
@@ -603,10 +565,7 @@ function rmRenderMood() {
 
 var rmBaseRenderCards = renderCards;
 renderCards = function () {
-    if (typeof activeCardKind !== "undefined" && activeCardKind === "mood") {
-        rmRenderMood();
-        return;
-    }
+    if (typeof activeCardKind !== "undefined" && activeCardKind === "mood") { rmRenderMood(); return; }
     var view = $("cardsView");
     if (view) {
         var catBar = view.querySelector(".cat-scroll");
@@ -635,6 +594,38 @@ function rmSetupMoodTab() {
     seg.classList.add("seg-5");
 }
 
+function rmSetupBubblePresets() {
+    var any = document.querySelector(".preset-card");
+    if (!any) return;
+    var wrap = any.parentNode;
+    if (!wrap || wrap.querySelector('[data-preset="imessage"]')) return;
+    var card = document.createElement("button");
+    card.type = "button";
+    card.className = "preset-card";
+    card.setAttribute("data-preset", "imessage");
+    var bubble = document.createElement("span");
+    bubble.className = "preset-bubble";
+    card.appendChild(bubble);
+    wrap.appendChild(card);
+
+    card.addEventListener("click", function () {
+        setTimeout(function () {
+            var b = appData.settings && appData.settings.bubble;
+            if (!b || b.preset !== "imessage") return;
+            var changed = false;
+            if (!b.bgTa) { b.bgTa = "#F2F2F2"; changed = true; }
+            if (b.bg === "#5b7fa6") { b.bg = "#E5E5E5"; changed = true; }
+            if (changed) {
+                saveData();
+                renderControls();
+                applySettings();
+                renderPreview();
+                renderChat();
+            }
+        }, 0);
+    });
+}
+
 function rmSetupMoodSettings() {
     var page = document.querySelector('[data-page="display"]');
     if (!page || page.querySelector("[data-mood-size]")) return;
@@ -645,8 +636,7 @@ function rmSetupMoodSettings() {
     card.className = "group-card control-card";
     card.innerHTML = '<div class="card-title">状态文字</div>' +
         '<div class="control-row"><span class="control-label">颜色</span><label class="color-dot"><input type="color" data-mood-color></label></div>' +
-        '<div class="control-block"><div class="control-head"><span class="control-label">大小</span><span class="control-value" data-mood-size-val>' + f.moodSize + 'px</span></div>' +
-        '<input type="range" class="slider" data-mood-size min="9" max="18" step="1"></div>' +
+        '<div class="control-block"><div class="control-head"><span class="control-label">大小</span><span class="control-value" data-mood-size-val>' + f.moodSize + 'px</span></div><input type="range" class="slider" data-mood-size min="9" max="18" step="1"></div>' +
         '<div class="control-row"><span class="control-label">轮换最短</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="1" max="1440" step="1" data-mood-min><span class="control-label">分钟</span></div></div>' +
         '<div class="control-row"><span class="control-label">轮换最长</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="1" max="1440" step="1" data-mood-max><span class="control-label">分钟</span></div></div>';
     page.appendChild(card);
@@ -661,27 +651,10 @@ function rmSetupMoodSettings() {
     minEl.value = range.min;
     maxEl.value = range.max;
 
-    color.addEventListener("input", function () {
-        f.moodColor = color.value;
-        rmApplyMoodStyle();
-        saveData();
-    });
-    size.addEventListener("input", function () {
-        f.moodSize = Number(size.value) || 11;
-        label.textContent = f.moodSize + "px";
-        rmApplyMoodStyle();
-        saveData();
-    });
-    minEl.addEventListener("change", function () {
-        range.min = rmClampInput(minEl, 1, 1440);
-        if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; }
-        rmSaveMoodStore();
-    });
-    maxEl.addEventListener("change", function () {
-        range.max = rmClampInput(maxEl, range.min, 1440);
-        if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; }
-        rmSaveMoodStore();
-    });
+    color.addEventListener("input", function () { f.moodColor = color.value; rmApplyMoodStyle(); saveData(); });
+    size.addEventListener("input", function () { f.moodSize = Number(size.value) || 11; label.textContent = f.moodSize + "px"; rmApplyMoodStyle(); saveData(); });
+    minEl.addEventListener("change", function () { range.min = rmClampInput(minEl, 1, 1440); if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; } rmSaveMoodStore(); });
+    maxEl.addEventListener("change", function () { range.max = rmClampInput(maxEl, range.min, 1440); if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; } rmSaveMoodStore(); });
 }
 
 function rmApplyCustomCss() {
@@ -697,46 +670,28 @@ function rmSetupCustomCss() {
     var area = document.querySelector('[data-key="bubble.css"]');
     if (!area || area.getAttribute("data-rm-css")) return;
     area.setAttribute("data-rm-css", "1");
-
     var block = area.closest(".control-block") || area.parentNode;
     var row = document.createElement("div");
     row.className = "control-block";
-    row.innerHTML = '<button class="wide-btn" type="button" data-rm-css-apply>应用 CSS</button>' +
-        '<p class="about-note" style="padding:8px 0 0;">写完点按钮生效。想覆盖预设圆角，选择器写具体一点（如 .msg-row.ta .msg-bubble）或加 !important。</p>';
+    row.innerHTML = '<button class="wide-btn" type="button" data-rm-css-apply>应用 CSS</button><p class="about-note" style="padding:8px 0 0;">写完点按钮生效。想覆盖预设圆角，选择器写具体一点（如 .msg-row.ta .msg-bubble）或加 !important。</p>';
     if (block.parentNode) block.parentNode.insertBefore(row, block.nextSibling);
-
     var btn = row.querySelector("[data-rm-css-apply]");
-    if (btn) {
-        btn.addEventListener("click", function () {
-            rmApplyCustomCss();
-            btn.textContent = "已应用";
-            setTimeout(function () { btn.textContent = "应用 CSS"; }, 1200);
-        });
-    }
-
+    if (btn) btn.addEventListener("click", function () { rmApplyCustomCss(); btn.textContent = "已应用"; setTimeout(function () { btn.textContent = "应用 CSS"; }, 1200); });
     var timer = null;
-    area.addEventListener("input", function () {
-        clearTimeout(timer);
-        timer = setTimeout(rmApplyCustomCss, 400);
-    });
+    area.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(rmApplyCustomCss, 400); });
 }
 
 function rmSetupPatSettings() {
     var b = appData.settings.bubble;
     if (typeof b.patBlur !== "number") b.patBlur = 70;
     rmApplyPatBlur();
-
     var anchor = document.querySelector("[data-preset]");
     var page = anchor ? anchor.closest(".set-page") : null;
     if (!page || page.querySelector("[data-pat-blur]")) return;
-
     var card = document.createElement("div");
     card.className = "group-card control-card";
-    card.innerHTML = '<div class="card-title">拍一拍弹窗</div>' +
-        '<div class="control-block"><div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-pat-blur-val>' + b.patBlur + '%</span></div>' +
-        '<input type="range" class="slider" data-pat-blur min="0" max="100" step="5"></div>';
+    card.innerHTML = '<div class="card-title">拍一拍弹窗</div><div class="control-block"><div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-pat-blur-val>' + b.patBlur + '%</span></div><input type="range" class="slider" data-pat-blur min="0" max="100" step="5"></div>';
     page.appendChild(card);
-
     var input = card.querySelector("[data-pat-blur]");
     var label = card.querySelector("[data-pat-blur-val]");
     input.value = b.patBlur;
@@ -750,24 +705,19 @@ function rmSetupPatSettings() {
 
 function rmSyncDarkToggle() {
     var el = document.querySelector("[data-rm-dark]");
-    if (!el) return;
-    el.checked = document.documentElement.getAttribute("data-theme") === "dark";
+    if (el) el.checked = document.documentElement.getAttribute("data-theme") === "dark";
 }
 
 function rmSetupThemeToggle() {
     var page = document.querySelector('[data-page="main"]');
     if (!page || page.querySelector("[data-rm-dark-card]")) return;
-
     var card = document.createElement("div");
     card.className = "group-card";
     card.setAttribute("data-rm-dark-card", "");
-    card.innerHTML = '<div class="settings-item"><span>深色模式</span>' +
-        '<label class="switch"><input type="checkbox" data-rm-dark><span class="switch-track"></span></label></div>';
-
+    card.innerHTML = '<div class="settings-item"><span>深色模式</span><label class="switch"><input type="checkbox" data-rm-dark><span class="switch-track"></span></label></div>';
     var account = page.querySelector(".account-card");
     if (account && account.parentNode) account.parentNode.insertBefore(card, account.nextSibling);
     else page.appendChild(card);
-
     var input = card.querySelector("[data-rm-dark]");
     input.addEventListener("change", function () {
         appData.themeMode = input.checked ? "dark" : "light";
@@ -776,9 +726,7 @@ function rmSetupThemeToggle() {
         applySettings();
         rmSyncDarkToggle();
     });
-
     rmSyncDarkToggle();
-
     if (window.MutationObserver) {
         var mo = new MutationObserver(rmSyncDarkToggle);
         mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
@@ -811,19 +759,12 @@ function rmTuneBubble() {
 
 function rmTrimPresets() {
     var b = appData.settings && appData.settings.bubble;
-    if (b && (b.preset === "small" || b.preset === "square")) {
-        b.preset = "large";
-        saveData();
-    }
+    if (b && (b.preset === "small" || b.preset === "square")) { b.preset = "large"; saveData(); }
     var old = document.querySelectorAll('.preset-card[data-preset="small"], .preset-card[data-preset="square"]');
-    for (var i = 0; i < old.length; i++) {
-        if (old[i].parentNode) old[i].parentNode.removeChild(old[i]);
-    }
+    for (var i = 0; i < old.length; i++) { if (old[i].parentNode) old[i].parentNode.removeChild(old[i]); }
     var cards = document.querySelectorAll(".preset-card");
     var current = b && b.preset ? b.preset : "tail";
-    for (var j = 0; j < cards.length; j++) {
-        cards[j].classList.toggle("selected", cards[j].getAttribute("data-preset") === current);
-    }
+    for (var j = 0; j < cards.length; j++) cards[j].classList.toggle("selected", cards[j].getAttribute("data-preset") === current);
 }
 
 function rmSetupMultiSticker() {
@@ -831,7 +772,6 @@ function rmSetupMultiSticker() {
     if (!input || input.getAttribute("data-rm-multi")) return;
     input.setAttribute("multiple", "multiple");
     input.setAttribute("data-rm-multi", "1");
-
     input.addEventListener("change", function (e) {
         e.stopImmediatePropagation();
         var files = input.files;
@@ -841,20 +781,11 @@ function rmSetupMultiSticker() {
         list.forEach(function (file) {
             var reader = new FileReader();
             reader.onload = function () {
-                appData.cards.unshift({
-                    id: uid(),
-                    kind: "sticker",
-                    content: reader.result,
-                    category: "未分类",
-                    createdAt: Date.now()
-                });
+                appData.cards.unshift({ id: uid(), kind: "sticker", content: reader.result, category: "未分类", createdAt: Date.now() });
                 pending--;
                 if (pending <= 0) { saveData(); renderCards(); }
             };
-            reader.onerror = function () {
-                pending--;
-                if (pending <= 0) { saveData(); renderCards(); }
-            };
+            reader.onerror = function () { pending--; if (pending <= 0) { saveData(); renderCards(); } };
             reader.readAsDataURL(file);
         });
         input.value = "";
@@ -875,27 +806,19 @@ function rmBuildUI() {
     var rows = "";
     for (var i = 0; i < RM_MODES.length; i++) {
         var m = RM_MODES[i];
-        rows += '<div class="control-row">' +
-                    '<span class="control-label">' + m.label + '</span>' +
-                    '<div class="row-actions">' +
-                        '<span class="control-value" data-rm-pct="' + m.key + '">—</span>' +
-                        '<label class="switch"><input type="checkbox" data-rm-on="' + m.key + '"><span class="switch-track"></span></label>' +
-                    '</div>' +
-                '</div>' +
-                '<div class="control-block"><input type="range" class="slider" data-rm-weight="' + m.key + '" min="0" max="100" step="5"></div>';
+        rows += '<div class="control-row"><span class="control-label">' + m.label + '</span><div class="row-actions"><span class="control-value" data-rm-pct="' + m.key + '">—</span><label class="switch"><input type="checkbox" data-rm-on="' + m.key + '"><span class="switch-track"></span></label></div></div>' +
+            '<div class="control-block"><input type="range" class="slider" data-rm-weight="' + m.key + '" min="0" max="100" step="5"></div>';
     }
 
     var card1 = document.createElement("div");
     card1.className = "group-card control-card";
     card1.setAttribute("data-rm-card", "");
-    card1.innerHTML = '<div class="card-title">他的回复方式（按权重随机）</div>' + rows +
-        '<p class="about-note" style="padding:0 16px 14px;">没有对应字卡的方式会自动跳过；全部关闭或字卡为空时不自动回复。</p>';
+    card1.innerHTML = '<div class="card-title">他的回复方式（按权重随机）</div>' + rows + '<p class="about-note" style="padding:0 16px 14px;">没有对应字卡的方式会自动跳过；全部关闭或字卡为空时不自动回复。</p>';
 
     var card2 = document.createElement("div");
     card2.className = "group-card control-card";
     card2.setAttribute("data-rm-card", "");
-    card2.innerHTML =
-        '<div class="card-title">组合与信笺</div>' +
+    card2.innerHTML = '<div class="card-title">组合与信笺</div>' +
         '<div class="control-row"><span class="control-label">多条组合最多</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="2" max="6" step="1" data-rm-combo><span class="control-label">条</span></div></div>' +
         '<div class="control-row"><span class="control-label">信笺最多字卡</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="3" max="12" step="1" data-rm-lettercount><span class="control-label">条</span></div></div>' +
         '<div class="control-row"><span class="control-label">回信最短间隔</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="0" max="86400" step="1" data-rm-lettermin><span class="control-label">秒</span></div></div>' +
@@ -930,21 +853,9 @@ function rmBind() {
         if (!p) return;
 
         var onKey = t.getAttribute("data-rm-on");
-        if (onKey) {
-            if (p.replyModes[onKey]) p.replyModes[onKey].on = !!t.checked;
-            rmUpdatePct();
-            saveData();
-            return;
-        }
-
+        if (onKey) { if (p.replyModes[onKey]) p.replyModes[onKey].on = !!t.checked; rmUpdatePct(); saveData(); return; }
         var wKey = t.getAttribute("data-rm-weight");
-        if (wKey && p.replyModes[wKey]) {
-            p.replyModes[wKey].weight = Math.round(Number(t.value) || 0);
-            rmUpdatePct();
-            saveData();
-            return;
-        }
-
+        if (wKey && p.replyModes[wKey]) { p.replyModes[wKey].weight = Math.round(Number(t.value) || 0); rmUpdatePct(); saveData(); return; }
         if (t.getAttribute("data-rm-combo")) { p.comboMax = rmClampInput(t, 2, 6); saveData(); return; }
         if (t.getAttribute("data-rm-lettercount")) { p.letterMax = rmClampInput(t, 3, 12); saveData(); return; }
         if (t.getAttribute("data-rm-lettermin")) { p.letterDelayMin = rmClampInput(t, 0, 86400); saveData(); return; }
@@ -971,6 +882,7 @@ function rmInit() {
     rmApplyMoodStyle();
     rmTrimPresets();
     rmSyncBubblePreset();
+    rmSetupBubblePresets();
     rmSetupMoodTab();
     rmSetupMoodSettings();
     rmSetupPatSettings();
@@ -1084,9 +996,7 @@ self.addEventListener("push", (event) => {
         const parsed = JSON.parse(raw);
         if (parsed && parsed.text) body = String(parsed.text);
         if (parsed && parsed.id) msgId = String(parsed.id);
-      } catch (e) {
-        if (raw) body = raw;
-      }
+      } catch (e) { if (raw) body = raw; }
     }
   } catch (e) {}
 
