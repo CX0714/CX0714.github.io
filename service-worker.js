@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v41";
+const CACHE_NAME = "philos-v42";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -46,11 +46,23 @@ function rmSettings() {
 function rmEnsureMoods() {
     if (!Array.isArray(appData.moods)) appData.moods = [];
     if (!appData.moodState || typeof appData.moodState !== "object") {
-        appData.moodState = { text: "", at: 0 };
+        appData.moodState = { text: "", until: 0 };
+    }
+    if (!appData.moodRange || typeof appData.moodRange !== "object") {
+        appData.moodRange = { min: 20, max: 120 };
     }
     var f = appData.settings.font;
     if (typeof f.moodColor !== "string" || !f.moodColor) f.moodColor = "#8b909a";
     if (typeof f.moodSize !== "number") f.moodSize = 11;
+}
+
+function rmMoodRange() {
+    var r = appData.moodRange;
+    if (!r || typeof r !== "object") r = appData.moodRange = { min: 20, max: 120 };
+    if (typeof r.min !== "number") r.min = 20;
+    if (typeof r.max !== "number") r.max = 120;
+    if (r.max < r.min) r.max = r.min;
+    return r;
 }
 
 function rmApplyMoodStyle() {
@@ -62,15 +74,17 @@ function rmApplyMoodStyle() {
 function rmCurrentMood() {
     var moods = appData.moods || [];
     if (!moods.length) return "";
-    var st = appData.moodState || (appData.moodState = { text: "", at: 0 });
+    var st = appData.moodState || (appData.moodState = { text: "", until: 0 });
     var now = Date.now();
-    if (!st.text || !st.at || now - st.at > 3600000) {
+    if (!st.text || !st.until || now >= st.until) {
+        var range = rmMoodRange();
+        var span = (range.min + Math.random() * (range.max - range.min)) * 60000;
         var next = moods[Math.floor(Math.random() * moods.length)];
         if (moods.length > 1 && next === st.text) {
             next = moods[(moods.indexOf(next) + 1) % moods.length];
         }
         st.text = next;
-        st.at = now;
+        st.until = now + span;
         saveData();
     }
     return st.text;
@@ -596,20 +610,27 @@ function rmSetupMoodSettings() {
     var page = document.querySelector('[data-page="display"]');
     if (!page || page.querySelector("[data-mood-size]")) return;
     var f = appData.settings.font;
+    var range = rmMoodRange();
 
     var card = document.createElement("div");
     card.className = "group-card control-card";
     card.innerHTML = '<div class="card-title">状态文字</div>' +
         '<div class="control-row"><span class="control-label">颜色</span><label class="color-dot"><input type="color" data-mood-color></label></div>' +
         '<div class="control-block"><div class="control-head"><span class="control-label">大小</span><span class="control-value" data-mood-size-val>' + f.moodSize + 'px</span></div>' +
-        '<input type="range" class="slider" data-mood-size min="9" max="18" step="1"></div>';
+        '<input type="range" class="slider" data-mood-size min="9" max="18" step="1"></div>' +
+        '<div class="control-row"><span class="control-label">轮换最短</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="1" max="1440" step="1" data-mood-min><span class="control-label">分钟</span></div></div>' +
+        '<div class="control-row"><span class="control-label">轮换最长</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="1" max="1440" step="1" data-mood-max><span class="control-label">分钟</span></div></div>';
     page.appendChild(card);
 
     var color = card.querySelector("[data-mood-color]");
     var size = card.querySelector("[data-mood-size]");
     var label = card.querySelector("[data-mood-size-val]");
+    var minEl = card.querySelector("[data-mood-min]");
+    var maxEl = card.querySelector("[data-mood-max]");
     color.value = f.moodColor;
     size.value = f.moodSize;
+    minEl.value = range.min;
+    maxEl.value = range.max;
 
     color.addEventListener("input", function () {
         f.moodColor = color.value;
@@ -620,6 +641,16 @@ function rmSetupMoodSettings() {
         f.moodSize = Number(size.value) || 11;
         label.textContent = f.moodSize + "px";
         rmApplyMoodStyle();
+        saveData();
+    });
+    minEl.addEventListener("change", function () {
+        range.min = rmClampInput(minEl, 1, 1440);
+        if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; }
+        saveData();
+    });
+    maxEl.addEventListener("change", function () {
+        range.max = rmClampInput(maxEl, range.min, 1440);
+        if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; }
         saveData();
     });
 }
