@@ -1,9 +1,8 @@
-const CACHE_NAME = "philos-v38";
+const CACHE_NAME = "philos-v39";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
-   运行时补丁：回复方式 / 气泡 / 表情包 / Typing / 输入栏 /
-   自定义 CSS / 拍一拍弹窗 / 深色开关 / 消息通知 / 阴影统一。
+   运行时补丁（app.js 末尾注入，原文件不动）
    ========================================================= */
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
@@ -375,8 +374,14 @@ function rmInjectStyles() {
     var st = document.createElement("style");
     st.id = "rm-style";
     st.textContent =
-        ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:15px;outline:none;}" +
+        ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:16px;outline:none;}" +
         ".widget-large,.dock{box-shadow:var(--shadow-card) !important;}" +
+        "input:not([type=\"checkbox\"]):not([type=\"range\"]):not([type=\"color\"]):not([type=\"file\"]),textarea,select{font-size:16px !important;}" +
+        ".msg-menu{flex-direction:row !important;gap:4px;padding:6px;border-radius:16px;background:var(--glass-bg) !important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:var(--shadow-card) !important;}" +
+        ".msg-menu::after{display:none !important;}" +
+        ".msg-menu-item{height:38px;padding:0 16px;border-radius:11px;color:var(--text-primary);font-size:14px;}" +
+        ".msg-menu-item + .msg-menu-item{border-top:none !important;}" +
+        ".msg-menu-item.danger{color:#ff3b30;}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row .msg-bubble,html[data-bubble-preset=\"tail\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
         "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px;}" +
@@ -528,17 +533,22 @@ function rmSyncBubblePreset() {
     document.documentElement.setAttribute("data-bubble-preset", preset);
 }
 
+function rmTuneIntervals() {
+    var delay = document.querySelector('[data-key="permission.replyDelay"]');
+    if (delay) { delay.setAttribute("max", "600"); delay.max = "600"; }
+    var activeMin = document.querySelector('[data-key="permission.activeMin"]');
+    if (activeMin) { activeMin.setAttribute("min", "1"); activeMin.min = "1"; }
+    var activeMax = document.querySelector('[data-key="permission.activeMax"]');
+    if (activeMax) { activeMax.setAttribute("min", "2"); activeMax.min = "2"; }
+    var callMin = document.querySelector('[data-key="permission.callMin"]');
+    if (callMin) { callMin.setAttribute("min", "1"); callMin.min = "1"; }
+}
+
 function rmTuneBubble() {
     var height = document.querySelector('[data-key="bubble.height"]');
-    if (height) {
-        height.setAttribute("min", "0");
-        height.min = "0";
-    }
+    if (height) { height.setAttribute("min", "0"); height.min = "0"; }
     var radius = document.querySelector('[data-key="bubble.radius"]');
-    if (radius) {
-        radius.setAttribute("max", "60");
-        radius.max = "60";
-    }
+    if (radius) { radius.setAttribute("max", "60"); radius.max = "60"; }
 }
 
 function rmTrimPresets() {
@@ -556,6 +566,46 @@ function rmTrimPresets() {
     for (var j = 0; j < cards.length; j++) {
         cards[j].classList.toggle("selected", cards[j].getAttribute("data-preset") === current);
     }
+}
+
+function rmSetupMultiSticker() {
+    var input = $("cardStickerFile");
+    if (!input || input.getAttribute("data-rm-multi")) return;
+    input.setAttribute("multiple", "multiple");
+    input.setAttribute("data-rm-multi", "1");
+
+    input.addEventListener("change", function (e) {
+        e.stopImmediatePropagation();
+        var files = input.files;
+        if (!files || !files.length) return;
+        var list = Array.prototype.slice.call(files);
+        var pending = list.length;
+        list.forEach(function (file) {
+            var reader = new FileReader();
+            reader.onload = function () {
+                appData.cards.unshift({
+                    id: uid(),
+                    kind: "sticker",
+                    content: reader.result,
+                    category: "未分类",
+                    createdAt: Date.now()
+                });
+                pending--;
+                if (pending <= 0) { saveData(); renderCards(); }
+            };
+            reader.onerror = function () {
+                pending--;
+                if (pending <= 0) { saveData(); renderCards(); }
+            };
+            reader.readAsDataURL(file);
+        });
+        input.value = "";
+    }, true);
+}
+
+function rmFixZoom() {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover");
 }
 
 function rmBuildUI() {
@@ -637,26 +687,10 @@ function rmBind() {
             return;
         }
 
-        if (t.getAttribute("data-rm-combo")) {
-            p.comboMax = rmClampInput(t, 2, 6);
-            saveData();
-            return;
-        }
-        if (t.getAttribute("data-rm-lettercount")) {
-            p.letterMax = rmClampInput(t, 3, 12);
-            saveData();
-            return;
-        }
-        if (t.getAttribute("data-rm-lettermin")) {
-            p.letterDelayMin = rmClampInput(t, 0, 86400);
-            saveData();
-            return;
-        }
-        if (t.getAttribute("data-rm-lettermax")) {
-            p.letterDelayMax = rmClampInput(t, 0, 86400);
-            saveData();
-            return;
-        }
+        if (t.getAttribute("data-rm-combo")) { p.comboMax = rmClampInput(t, 2, 6); saveData(); return; }
+        if (t.getAttribute("data-rm-lettercount")) { p.letterMax = rmClampInput(t, 3, 12); saveData(); return; }
+        if (t.getAttribute("data-rm-lettermin")) { p.letterDelayMin = rmClampInput(t, 0, 86400); saveData(); return; }
+        if (t.getAttribute("data-rm-lettermax")) { p.letterDelayMax = rmClampInput(t, 0, 86400); saveData(); return; }
     });
 }
 
@@ -669,12 +703,15 @@ applySettings = function () {
 
 function rmInit() {
     rmInjectStyles();
+    rmFixZoom();
+    rmTuneIntervals();
     rmTuneBubble();
     rmSettings();
     rmTrimPresets();
     rmSyncBubblePreset();
     rmSetupPatSettings();
     rmSetupThemeToggle();
+    rmSetupMultiSticker();
     rmBuildUI();
     rmBind();
     rmRender();
