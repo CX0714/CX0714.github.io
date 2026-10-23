@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v40";
+const CACHE_NAME = "philos-v41";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -45,6 +45,9 @@ function rmSettings() {
 
 function rmEnsureMoods() {
     if (!Array.isArray(appData.moods)) appData.moods = [];
+    if (!appData.moodState || typeof appData.moodState !== "object") {
+        appData.moodState = { text: "", at: 0 };
+    }
     var f = appData.settings.font;
     if (typeof f.moodColor !== "string" || !f.moodColor) f.moodColor = "#8b909a";
     if (typeof f.moodSize !== "number") f.moodSize = 11;
@@ -54,6 +57,23 @@ function rmApplyMoodStyle() {
     var f = appData.settings.font;
     document.documentElement.style.setProperty("--mood-color", f.moodColor || "#8b909a");
     document.documentElement.style.setProperty("--mood-size", (f.moodSize || 11) + "px");
+}
+
+function rmCurrentMood() {
+    var moods = appData.moods || [];
+    if (!moods.length) return "";
+    var st = appData.moodState || (appData.moodState = { text: "", at: 0 });
+    var now = Date.now();
+    if (!st.text || !st.at || now - st.at > 3600000) {
+        var next = moods[Math.floor(Math.random() * moods.length)];
+        if (moods.length > 1 && next === st.text) {
+            next = moods[(moods.indexOf(next) + 1) % moods.length];
+        }
+        st.text = next;
+        st.at = now;
+        saveData();
+    }
+    return st.text;
 }
 
 function rmPool() {
@@ -115,31 +135,30 @@ function rmTakeCards(pool, count) {
 function rmBuildMessage(p, pool) {
     var mode = rmPickMode(p, pool);
     if (!mode) return null;
-    var msg = null;
 
     if (mode === "text") {
-        msg = { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
-    } else if (mode === "emoji") {
-        msg = { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
-    } else if (mode === "sticker") {
-        msg = { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
-    } else if (mode === "textEmoji") {
+        return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
+    }
+    if (mode === "emoji") {
+        return { from: "ta", type: "text", text: rmPick(pool.emoji), status: "" };
+    }
+    if (mode === "sticker") {
+        return { from: "ta", type: "sticker", text: rmPick(pool.sticker), status: "" };
+    }
+    if (mode === "textEmoji") {
         var text = rmPick(pool.text);
         var n = 1 + Math.floor(Math.random() * 2);
         if (pool.emoji.length) {
             for (var i = 0; i < n; i++) text += rmPick(pool.emoji);
         }
-        msg = { from: "ta", type: "text", text: text, status: "" };
-    } else if (mode === "combo") {
+        return { from: "ta", type: "text", text: text, status: "" };
+    }
+    if (mode === "combo") {
         var max = clamp(Number(p.comboMax) || 3, 2, 6);
         var count = 2 + Math.floor(Math.random() * (max - 1));
-        msg = { from: "ta", type: "text", text: rmTakeCards(pool, count).join("，"), status: "" };
+        return { from: "ta", type: "text", text: rmTakeCards(pool, count).join("，"), status: "" };
     }
-
-    if (msg && appData.moods && appData.moods.length) {
-        msg.mood = rmPick(appData.moods);
-    }
-    return msg;
+    return null;
 }
 
 function rmSetTyping(on) {
@@ -404,7 +423,8 @@ function rmInjectStyles() {
         ".mood-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;margin-bottom:10px;border-radius:16px;background:var(--card-bg);box-shadow:var(--shadow-card);}" +
         ".mood-row-text{font-size:15px;color:var(--text-primary);word-break:break-word;}" +
         ".mood-del{font-size:13px;color:#ff3b30;background:none;border:none;padding:4px 0;flex:0 0 auto;}" +
-        ".msg-mood{display:flex;align-items:center;gap:5px;margin-top:5px;font-size:var(--mood-size,11px);line-height:1.3;color:var(--mood-color,#8b909a);}" +
+        ".msg-mood{position:absolute;top:100%;left:0;margin-top:4px;display:flex;align-items:center;gap:5px;font-size:var(--mood-size,11px);line-height:1.2;color:var(--mood-color,#8b909a);white-space:nowrap;pointer-events:none;}" +
+        ".msg-row.rm-mood-row{padding-bottom:28px;}" +
         ".mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;animation:rmBreath 1.8s ease-in-out infinite;}" +
         "@keyframes rmBreath{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(52,199,89,.35);}50%{opacity:.55;box-shadow:0 0 0 4px rgba(52,199,89,0);}}" +
         "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:var(--bubble-radius,16px);}" +
@@ -435,14 +455,15 @@ function rmInjectStyles() {
 
 function rmDecorateChat() {
     var bubbles = document.querySelectorAll("#chatMessages .msg-bubble");
+    var moodText = rmCurrentMood();
     for (var i = 0; i < bubbles.length; i++) {
         var idx = Number(bubbles[i].getAttribute("data-index"));
         var msg = appData.chatHistory[idx];
         if (!msg) continue;
-        if (msg.type === "sticker") {
-            bubbles[i].classList.add("rm-sticker-bubble");
-        }
-        if (msg.from === "ta" && msg.mood) {
+        if (msg.type === "sticker") bubbles[i].classList.add("rm-sticker-bubble");
+        if (msg.from === "ta" && moodText) {
+            var row = bubbles[i].closest(".msg-row");
+            if (row) row.classList.add("rm-mood-row");
             var wrap = bubbles[i].parentNode;
             if (wrap && !wrap.querySelector(".msg-mood")) {
                 var mood = document.createElement("div");
@@ -451,7 +472,7 @@ function rmDecorateChat() {
                 dot.className = "mood-dot";
                 var label = document.createElement("span");
                 label.className = "mood-text";
-                label.textContent = msg.mood;
+                label.textContent = moodText;
                 mood.appendChild(dot);
                 mood.appendChild(label);
                 wrap.appendChild(mood);
