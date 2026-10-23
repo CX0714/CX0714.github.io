@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v45";
+const CACHE_NAME = "philos-v46";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -15,6 +15,7 @@ var RM_MODES = [
 ];
 
 var RM_MOOD_KEY = "philos_moods";
+var RM_SETTINGS_KEY = "philos_patch_settings";
 
 function rmDefaults() {
     return {
@@ -43,6 +44,46 @@ function rmSettings() {
     if (typeof p.letterDelayMin !== "number") p.letterDelayMin = 5;
     if (typeof p.letterDelayMax !== "number") p.letterDelayMax = 15;
     return p;
+}
+
+function rmSavePatch() {
+    var s = appData.settings || {};
+    var p = s.permission || {};
+    var b = s.bubble || {};
+    var f = s.font || {};
+    try {
+        localStorage.setItem(RM_SETTINGS_KEY, JSON.stringify({
+            permission: {
+                replyModes: p.replyModes || null,
+                comboMax: p.comboMax,
+                letterMax: p.letterMax,
+                letterDelayMin: p.letterDelayMin,
+                letterDelayMax: p.letterDelayMax
+            },
+            bubble: { patBlur: b.patBlur },
+            font: { moodColor: f.moodColor, moodSize: f.moodSize }
+        }));
+    } catch (e) {}
+}
+
+function rmLoadPatch() {
+    var data = null;
+    try { data = JSON.parse(localStorage.getItem(RM_SETTINGS_KEY) || "null"); } catch (e) {}
+    if (!data) { rmSavePatch(); return; }
+    var s = appData.settings;
+    if (data.permission) {
+        var p = s.permission;
+        if (data.permission.replyModes && typeof data.permission.replyModes === "object") p.replyModes = data.permission.replyModes;
+        var keys = ["comboMax", "letterMax", "letterDelayMin", "letterDelayMax"];
+        for (var i = 0; i < keys.length; i++) {
+            if (typeof data.permission[keys[i]] === "number") p[keys[i]] = data.permission[keys[i]];
+        }
+    }
+    if (data.bubble && typeof data.bubble.patBlur === "number") s.bubble.patBlur = data.bubble.patBlur;
+    if (data.font) {
+        if (typeof data.font.moodColor === "string" && data.font.moodColor) s.font.moodColor = data.font.moodColor;
+        if (typeof data.font.moodSize === "number") s.font.moodSize = data.font.moodSize;
+    }
 }
 
 function rmEnsureMoods() {
@@ -610,8 +651,8 @@ function rmSetupMoodSettings() {
     minEl.value = range.min;
     maxEl.value = range.max;
 
-    color.addEventListener("input", function () { f.moodColor = color.value; rmApplyMoodStyle(); saveData(); });
-    size.addEventListener("input", function () { f.moodSize = Number(size.value) || 11; label.textContent = f.moodSize + "px"; rmApplyMoodStyle(); saveData(); });
+    color.addEventListener("input", function () { f.moodColor = color.value; rmApplyMoodStyle(); rmSavePatch(); saveData(); });
+    size.addEventListener("input", function () { f.moodSize = Number(size.value) || 11; label.textContent = f.moodSize + "px"; rmApplyMoodStyle(); rmSavePatch(); saveData(); });
     minEl.addEventListener("change", function () { range.min = rmClampInput(minEl, 1, 1440); if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; } rmSaveMoodStore(); });
     maxEl.addEventListener("change", function () { range.max = rmClampInput(maxEl, range.min, 1440); if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; } rmSaveMoodStore(); });
 }
@@ -658,6 +699,7 @@ function rmSetupPatSettings() {
         b.patBlur = Number(input.value) || 0;
         label.textContent = b.patBlur + "%";
         rmApplyPatBlur();
+        rmSavePatch();
         saveData();
     });
 }
@@ -805,6 +847,7 @@ function rmBind() {
         if (!p || !p.replyModes[key]) return;
         p.replyModes[key].weight = Math.round(Number(t.value) || 0);
         rmUpdatePct();
+        rmSavePatch();
         saveData();
     });
 
@@ -815,13 +858,13 @@ function rmBind() {
         if (!p) return;
 
         var onKey = t.getAttribute("data-rm-on");
-        if (onKey) { if (p.replyModes[onKey]) p.replyModes[onKey].on = !!t.checked; rmUpdatePct(); saveData(); return; }
+        if (onKey) { if (p.replyModes[onKey]) p.replyModes[onKey].on = !!t.checked; rmUpdatePct(); rmSavePatch(); saveData(); return; }
         var wKey = t.getAttribute("data-rm-weight");
-        if (wKey && p.replyModes[wKey]) { p.replyModes[wKey].weight = Math.round(Number(t.value) || 0); rmUpdatePct(); saveData(); return; }
-        if (t.getAttribute("data-rm-combo")) { p.comboMax = rmClampInput(t, 2, 6); saveData(); return; }
-        if (t.getAttribute("data-rm-lettercount")) { p.letterMax = rmClampInput(t, 3, 12); saveData(); return; }
-        if (t.getAttribute("data-rm-lettermin")) { p.letterDelayMin = rmClampInput(t, 0, 86400); saveData(); return; }
-        if (t.getAttribute("data-rm-lettermax")) { p.letterDelayMax = rmClampInput(t, 0, 86400); saveData(); return; }
+        if (wKey && p.replyModes[wKey]) { p.replyModes[wKey].weight = Math.round(Number(t.value) || 0); rmUpdatePct(); rmSavePatch(); saveData(); return; }
+        if (t.getAttribute("data-rm-combo")) { p.comboMax = rmClampInput(t, 2, 6); rmSavePatch(); saveData(); return; }
+        if (t.getAttribute("data-rm-lettercount")) { p.letterMax = rmClampInput(t, 3, 12); rmSavePatch(); saveData(); return; }
+        if (t.getAttribute("data-rm-lettermin")) { p.letterDelayMin = rmClampInput(t, 0, 86400); rmSavePatch(); saveData(); return; }
+        if (t.getAttribute("data-rm-lettermax")) { p.letterDelayMax = rmClampInput(t, 0, 86400); rmSavePatch(); saveData(); return; }
     });
 }
 
@@ -839,6 +882,7 @@ function rmInit() {
     rmTuneIntervals();
     rmTuneBubble();
     rmSettings();
+    rmLoadPatch();
     rmEnsureMoods();
     rmLoadMoodStore();
     rmApplyMoodStyle();
