@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v47";
+const CACHE_NAME = "philos-v48";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -17,6 +17,174 @@ var RM_MODES = [
 var RM_MOOD_KEY = "philos_moods";
 var RM_SETTINGS_KEY = "philos_patch_settings";
 var rmWarnedStorage = false;
+
+var rmDb = null;
+var rmDbOk = false;
+var rmDbPromise = null;
+var rmImgMap = new Map();
+var rmStoredIds = {};
+var rmImgSeq = 0;
+
+function rmOpenDb() {
+    if (rmDbPromise) return rmDbPromise;
+    rmDbPromise = new Promise(function (resolve) {
+        try {
+            var req = indexedDB.open("philos_images", 1);
+            req.onupgradeneeded = function () {
+                try { req.result.createObjectStore("images"); } catch (e) {}
+            };
+            req.onsuccess = function () { rmDb = req.result; rmDbOk = true; resolve(rmDb); };
+            req.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+    });
+    return rmDbPromise;
+}
+
+function rmIdbPut(id, value) {
+    if (!rmDbOk || rmStoredIds[id]) return;
+    rmStoredIds[id] = true;
+    try {
+        var tx = rmDb.transaction("images", "readwrite");
+        tx.objectStore("images").put(value, id);
+    } catch (e) {}
+}
+
+function rmIdbGet(id) {
+    return new Promise(function (resolve) {
+        if (!rmDb) { resolve(null); return; }
+        try {
+            var req = rmDb.transaction("images").objectStore("images").get(id);
+            req.onsuccess = function () { resolve(req.result || null); };
+            req.onerror = function () { resolve(null); };
+        } catch (e) { resolve(null); }
+    });
+}
+
+function rmHash(str) {
+    var h1 = 5381, h2 = 52711;
+    for (var i = 0; i < str.length; i++) {
+        var c = str.charCodeAt(i);
+        h1 = (h1 * 33 ^ c) >>> 0;
+        h2 = (h2 * 31 + c) >>> 0;
+    }
+    return h1.toString(36) + h2.toString(36) + str.length.toString(36);
+}
+
+function rmImgId(url) {
+    var id = rmImgMap.get(url);
+    if (!id) {
+        id = "i" + (++rmImgSeq).toString(36) + rmHash(url);
+        rmImgMap.set(url, id);
+    }
+    rmIdbPut(id, url);
+    return id;
+}
+
+function rmWalkImages(obj, fn) {
+    if (!obj || typeof obj !== "object") return;
+    for (var k in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+        var v = obj[k];
+        if (typeof v === "string") {
+            if (v.indexOf("data:image/") === 0 || v.indexOf("blob:") === 0) obj[k] = fn(v);
+        } else if (v && typeof v === "object") {
+            rmWalkImages(v, fn);
+        }
+    }
+}
+
+function rmHydrateWalk(obj, map) {
+    if (!obj || typeof obj !== "object") return;
+    for (var k in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+        var v = obj[k];
+        if (typeof v === "string") {
+            if (map[v]) obj[k] = map[v];
+        } else if (v && typeof v === "object") {
+            rmHydrateWalk(v, map);
+        }
+    }
+}
+
+function rmCollectRefs(obj, out) {
+    if (!obj || typeof obj !== "object") return;
+    for (var k in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+        var v = obj[k];
+        if (typeof v === "string") {
+            if (v.indexOf("idb://") === 0) out.push(v.slice(6));
+        } else if (v && typeof v === "object") {
+            rmCollectRefs(v, out);
+        }
+    }
+}
+
+function rmHydrateImages() {
+    var refs = [];
+    rmCollectRefs(appData, refs);
+    if (!refs.length) return;
+    var unique = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
+    Promise.all(unique.map(function (id) {
+        return rmIdbGet(id).then(function (url) { return { id: id, url: url }; });
+    })).then(function (list) {
+        var map = {};
+        list.forEach(function (item) {
+            if (item.url) {
+                map["idb://" + item.id] = item.url;
+                rmImgMap.set(item.url, item.id);
+                rmStoredIds[item.id] = true;
+            }
+        });
+        rmHydrateWalk(appData, map);
+        rmRefreshAll();
+    });
+}
+
+function rmRefreshAll() {
+    try {
+        renderWidget();
+        renderProfile();
+        renderPreview();
+        renderChat();
+        renderStickers();
+        renderPats();
+        renderIconConfigs();
+        renderControls();
+        renderCountdown();
+        renderLetters();
+        renderCards();
+        renderWidgetConfig();
+        applySettings();
+        applyHeroImages();
+    } catch (e) {}
+}
+
+function rmWarnStorage() {
+    if (rmWarnedStorage) return;
+    rmWarnedStorage = true;
+    setTimeout(function () {
+        alert("存储空间不足，刚添加的图片可能没有保存。\n请删掉一些旧表情包后再试。");
+    }, 60);
+}
+
+function rmSaveAppData() {
+    try {
+        var json;
+        if (rmDbOk) {
+            json = JSON.stringify(appData, function (k, v) {
+                if (typeof v === "string" && v.indexOf("data:image/") === 0) {
+                    return "idb://" + rmImgId(v);
+                }
+                return v;
+            });
+        } else {
+            json = JSON.stringify(appData);
+        }
+        localStorage.setItem(STORAGE_KEY, json);
+    } catch (e) {
+        rmWarnStorage();
+    }
+}
 
 function rmDefaults() {
     return {
@@ -45,14 +213,6 @@ function rmSettings() {
     if (typeof p.letterDelayMin !== "number") p.letterDelayMin = 5;
     if (typeof p.letterDelayMax !== "number") p.letterDelayMax = 15;
     return p;
-}
-
-function rmWarnStorage() {
-    if (rmWarnedStorage) return;
-    rmWarnedStorage = true;
-    setTimeout(function () {
-        alert("存储空间不足，刚添加的图片可能没有保存。\n请删掉一些旧表情包或关掉部分图片设置后再试。");
-    }, 60);
 }
 
 function rmSavePatch() {
@@ -459,7 +619,7 @@ function rmCompressImage(file, cb) {
     var url = URL.createObjectURL(file);
     var img = new Image();
     img.onload = function () {
-        var max = 640;
+        var max = 480;
         var scale = Math.min(1, max / Math.max(img.width, img.height));
         var w = Math.max(1, Math.round(img.width * scale));
         var h = Math.max(1, Math.round(img.height * scale));
@@ -468,7 +628,7 @@ function rmCompressImage(file, cb) {
         canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
         var out = "";
-        try { out = canvas.toDataURL("image/webp", 0.8); } catch (e) {}
+        try { out = canvas.toDataURL("image/webp", 0.72); } catch (e) {}
         if (!out || out.indexOf("data:image/") !== 0) out = canvas.toDataURL("image/png");
         URL.revokeObjectURL(url);
         cb(out);
@@ -566,13 +726,8 @@ renderChat = function () {
     rmAutoScrollChat();
 };
 
-var rmBaseSaveData = saveData;
 saveData = function () {
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
-    } catch (e) {
-        rmWarnStorage();
-    }
+    rmSaveAppData();
 };
 
 function rmRenderMood() {
@@ -918,6 +1073,7 @@ applySettings = function () {
 };
 
 function rmInit() {
+    rmOpenDb();
     rmInjectStyles();
     rmFixZoom();
     rmTuneIntervals();
@@ -950,6 +1106,8 @@ function rmInit() {
             setTimeout(rmScrollChatBottom, 300);
         });
     }
+
+    rmOpenDb().then(function () { setTimeout(rmHydrateImages, 0); });
 }
 
 if (document.readyState === "loading") {
