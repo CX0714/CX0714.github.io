@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v46";
+const CACHE_NAME = "philos-v47";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -16,6 +16,7 @@ var RM_MODES = [
 
 var RM_MOOD_KEY = "philos_moods";
 var RM_SETTINGS_KEY = "philos_patch_settings";
+var rmWarnedStorage = false;
 
 function rmDefaults() {
     return {
@@ -44,6 +45,14 @@ function rmSettings() {
     if (typeof p.letterDelayMin !== "number") p.letterDelayMin = 5;
     if (typeof p.letterDelayMax !== "number") p.letterDelayMax = 15;
     return p;
+}
+
+function rmWarnStorage() {
+    if (rmWarnedStorage) return;
+    rmWarnedStorage = true;
+    setTimeout(function () {
+        alert("存储空间不足，刚添加的图片可能没有保存。\n请删掉一些旧表情包或关掉部分图片设置后再试。");
+    }, 60);
 }
 
 function rmSavePatch() {
@@ -446,6 +455,28 @@ function rmClampInput(el, min, max) {
     return v;
 }
 
+function rmCompressImage(file, cb) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+        var max = 640;
+        var scale = Math.min(1, max / Math.max(img.width, img.height));
+        var w = Math.max(1, Math.round(img.width * scale));
+        var h = Math.max(1, Math.round(img.height * scale));
+        var canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        var out = "";
+        try { out = canvas.toDataURL("image/webp", 0.8); } catch (e) {}
+        if (!out || out.indexOf("data:image/") !== 0) out = canvas.toDataURL("image/png");
+        URL.revokeObjectURL(url);
+        cb(out);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); cb(""); };
+    img.src = url;
+}
+
 function rmInjectStyles() {
     if (document.getElementById("rm-style")) return;
     var st = document.createElement("style");
@@ -453,6 +484,8 @@ function rmInjectStyles() {
     st.textContent =
         ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:16px;outline:none;}" +
         ".widget-large,.dock{box-shadow:var(--shadow-card) !important;}" +
+        ".chat-center{padding-top:10px !important;}" +
+        ".chat-avatar{width:50px !important;height:50px !important;}" +
         "input:not([type=\"checkbox\"]):not([type=\"range\"]):not([type=\"color\"]):not([type=\"file\"]),textarea,select{font-size:16px !important;}" +
         ".msg-menu{flex-direction:row !important;gap:4px;padding:6px;border-radius:16px;background:var(--glass-bg) !important;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);border:1px solid var(--glass-border);box-shadow:var(--shadow-card) !important;}" +
         ".msg-menu::after{display:none !important;}" +
@@ -531,6 +564,15 @@ renderChat = function () {
     rmBaseRenderChat.apply(null, arguments);
     rmDecorateChat();
     rmAutoScrollChat();
+};
+
+var rmBaseSaveData = saveData;
+saveData = function () {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+    } catch (e) {
+        rmWarnStorage();
+    }
 };
 
 function rmRenderMood() {
@@ -783,14 +825,13 @@ function rmSetupMultiSticker() {
         var list = Array.prototype.slice.call(files);
         var pending = list.length;
         list.forEach(function (file) {
-            var reader = new FileReader();
-            reader.onload = function () {
-                appData.cards.unshift({ id: uid(), kind: "sticker", content: reader.result, category: "未分类", createdAt: Date.now() });
+            rmCompressImage(file, function (src) {
+                if (src) {
+                    appData.cards.unshift({ id: uid(), kind: "sticker", content: src, category: "未分类", createdAt: Date.now() });
+                }
                 pending--;
                 if (pending <= 0) { saveData(); renderCards(); }
-            };
-            reader.onerror = function () { pending--; if (pending <= 0) { saveData(); renderCards(); } };
-            reader.readAsDataURL(file);
+            });
         });
         input.value = "";
     }, true);
