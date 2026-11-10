@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v48";
+const CACHE_NAME = "philos-v49";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -80,15 +80,15 @@ function rmImgId(url) {
     return id;
 }
 
-function rmWalkImages(obj, fn) {
+function rmCollectRefs(obj, out) {
     if (!obj || typeof obj !== "object") return;
     for (var k in obj) {
         if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
         var v = obj[k];
         if (typeof v === "string") {
-            if (v.indexOf("data:image/") === 0 || v.indexOf("blob:") === 0) obj[k] = fn(v);
+            if (v.indexOf("idb://") === 0) out.push(v.slice(6));
         } else if (v && typeof v === "object") {
-            rmWalkImages(v, fn);
+            rmCollectRefs(v, out);
         }
     }
 }
@@ -102,19 +102,6 @@ function rmHydrateWalk(obj, map) {
             if (map[v]) obj[k] = map[v];
         } else if (v && typeof v === "object") {
             rmHydrateWalk(v, map);
-        }
-    }
-}
-
-function rmCollectRefs(obj, out) {
-    if (!obj || typeof obj !== "object") return;
-    for (var k in obj) {
-        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
-        var v = obj[k];
-        if (typeof v === "string") {
-            if (v.indexOf("idb://") === 0) out.push(v.slice(6));
-        } else if (v && typeof v === "object") {
-            rmCollectRefs(v, out);
         }
     }
 }
@@ -163,7 +150,7 @@ function rmWarnStorage() {
     if (rmWarnedStorage) return;
     rmWarnedStorage = true;
     setTimeout(function () {
-        alert("存储空间不足，刚添加的图片可能没有保存。\n请删掉一些旧表情包后再试。");
+        alert("存储空间不足，刚添加的图片可能没有保存。");
     }, 60);
 }
 
@@ -637,6 +624,80 @@ function rmCompressImage(file, cb) {
     img.src = url;
 }
 
+function rmAppButton(id, label, symbol) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "app-icon";
+    btn.id = id;
+    btn.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span><span class="app-label">' + label + '</span>';
+    return btn;
+}
+
+function rmBuildHomePages() {
+    var content = document.querySelector(".desktop-content");
+    if (!content || content.querySelector(".home-pager")) return;
+    var widget = document.getElementById("widgetLarge");
+    var dock = content.querySelector(".dock");
+    var iconGrid = content.querySelector(".icon-grid");
+    if (!content || !widget || !dock) return;
+
+    var pager = document.createElement("div");
+    pager.className = "home-pager";
+    pager.id = "homePager";
+
+    var page1 = document.createElement("section");
+    page1.className = "home-page";
+    var page2 = document.createElement("section");
+    page2.className = "home-page";
+
+    var grid1 = document.createElement("div");
+    grid1.className = "home-app-grid";
+    var grid2 = document.createElement("div");
+    grid2.className = "home-app-grid";
+
+    page1.appendChild(widget);
+    page1.appendChild(grid1);
+    page2.appendChild(grid2);
+
+    var chatBtn = document.getElementById("appChat");
+    var setBtn = document.getElementById("appSettings");
+    var letterBtn = document.getElementById("appLetter");
+    var cdBtn = document.getElementById("appCountdown");
+    var widgetsBtn = document.getElementById("appWidgets");
+
+    var phoneBtn = rmAppButton("btnPhone", "电话", "ic-phone");
+    var wechatBtn = rmAppButton("btnWechat", "微信", "ic-chat");
+    var galleryBtn = rmAppButton("btnGallery", "图库", "ic-image");
+    var quizBtn = rmAppButton("btnQuiz", "出题", "ic-card");
+    var freqBtn = rmAppButton("btnFreq", "频率", "ic-calendar");
+
+    if (chatBtn) grid1.appendChild(chatBtn);
+    grid1.insertBefore(phoneBtn, grid1.firstChild);
+    if (wechatBtn) grid1.appendChild(wechatBtn);
+    if (setBtn) grid1.appendChild(setBtn);
+
+    if (widgetsBtn) grid2.appendChild(widgetsBtn);
+    if (letterBtn) grid2.appendChild(letterBtn);
+    if (cdBtn) grid2.appendChild(cdBtn);
+    grid2.appendChild(galleryBtn);
+    grid2.appendChild(quizBtn);
+    grid2.appendChild(freqBtn);
+
+    if (iconGrid && iconGrid.parentNode) iconGrid.parentNode.removeChild(iconGrid);
+
+    pager.appendChild(page1);
+    pager.appendChild(page2);
+    content.insertBefore(pager, dock);
+
+    phoneBtn.addEventListener("click", function () { startCall(); });
+    wechatBtn.addEventListener("click", function () {
+        alert("微信聊天还在搭建，等你的气泡 CSS 到了再接上。");
+    });
+    galleryBtn.addEventListener("click", function () { alert("图库还没开始做。"); });
+    quizBtn.addEventListener("click", function () { alert("出题还没开始做。"); });
+    freqBtn.addEventListener("click", function () { alert("频率 app 还没拆分完成。"); });
+}
+
 function rmInjectStyles() {
     if (document.getElementById("rm-style")) return;
     var st = document.createElement("style");
@@ -644,6 +705,12 @@ function rmInjectStyles() {
     st.textContent =
         ".rm-num{width:74px;text-align:right;border:none;border-radius:8px;padding:6px 8px;background:var(--input-bg);color:var(--text-primary);font-size:16px;outline:none;}" +
         ".widget-large,.dock{box-shadow:var(--shadow-card) !important;}" +
+        ".desktop-content{overflow:hidden !important;}" +
+        ".home-pager{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
+        ".home-pager::-webkit-scrollbar{display:none;}" +
+        ".home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
+        ".home-app-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;align-content:start;}" +
+        ".dock{grid-template-columns:repeat(3,1fr) !important;}" +
         ".chat-center{padding-top:10px !important;}" +
         ".chat-avatar{width:50px !important;height:50px !important;}" +
         "input:not([type=\"checkbox\"]):not([type=\"range\"]):not([type=\"color\"]):not([type=\"file\"]),textarea,select{font-size:16px !important;}" +
@@ -730,348 +797,6 @@ saveData = function () {
     rmSaveAppData();
 };
 
-function rmRenderMood() {
-    var view = $("cardsView");
-    if (!view) return;
-    var seg = view.querySelector(".kind-seg");
-    if (seg) {
-        var btns = seg.querySelectorAll("[data-kind]");
-        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-kind") === "mood");
-    }
-    var catBar = view.querySelector(".cat-scroll");
-    if (catBar) catBar.style.display = "none";
-    var addRow = view.querySelector(".card-add-row");
-    if (addRow) addRow.style.display = "none";
-
-    var scroll = view.querySelector(".card-scroll");
-    if (!scroll) return;
-    scroll.innerHTML = "";
-
-    var editor = document.createElement("div");
-    editor.className = "mood-editor";
-    editor.innerHTML = '<textarea class="mood-input" placeholder="一行一条，可一次加多条"></textarea><button class="wide-btn mood-add" type="button">添加状态</button>';
-    scroll.appendChild(editor);
-
-    var list = document.createElement("div");
-    list.className = "mood-list";
-    scroll.appendChild(list);
-
-    var moods = appData.moods || [];
-    if (!moods.length) {
-        var empty = document.createElement("div");
-        empty.className = "card-empty";
-        empty.textContent = "还没有状态，写几句他的心情吧";
-        list.appendChild(empty);
-    }
-
-    moods.forEach(function (text, idx) {
-        var row = document.createElement("div");
-        row.className = "mood-row";
-        var span = document.createElement("span");
-        span.className = "mood-row-text";
-        span.textContent = text;
-        var del = document.createElement("button");
-        del.type = "button"; del.className = "mood-del"; del.textContent = "删除";
-        del.addEventListener("click", function () {
-            appData.moods.splice(idx, 1);
-            rmSaveMoodStore();
-            rmRenderMood();
-        });
-        row.appendChild(span);
-        row.appendChild(del);
-        list.appendChild(row);
-    });
-
-    var input = editor.querySelector(".mood-input");
-    editor.querySelector(".mood-add").addEventListener("click", function () {
-        var lines = input.value.split("\n").map(function (s) { return s.trim(); }).filter(Boolean);
-        if (!lines.length) return;
-        lines.forEach(function (text) { if (appData.moods.indexOf(text) < 0) appData.moods.push(text); });
-        rmSaveMoodStore();
-        rmRenderMood();
-    });
-}
-
-var rmBaseRenderCards = renderCards;
-renderCards = function () {
-    if (typeof activeCardKind !== "undefined" && activeCardKind === "mood") { rmRenderMood(); return; }
-    var view = $("cardsView");
-    if (view) {
-        var catBar = view.querySelector(".cat-scroll");
-        if (catBar) catBar.style.display = "";
-        var addRow = view.querySelector(".card-add-row");
-        if (addRow) addRow.style.display = "";
-    }
-    rmBaseRenderCards.apply(null, arguments);
-};
-
-function rmSetupMoodTab() {
-    var view = $("cardsView");
-    if (!view) return;
-    var seg = view.querySelector(".kind-seg");
-    if (!seg) return;
-    var statusBtn = seg.querySelector('[data-kind="status"]');
-    if (statusBtn) statusBtn.textContent = "拍一拍";
-    if (!seg.querySelector('[data-kind="mood"]')) {
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "kind-btn";
-        btn.setAttribute("data-kind", "mood");
-        btn.textContent = "状态";
-        seg.appendChild(btn);
-    }
-    seg.classList.add("seg-5");
-}
-
-function rmSetupMoodSettings() {
-    var page = document.querySelector('[data-page="display"]');
-    if (!page || page.querySelector("[data-mood-size]")) return;
-    var f = appData.settings.font;
-    var range = rmMoodRange();
-
-    var card = document.createElement("div");
-    card.className = "group-card control-card";
-    card.innerHTML = '<div class="card-title">状态文字</div>' +
-        '<div class="control-row"><span class="control-label">颜色</span><label class="color-dot"><input type="color" data-mood-color></label></div>' +
-        '<div class="control-block"><div class="control-head"><span class="control-label">大小</span><span class="control-value" data-mood-size-val>' + f.moodSize + 'px</span></div><input type="range" class="slider" data-mood-size min="9" max="18" step="1"></div>' +
-        '<div class="control-row"><span class="control-label">轮换最短</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="1" max="1440" step="1" data-mood-min><span class="control-label">分钟</span></div></div>' +
-        '<div class="control-row"><span class="control-label">轮换最长</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="1" max="1440" step="1" data-mood-max><span class="control-label">分钟</span></div></div>';
-    page.appendChild(card);
-
-    var color = card.querySelector("[data-mood-color]");
-    var size = card.querySelector("[data-mood-size]");
-    var label = card.querySelector("[data-mood-size-val]");
-    var minEl = card.querySelector("[data-mood-min]");
-    var maxEl = card.querySelector("[data-mood-max]");
-    color.value = f.moodColor;
-    size.value = f.moodSize;
-    minEl.value = range.min;
-    maxEl.value = range.max;
-
-    color.addEventListener("input", function () { f.moodColor = color.value; rmApplyMoodStyle(); rmSavePatch(); saveData(); });
-    size.addEventListener("input", function () { f.moodSize = Number(size.value) || 11; label.textContent = f.moodSize + "px"; rmApplyMoodStyle(); rmSavePatch(); saveData(); });
-    minEl.addEventListener("change", function () { range.min = rmClampInput(minEl, 1, 1440); if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; } rmSaveMoodStore(); });
-    maxEl.addEventListener("change", function () { range.max = rmClampInput(maxEl, range.min, 1440); if (range.max < range.min) { range.max = range.min; maxEl.value = range.max; } rmSaveMoodStore(); });
-}
-
-function rmApplyCustomCss() {
-    var area = document.querySelector('[data-key="bubble.css"]');
-    if (!area) return;
-    appData.settings.bubble.css = area.value;
-    var target = document.getElementById("bubbleCustom");
-    if (target) target.textContent = area.value;
-    saveData();
-}
-
-function rmSetupCustomCss() {
-    var area = document.querySelector('[data-key="bubble.css"]');
-    if (!area || area.getAttribute("data-rm-css")) return;
-    area.setAttribute("data-rm-css", "1");
-    var block = area.closest(".control-block") || area.parentNode;
-    var row = document.createElement("div");
-    row.className = "control-block";
-    row.innerHTML = '<button class="wide-btn" type="button" data-rm-css-apply>应用 CSS</button><p class="about-note" style="padding:8px 0 0;">写完点按钮生效。想覆盖预设圆角，选择器写具体一点（如 .msg-row.ta .msg-bubble）或加 !important。</p>';
-    if (block.parentNode) block.parentNode.insertBefore(row, block.nextSibling);
-    var btn = row.querySelector("[data-rm-css-apply]");
-    if (btn) btn.addEventListener("click", function () { rmApplyCustomCss(); btn.textContent = "已应用"; setTimeout(function () { btn.textContent = "应用 CSS"; }, 1200); });
-    var timer = null;
-    area.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(rmApplyCustomCss, 400); });
-}
-
-function rmSetupPatSettings() {
-    var b = appData.settings.bubble;
-    if (typeof b.patBlur !== "number") b.patBlur = 70;
-    rmApplyPatBlur();
-    var anchor = document.querySelector("[data-preset]");
-    var page = anchor ? anchor.closest(".set-page") : null;
-    if (!page || page.querySelector("[data-pat-blur]")) return;
-    var card = document.createElement("div");
-    card.className = "group-card control-card";
-    card.innerHTML = '<div class="card-title">拍一拍弹窗</div><div class="control-block"><div class="control-head"><span class="control-label">磨砂度</span><span class="control-value" data-pat-blur-val>' + b.patBlur + '%</span></div><input type="range" class="slider" data-pat-blur min="0" max="100" step="5"></div>';
-    page.appendChild(card);
-    var input = card.querySelector("[data-pat-blur]");
-    var label = card.querySelector("[data-pat-blur-val]");
-    input.value = b.patBlur;
-    input.addEventListener("input", function () {
-        b.patBlur = Number(input.value) || 0;
-        label.textContent = b.patBlur + "%";
-        rmApplyPatBlur();
-        rmSavePatch();
-        saveData();
-    });
-}
-
-function rmSyncDarkToggle() {
-    var el = document.querySelector("[data-rm-dark]");
-    if (el) el.checked = document.documentElement.getAttribute("data-theme") === "dark";
-}
-
-function rmSetupThemeToggle() {
-    var page = document.querySelector('[data-page="main"]');
-    if (!page || page.querySelector("[data-rm-dark-card]")) return;
-    var card = document.createElement("div");
-    card.className = "group-card";
-    card.setAttribute("data-rm-dark-card", "");
-    card.innerHTML = '<div class="settings-item"><span>深色模式</span><label class="switch"><input type="checkbox" data-rm-dark><span class="switch-track"></span></label></div>';
-    var account = page.querySelector(".account-card");
-    if (account && account.parentNode) account.parentNode.insertBefore(card, account.nextSibling);
-    else page.appendChild(card);
-    var input = card.querySelector("[data-rm-dark]");
-    input.addEventListener("change", function () {
-        appData.themeMode = input.checked ? "dark" : "light";
-        saveData();
-        applyTheme();
-        applySettings();
-        rmSyncDarkToggle();
-    });
-    rmSyncDarkToggle();
-    if (window.MutationObserver) {
-        var mo = new MutationObserver(rmSyncDarkToggle);
-        mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    }
-}
-
-function rmSyncBubblePreset() {
-    var b = appData.settings && appData.settings.bubble;
-    var preset = b && b.preset ? b.preset : "tail";
-    document.documentElement.setAttribute("data-bubble-preset", preset);
-}
-
-function rmTuneIntervals() {
-    var delay = document.querySelector('[data-key="permission.replyDelay"]');
-    if (delay) { delay.setAttribute("max", "600"); delay.max = "600"; }
-    var activeMin = document.querySelector('[data-key="permission.activeMin"]');
-    if (activeMin) { activeMin.setAttribute("min", "1"); activeMin.min = "1"; }
-    var activeMax = document.querySelector('[data-key="permission.activeMax"]');
-    if (activeMax) { activeMax.setAttribute("min", "2"); activeMax.min = "2"; }
-    var callMin = document.querySelector('[data-key="permission.callMin"]');
-    if (callMin) { callMin.setAttribute("min", "1"); callMin.min = "1"; }
-}
-
-function rmTuneBubble() {
-    var height = document.querySelector('[data-key="bubble.height"]');
-    if (height) { height.setAttribute("min", "0"); height.min = "0"; }
-    var radius = document.querySelector('[data-key="bubble.radius"]');
-    if (radius) { radius.setAttribute("max", "60"); radius.max = "60"; }
-}
-
-function rmTrimPresets() {
-    var b = appData.settings && appData.settings.bubble;
-    if (b && (b.preset === "small" || b.preset === "square" || b.preset === "imessage")) {
-        b.preset = "tail";
-        saveData();
-    }
-    var old = document.querySelectorAll('.preset-card[data-preset="small"], .preset-card[data-preset="square"], .preset-card[data-preset="imessage"]');
-    for (var i = 0; i < old.length; i++) { if (old[i].parentNode) old[i].parentNode.removeChild(old[i]); }
-    var cards = document.querySelectorAll(".preset-card");
-    var current = b && b.preset ? b.preset : "tail";
-    for (var j = 0; j < cards.length; j++) cards[j].classList.toggle("selected", cards[j].getAttribute("data-preset") === current);
-}
-
-function rmSetupMultiSticker() {
-    var input = $("cardStickerFile");
-    if (!input || input.getAttribute("data-rm-multi")) return;
-    input.setAttribute("multiple", "multiple");
-    input.setAttribute("data-rm-multi", "1");
-    input.addEventListener("change", function (e) {
-        e.stopImmediatePropagation();
-        var files = input.files;
-        if (!files || !files.length) return;
-        var list = Array.prototype.slice.call(files);
-        var pending = list.length;
-        list.forEach(function (file) {
-            rmCompressImage(file, function (src) {
-                if (src) {
-                    appData.cards.unshift({ id: uid(), kind: "sticker", content: src, category: "未分类", createdAt: Date.now() });
-                }
-                pending--;
-                if (pending <= 0) { saveData(); renderCards(); }
-            });
-        });
-        input.value = "";
-    }, true);
-}
-
-function rmFixZoom() {
-    var meta = document.querySelector('meta[name="viewport"]');
-    if (meta) meta.setAttribute("content", "width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover");
-}
-
-function rmBuildUI() {
-    var page = document.querySelector('[data-page="permission"]');
-    if (!page || page.querySelector("[data-rm-card]")) return;
-    var p = rmSettings();
-    if (!p) return;
-
-    var rows = "";
-    for (var i = 0; i < RM_MODES.length; i++) {
-        var m = RM_MODES[i];
-        rows += '<div class="control-row"><span class="control-label">' + m.label + '</span><div class="row-actions"><span class="control-value" data-rm-pct="' + m.key + '">—</span><label class="switch"><input type="checkbox" data-rm-on="' + m.key + '"><span class="switch-track"></span></label></div></div>' +
-            '<div class="control-block"><input type="range" class="slider" data-rm-weight="' + m.key + '" min="0" max="100" step="5"></div>';
-    }
-
-    var card1 = document.createElement("div");
-    card1.className = "group-card control-card";
-    card1.setAttribute("data-rm-card", "");
-    card1.innerHTML = '<div class="card-title">他的回复方式（按权重随机）</div>' + rows + '<p class="about-note" style="padding:0 16px 14px;">没有对应字卡的方式会自动跳过；全部关闭或字卡为空时不自动回复。</p>';
-
-    var card2 = document.createElement("div");
-    card2.className = "group-card control-card";
-    card2.setAttribute("data-rm-card", "");
-    card2.innerHTML = '<div class="card-title">组合与信笺</div>' +
-        '<div class="control-row"><span class="control-label">多条组合最多</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="2" max="6" step="1" data-rm-combo><span class="control-label">条</span></div></div>' +
-        '<div class="control-row"><span class="control-label">信笺最多字卡</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="3" max="12" step="1" data-rm-lettercount><span class="control-label">条</span></div></div>' +
-        '<div class="control-row"><span class="control-label">回信最短间隔</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="0" max="86400" step="1" data-rm-lettermin><span class="control-label">秒</span></div></div>' +
-        '<div class="control-row"><span class="control-label">回信最长间隔</span><div class="row-actions"><input class="rm-num" type="number" inputmode="numeric" min="0" max="86400" step="1" data-rm-lettermax><span class="control-label">秒</span></div></div>' +
-        '<p class="about-note" style="padding:0 16px 14px;">信笺只用文字字卡回信，固定格式：称呼 / 见字如晤 / 正文 / 落款和日期。</p>';
-
-    page.appendChild(card1);
-    page.appendChild(card2);
-}
-
-function rmBind() {
-    var page = document.querySelector('[data-page="permission"]');
-    if (!page || page.getAttribute("data-rm-bound")) return;
-    page.setAttribute("data-rm-bound", "1");
-
-    page.addEventListener("input", function (e) {
-        var t = e.target;
-        if (!t || !t.getAttribute) return;
-        var key = t.getAttribute("data-rm-weight");
-        if (!key) return;
-        var p = rmSettings();
-        if (!p || !p.replyModes[key]) return;
-        p.replyModes[key].weight = Math.round(Number(t.value) || 0);
-        rmUpdatePct();
-        rmSavePatch();
-        saveData();
-    });
-
-    page.addEventListener("change", function (e) {
-        var t = e.target;
-        if (!t || !t.getAttribute) return;
-        var p = rmSettings();
-        if (!p) return;
-
-        var onKey = t.getAttribute("data-rm-on");
-        if (onKey) { if (p.replyModes[onKey]) p.replyModes[onKey].on = !!t.checked; rmUpdatePct(); rmSavePatch(); saveData(); return; }
-        var wKey = t.getAttribute("data-rm-weight");
-        if (wKey && p.replyModes[wKey]) { p.replyModes[wKey].weight = Math.round(Number(t.value) || 0); rmUpdatePct(); rmSavePatch(); saveData(); return; }
-        if (t.getAttribute("data-rm-combo")) { p.comboMax = rmClampInput(t, 2, 6); rmSavePatch(); saveData(); return; }
-        if (t.getAttribute("data-rm-lettercount")) { p.letterMax = rmClampInput(t, 3, 12); rmSavePatch(); saveData(); return; }
-        if (t.getAttribute("data-rm-lettermin")) { p.letterDelayMin = rmClampInput(t, 0, 86400); rmSavePatch(); saveData(); return; }
-        if (t.getAttribute("data-rm-lettermax")) { p.letterDelayMax = rmClampInput(t, 0, 86400); rmSavePatch(); saveData(); return; }
-    });
-}
-
-var rmBaseApplySettings = applySettings;
-applySettings = function () {
-    rmBaseApplySettings.apply(null, arguments);
-    rmSyncBubblePreset();
-    rmApplyPatBlur();
-    rmApplyMoodStyle();
-};
-
 function rmInit() {
     rmOpenDb();
     rmInjectStyles();
@@ -1085,6 +810,7 @@ function rmInit() {
     rmApplyMoodStyle();
     rmTrimPresets();
     rmSyncBubblePreset();
+    rmBuildHomePages();
     rmSetupMoodTab();
     rmSetupMoodSettings();
     rmSetupPatSettings();
