@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（H6）
+   大组件文字颜色 + 主屏分页（H7）
    ========================================================= */
 (function () {
     "use strict";
@@ -159,6 +159,17 @@
         } catch (e) {}
     }
 
+    function cleanStrays(content, pager) {
+        var kids = Array.prototype.slice.call(content.children);
+        for (var i = 0; i < kids.length; i++) {
+            var el = kids[i];
+            if (el === pager) continue;
+            if (el.classList && (el.classList.contains("icon-grid") || el.classList.contains("home-app-grid") || el.classList.contains("home-page"))) {
+                content.removeChild(el);
+            }
+        }
+    }
+
     function takeover() {
         var content = document.querySelector(".desktop-content");
         if (!content) return;
@@ -167,7 +178,11 @@
         if (!dock || !widget) return;
 
         var old = content.querySelector(".home-pager");
-        if (old && old.getAttribute("data-owner") === "hero") { fillSmallWidget(); return; }
+        if (old && old.getAttribute("data-owner") === "hero") {
+            cleanStrays(content, old);
+            fillSmallWidget();
+            return;
+        }
 
         var chat = document.getElementById("appChat");
         var settings = document.getElementById("appSettings");
@@ -226,7 +241,8 @@
         var grid2 = document.createElement("div");
         grid2.className = "home-app-grid";
         var gallery = document.getElementById("btnGallery") || makeApp("btnGallery", "图库", "ic-image");
-        var quiz = document.getElementById("btnQuiz") || makeApp("btnQuiz", "出题", "ic-card");
+        var quiz = document.getElementById("btnQuiz", "出题", "ic-card");
+        if (!document.getElementById("btnQuiz")) quiz = makeApp("btnQuiz", "出题", "ic-card");
         var freq = document.getElementById("btnFreq") || makeApp("btnFreq", "频率", "ic-calendar");
         if (widgets) grid2.appendChild(widgets);
         if (letter) grid2.appendChild(letter);
@@ -239,6 +255,8 @@
         pager.appendChild(page1);
         pager.appendChild(page2);
         content.insertBefore(pager, dock);
+
+        cleanStrays(content, pager);
 
         bindOnce(phone, function () {
             var c = document.getElementById("appChat");
@@ -264,7 +282,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H6";
+                    if (val) val.textContent = "3.9 · H7";
                 }
             }
         } catch (e) {}
@@ -276,6 +294,7 @@
         apply();
         takeover();
         markVersion();
+        setTimeout(takeover, 600);
         setTimeout(takeover, 1800);
         setTimeout(takeover, 3000);
 
