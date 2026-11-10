@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件四行文字颜色（独立存储，不干扰主数据）
+   大组件文字颜色 + 主屏回退（恢复原始单屏布局）
    ========================================================= */
 (function () {
     "use strict";
@@ -107,9 +107,97 @@
         });
     }
 
+    /* ---------- 回退主屏分页 ---------- */
+    function injectRestoreStyles() {
+        if (document.getElementById("philos-restore-style")) return;
+        var st = document.createElement("style");
+        st.id = "philos-restore-style";
+        st.textContent =
+            ".desktop-content{overflow-y:auto !important;}" +
+            ".dock{grid-template-columns:repeat(4,1fr) !important;}" +
+            ".home-pager{display:none !important;}";
+        document.head.appendChild(st);
+    }
+
+    function ensureSmallWidget() {
+        var el = document.getElementById("widgetSmallArea");
+        if (el) return el;
+        el = document.createElement("div");
+        el.className = "widget-small";
+        el.id = "widgetSmallArea";
+        el.setAttribute("role", "button");
+        el.setAttribute("tabindex", "0");
+        el.innerHTML = '<span class="ws-placeholder">Select Widget</span>';
+        return el;
+    }
+
+    function undoPages() {
+        var pager = document.querySelector(".home-pager");
+        if (!pager) return;
+        var content = document.querySelector(".desktop-content");
+        if (!content) return;
+        var dock = content.querySelector(".dock");
+        var widget = document.getElementById("widgetLarge");
+        var small = ensureSmallWidget();
+
+        var letter = document.getElementById("appLetter");
+        var settings = document.getElementById("appSettings");
+        var countdown = document.getElementById("appCountdown");
+        var widgets = document.getElementById("appWidgets");
+        var chat = document.getElementById("appChat");
+
+        var iconGrid = document.createElement("div");
+        iconGrid.className = "icon-grid";
+        var appGrid = document.createElement("div");
+        appGrid.className = "app-grid-small";
+        if (letter) appGrid.appendChild(letter);
+        if (settings) appGrid.appendChild(settings);
+        if (countdown) appGrid.appendChild(countdown);
+        if (widgets) appGrid.appendChild(widgets);
+        iconGrid.appendChild(small);
+        iconGrid.appendChild(appGrid);
+
+        if (widget) content.insertBefore(widget, pager);
+        content.insertBefore(iconGrid, pager);
+
+        if (chat && dock) {
+            chat.className = "dock-btn";
+            dock.insertBefore(chat, dock.firstChild);
+        }
+
+        pager.parentNode.removeChild(pager);
+
+        ["btnPhone", "btnWechat", "btnGallery", "btnQuiz", "btnFreq"].forEach(function (id) {
+            var b = document.getElementById(id);
+            if (b && b.parentNode) b.parentNode.removeChild(b);
+        });
+    }
+
+    function markVersion() {
+        try {
+            var page = document.querySelector('[data-page="about"]');
+            if (!page) return;
+            var items = page.querySelectorAll(".settings-item");
+            for (var i = 0; i < items.length; i++) {
+                if ((items[i].textContent || "").indexOf("版本") >= 0) {
+                    var val = items[i].querySelector(".control-value");
+                    if (val) val.textContent = "3.9 · H5";
+                }
+            }
+        } catch (e) {}
+    }
+
     function init() {
+        injectRestoreStyles();
         buildRow();
         apply();
+        undoPages();
+        markVersion();
+        setTimeout(undoPages, 200);
+        setTimeout(undoPages, 800);
+        setTimeout(undoPages, 1600);
+        setTimeout(undoPages, 2800);
+
         var mq = window.matchMedia("(prefers-color-scheme: dark)");
         if (mq && mq.addEventListener) {
             mq.addEventListener("change", function () {
@@ -127,4 +215,10 @@
     } else {
         init();
     }
+
+    window.addEventListener("load", function () {
+        undoPages();
+        setTimeout(undoPages, 700);
+        setTimeout(undoPages, 2000);
+    });
 })();
