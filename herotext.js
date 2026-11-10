@@ -118,9 +118,7 @@
             ".home-pager{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
             ".home-pager::-webkit-scrollbar{display:none;}" +
             ".home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
-            ".home-app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;}" +
-            ".home-page .app-icon{grid-template-rows:auto auto;}" +
-            ".home-page .app-icon-box{width:100%;height:auto;aspect-ratio:1 / 1;max-width:100%;}" +
+            ".home-app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;grid-auto-rows:80px;}" +
             ".dock{grid-template-columns:repeat(3,1fr) !important;}";
         document.head.appendChild(st);
     }
@@ -196,6 +194,11 @@
             pager.appendChild(page2);
         }
 
+        /* 清理第一页多余节点，只保留大组件 */
+        var kids = Array.prototype.slice.call(page1.children);
+        for (var k = 0; k < kids.length; k++) {
+            if (kids[k] !== widget) page1.removeChild(kids[k]);
+        }
         if (widget.parentNode !== page1) page1.insertBefore(widget, page1.firstChild);
 
         var small = document.getElementById("widgetSmallArea");
@@ -218,12 +221,9 @@
         var quizBtn = grab("btnQuiz", "出题", "ic-card");
         var freqBtn = grab("btnFreq", "频率", "ic-calendar");
 
-        /* 第一页：清掉旧网格后重建 */
-        var olds = page1.querySelectorAll(".icon-grid, .home-app-grid, .app-grid-small");
-        for (var i = 0; i < olds.length; i++) {
-            if (olds[i].parentNode) olds[i].parentNode.removeChild(olds[i]);
-        }
+        chatBtn.classList.remove("has-image");
 
+        /* 第一页：大组件 + 原尺寸 icon-grid */
         var iconGrid = document.createElement("div");
         iconGrid.className = "icon-grid";
         var appGrid = document.createElement("div");
@@ -236,9 +236,9 @@
         iconGrid.appendChild(appGrid);
         page1.appendChild(iconGrid);
 
-        /* 第二页：四列，图标与 app 同尺寸 */
-        var oldGrid = page2.querySelector(".home-app-grid");
-        if (oldGrid && oldGrid.parentNode) oldGrid.parentNode.removeChild(oldGrid);
+        /* 第二页 */
+        var kids2 = Array.prototype.slice.call(page2.children);
+        for (var m = 0; m < kids2.length; m++) page2.removeChild(kids2[m]);
         var grid2 = document.createElement("div");
         grid2.className = "home-app-grid";
         grid2.appendChild(widgetsBtn);
@@ -273,7 +273,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H3";
+                    if (val) val.textContent = "3.9 · H4";
                 }
             }
         } catch (e) {}
