@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v49";
+const CACHE_NAME = "philos-v50";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -149,9 +149,7 @@ function rmRefreshAll() {
 function rmWarnStorage() {
     if (rmWarnedStorage) return;
     rmWarnedStorage = true;
-    setTimeout(function () {
-        alert("存储空间不足，刚添加的图片可能没有保存。");
-    }, 60);
+    setTimeout(function () { alert("存储空间不足，刚添加的图片可能没有保存。"); }, 60);
 }
 
 function rmSaveAppData() {
@@ -168,9 +166,7 @@ function rmSaveAppData() {
             json = JSON.stringify(appData);
         }
         localStorage.setItem(STORAGE_KEY, json);
-    } catch (e) {
-        rmWarnStorage();
-    }
+    } catch (e) { rmWarnStorage(); }
 }
 
 function rmDefaults() {
@@ -331,9 +327,7 @@ function rmAvailable(mode, pool) {
     return false;
 }
 
-function rmPick(list) {
-    return list[Math.floor(Math.random() * list.length)];
-}
+function rmPick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
 function rmPickMode(p, pool) {
     var list = [];
@@ -375,9 +369,7 @@ function rmBuildMessage(p, pool) {
     if (mode === "textEmoji") {
         var text = rmPick(pool.text);
         var n = 1 + Math.floor(Math.random() * 2);
-        if (pool.emoji.length) {
-            for (var i = 0; i < n; i++) text += rmPick(pool.emoji);
-        }
+        if (pool.emoji.length) { for (var i = 0; i < n; i++) text += rmPick(pool.emoji); }
         return { from: "ta", type: "text", text: text, status: "" };
     }
     if (mode === "combo") {
@@ -443,36 +435,19 @@ function rmShowPat(text) {
     var wrap = document.createElement("div");
     wrap.className = "pat-pop";
     wrap.id = "patPop";
-    var mask = document.createElement("div");
-    mask.className = "pat-pop-mask";
-    var card = document.createElement("div");
-    card.className = "pat-pop-card";
-    var avatar = document.createElement("div");
-    avatar.className = "pat-pop-avatar";
+    var mask = document.createElement("div"); mask.className = "pat-pop-mask";
+    var card = document.createElement("div"); card.className = "pat-pop-card";
+    var avatar = document.createElement("div"); avatar.className = "pat-pop-avatar";
     avatar.innerHTML = avatarMarkup(appData.taAvatar, "他");
-    var body = document.createElement("div");
-    body.className = "pat-pop-text";
-    body.textContent = text;
-    var actions = document.createElement("div");
-    actions.className = "pat-pop-actions";
-    var later = document.createElement("button");
-    later.type = "button"; later.className = "pat-pop-btn"; later.textContent = "等下哦";
+    var body = document.createElement("div"); body.className = "pat-pop-text"; body.textContent = text;
+    var actions = document.createElement("div"); actions.className = "pat-pop-actions";
+    var later = document.createElement("button"); later.type = "button"; later.className = "pat-pop-btn"; later.textContent = "等下哦";
     later.addEventListener("click", rmHidePat);
-    var go = document.createElement("button");
-    go.type = "button"; go.className = "pat-pop-btn primary"; go.textContent = "闪去";
-    go.addEventListener("click", function () {
-        rmHidePat();
-        showScreen("chatView");
-        renderChat();
-        rmAutoScrollChat();
-    });
-    actions.appendChild(later);
-    actions.appendChild(go);
-    card.appendChild(avatar);
-    card.appendChild(body);
-    card.appendChild(actions);
-    wrap.appendChild(mask);
-    wrap.appendChild(card);
+    var go = document.createElement("button"); go.type = "button"; go.className = "pat-pop-btn primary"; go.textContent = "闪去";
+    go.addEventListener("click", function () { rmHidePat(); showScreen("chatView"); renderChat(); rmAutoScrollChat(); });
+    actions.appendChild(later); actions.appendChild(go);
+    card.appendChild(avatar); card.appendChild(body); card.appendChild(actions);
+    wrap.appendChild(mask); wrap.appendChild(card);
     document.body.appendChild(wrap);
 }
 
@@ -558,8 +533,7 @@ maybeReply = function (letterId) {
 function rmUpdatePct() {
     var p = rmSettings();
     if (!p) return;
-    var total = 0;
-    var i;
+    var total = 0, i;
     for (i = 0; i < RM_MODES.length; i++) {
         var c = p.replyModes[RM_MODES[i].key];
         if (c.on) total += Math.max(0, Number(c.weight) || 0);
@@ -611,8 +585,7 @@ function rmCompressImage(file, cb) {
         var w = Math.max(1, Math.round(img.width * scale));
         var h = Math.max(1, Math.round(img.height * scale));
         var canvas = document.createElement("canvas");
-        canvas.width = w;
-        canvas.height = h;
+        canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
         var out = "";
         try { out = canvas.toDataURL("image/webp", 0.72); } catch (e) {}
@@ -635,25 +608,21 @@ function rmAppButton(id, label, symbol) {
 
 function rmBuildHomePages() {
     var content = document.querySelector(".desktop-content");
-    if (!content || content.querySelector(".home-pager")) return;
+    if (!content) return;
+    if (content.querySelector(".home-pager")) return;
     var widget = document.getElementById("widgetLarge");
     var dock = content.querySelector(".dock");
-    var iconGrid = content.querySelector(".icon-grid");
-    if (!content || !widget || !dock) return;
+    if (!widget || !dock) return;
 
+    var iconGrid = content.querySelector(".icon-grid");
     var pager = document.createElement("div");
     pager.className = "home-pager";
     pager.id = "homePager";
 
-    var page1 = document.createElement("section");
-    page1.className = "home-page";
-    var page2 = document.createElement("section");
-    page2.className = "home-page";
-
-    var grid1 = document.createElement("div");
-    grid1.className = "home-app-grid";
-    var grid2 = document.createElement("div");
-    grid2.className = "home-app-grid";
+    var page1 = document.createElement("section"); page1.className = "home-page";
+    var page2 = document.createElement("section"); page2.className = "home-page";
+    var grid1 = document.createElement("div"); grid1.className = "home-app-grid";
+    var grid2 = document.createElement("div"); grid2.className = "home-app-grid";
 
     page1.appendChild(widget);
     page1.appendChild(grid1);
@@ -671,9 +640,9 @@ function rmBuildHomePages() {
     var quizBtn = rmAppButton("btnQuiz", "出题", "ic-card");
     var freqBtn = rmAppButton("btnFreq", "频率", "ic-calendar");
 
+    grid1.appendChild(phoneBtn);
     if (chatBtn) grid1.appendChild(chatBtn);
-    grid1.insertBefore(phoneBtn, grid1.firstChild);
-    if (wechatBtn) grid1.appendChild(wechatBtn);
+    grid1.appendChild(wechatBtn);
     if (setBtn) grid1.appendChild(setBtn);
 
     if (widgetsBtn) grid2.appendChild(widgetsBtn);
@@ -690,12 +659,10 @@ function rmBuildHomePages() {
     content.insertBefore(pager, dock);
 
     phoneBtn.addEventListener("click", function () { startCall(); });
-    wechatBtn.addEventListener("click", function () {
-        alert("微信聊天还在搭建，等你的气泡 CSS 到了再接上。");
-    });
-    galleryBtn.addEventListener("click", function () { alert("图库还没开始做。"); });
-    quizBtn.addEventListener("click", function () { alert("出题还没开始做。"); });
-    freqBtn.addEventListener("click", function () { alert("频率 app 还没拆分完成。"); });
+    wechatBtn.addEventListener("click", function () { alert("微信聊天还在搭建，等气泡 CSS。"); });
+    galleryBtn.addEventListener("click", function () { alert("图库还没做。"); });
+    quizBtn.addEventListener("click", function () { alert("出题还没做。"); });
+    freqBtn.addEventListener("click", function () { alert("频率还没拆分完成。"); });
 }
 
 function rmInjectStyles() {
@@ -771,16 +738,10 @@ function rmDecorateChat() {
             if (row) row.classList.add("rm-mood-row");
             var wrap = bubbles[i].parentNode;
             if (wrap && !wrap.querySelector(".msg-mood")) {
-                var mood = document.createElement("div");
-                mood.className = "msg-mood";
-                var dot = document.createElement("span");
-                dot.className = "mood-dot";
-                var label = document.createElement("span");
-                label.className = "mood-text";
-                label.textContent = text;
-                mood.appendChild(dot);
-                mood.appendChild(label);
-                wrap.appendChild(mood);
+                var mood = document.createElement("div"); mood.className = "msg-mood";
+                var dot = document.createElement("span"); dot.className = "mood-dot";
+                var label = document.createElement("span"); label.className = "mood-text"; label.textContent = text;
+                mood.appendChild(dot); mood.appendChild(label); wrap.appendChild(mood);
             }
         }
     }
@@ -793,9 +754,21 @@ renderChat = function () {
     rmAutoScrollChat();
 };
 
-saveData = function () {
-    rmSaveAppData();
-};
+saveData = function () { rmSaveAppData(); };
+
+function rmMarkVersion() {
+    try {
+        var page = document.querySelector('[data-page="about"]');
+        if (!page) return;
+        var items = page.querySelectorAll(".settings-item");
+        for (var i = 0; i < items.length; i++) {
+            if ((items[i].textContent || "").indexOf("版本") >= 0) {
+                var val = items[i].querySelector(".control-value");
+                if (val) val.textContent = "3.9 · v50";
+            }
+        }
+    } catch (e) {}
+}
 
 function rmInit() {
     rmOpenDb();
@@ -811,6 +784,8 @@ function rmInit() {
     rmTrimPresets();
     rmSyncBubblePreset();
     rmBuildHomePages();
+    setTimeout(rmBuildHomePages, 400);
+    setTimeout(rmBuildHomePages, 1200);
     rmSetupMoodTab();
     rmSetupMoodSettings();
     rmSetupPatSettings();
@@ -820,6 +795,7 @@ function rmInit() {
     rmBind();
     rmRender();
     rmSetupCustomCss();
+    rmMarkVersion();
 
     var input = $("chatInput");
     if (input) input.placeholder = "iMessage";
@@ -938,9 +914,7 @@ self.addEventListener("push", (event) => {
       return;
     }
     return self.registration.showNotification("☆Philos", {
-      body: body,
-      icon: "icon-192.png",
-      badge: "icon-192.png",
+      body: body, icon: "icon-192.png", badge: "icon-192.png",
     });
   })());
 });
