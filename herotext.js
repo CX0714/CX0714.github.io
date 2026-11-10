@@ -1,10 +1,9 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（独立脚本，网络优先加载）
+   大组件四行文字颜色（独立存储，不干扰主数据）
    ========================================================= */
 (function () {
     "use strict";
 
-    /* ---------- 一、大组件文字颜色 ---------- */
     var KEY = "philos_hero_text";
     var PRESETS = ["#1b1d21", "#ffffff", "#5b7fa6", "#8b909a", "#c9d3de"];
 
@@ -27,7 +26,7 @@
         return isDark() ? "#f4f5f7" : "#1b1d21";
     }
 
-    function applyHeroColor() {
+    function apply() {
         var big = document.getElementById("widgetLarge");
         if (!big) return;
         var color = load();
@@ -47,7 +46,7 @@
         }
     }
 
-    function buildHeroRow() {
+    function buildRow() {
         var pane = document.querySelector('[data-wpane="hero"]');
         if (!pane || pane.querySelector("[data-hero-text-card]")) return;
         var anchor = pane.querySelector(".group-card");
@@ -82,7 +81,7 @@
 
         input.addEventListener("input", function () {
             save(input.value);
-            applyHeroColor();
+            apply();
             syncPresets(card, input.value);
         });
 
@@ -94,7 +93,7 @@
             if (preset) {
                 input.value = preset.getAttribute("data-hero-text-preset");
                 save(input.value);
-                applyHeroColor();
+                apply();
                 syncPresets(card, input.value);
                 return;
             }
@@ -102,192 +101,15 @@
             if (target.closest("[data-hero-text-clear]")) {
                 save("");
                 input.value = defaultColor();
-                applyHeroColor();
+                apply();
                 syncPresets(card, "");
             }
         });
     }
 
-    /* ---------- 二、主屏分页 ---------- */
-    function injectHomeStyles() {
-        if (document.getElementById("philos-home-style")) return;
-        var st = document.createElement("style");
-        st.id = "philos-home-style";
-        st.textContent =
-            ".desktop-content{overflow:hidden !important;}" +
-            ".home-pager{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
-            ".home-pager::-webkit-scrollbar{display:none;}" +
-            ".home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
-            ".home-app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;grid-auto-rows:80px;}" +
-            ".dock{grid-template-columns:repeat(3,1fr) !important;}";
-        document.head.appendChild(st);
-    }
-
-    function makeApp(id, label, symbol) {
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "app-icon";
-        btn.id = id;
-        btn.innerHTML =
-            '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span>' +
-            '<span class="app-label">' + label + '</span>';
-        return btn;
-    }
-
-    function bindOnce(btn, handler) {
-        if (!btn || btn.getAttribute("data-hbind")) return;
-        btn.setAttribute("data-hbind", "1");
-        btn.addEventListener("click", handler);
-    }
-
-    function fillSmallWidget() {
-        var el = document.getElementById("widgetSmallArea");
-        if (!el || (el.textContent || "").trim()) return;
-        try {
-            var data = JSON.parse(localStorage.getItem("private_chat_app_v1") || "{}");
-            var cfg = data.widgetConfig || {};
-            if (cfg.template) return;
-            var item = null;
-            var list = data.anniversaries || [];
-            for (var i = 0; i < list.length; i++) {
-                if (list[i].id === data.activeCountdownId) { item = list[i]; break; }
-            }
-            if (!item) {
-                el.innerHTML = '<span class="ws-placeholder">Select Widget</span>';
-                return;
-            }
-            var d = new Date(item.date + "T00:00:00");
-            var now = new Date();
-            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            var days = Math.floor((today - d) / 86400000);
-            var label = days >= 0 ? "第 " + (days + 1) + " 天" : "还有 " + (-days) + " 天";
-            el.innerHTML = '<div class="ws-widget"><div class="ws-widget-title">' + item.title + '</div><div class="ws-widget-days">' + label + '</div></div>';
-        } catch (e) {}
-    }
-
-    function grab(id, label, symbol) {
-        var el = document.getElementById(id);
-        if (el) return el;
-        return makeApp(id, label, symbol);
-    }
-
-    function buildHomePages() {
-        var content = document.querySelector(".desktop-content");
-        if (!content) return;
-        var dock = content.querySelector(".dock");
-        var widget = document.getElementById("widgetLarge");
-        if (!dock || !widget) return;
-
-        var pager = content.querySelector(".home-pager");
-        if (!pager) {
-            pager = document.createElement("div");
-            pager.className = "home-pager";
-            pager.id = "homePager";
-            pager.innerHTML = '<section class="home-page"></section><section class="home-page"></section>';
-            content.insertBefore(pager, dock);
-        }
-        var page1 = pager.children[0];
-        var page2 = pager.children[1];
-        if (!page2) {
-            page2 = document.createElement("section");
-            page2.className = "home-page";
-            pager.appendChild(page2);
-        }
-
-        /* 清理第一页多余节点，只保留大组件 */
-        var kids = Array.prototype.slice.call(page1.children);
-        for (var k = 0; k < kids.length; k++) {
-            if (kids[k] !== widget) page1.removeChild(kids[k]);
-        }
-        if (widget.parentNode !== page1) page1.insertBefore(widget, page1.firstChild);
-
-        var small = document.getElementById("widgetSmallArea");
-        if (!small) {
-            small = document.createElement("div");
-            small.className = "widget-small";
-            small.id = "widgetSmallArea";
-            small.setAttribute("role", "button");
-            small.setAttribute("tabindex", "0");
-        }
-
-        var chatBtn = grab("appChat", "iMessage", "ic-chat");
-        var setBtn = grab("appSettings", "设置", "ic-gear");
-        var widgetsBtn = grab("appWidgets", "小组件", "ic-grid");
-        var letterBtn = grab("appLetter", "信箱", "ic-mail");
-        var cdBtn = grab("appCountdown", "倒数日", "ic-calendar");
-        var phoneBtn = grab("btnPhone", "电话", "ic-phone");
-        var wechatBtn = grab("btnWechat", "微信", "ic-chat");
-        var galleryBtn = grab("btnGallery", "图库", "ic-image");
-        var quizBtn = grab("btnQuiz", "出题", "ic-card");
-        var freqBtn = grab("btnFreq", "频率", "ic-calendar");
-
-        chatBtn.classList.remove("has-image");
-
-        /* 第一页：大组件 + 原尺寸 icon-grid */
-        var iconGrid = document.createElement("div");
-        iconGrid.className = "icon-grid";
-        var appGrid = document.createElement("div");
-        appGrid.className = "app-grid-small";
-        appGrid.appendChild(phoneBtn);
-        appGrid.appendChild(chatBtn);
-        appGrid.appendChild(wechatBtn);
-        appGrid.appendChild(setBtn);
-        iconGrid.appendChild(small);
-        iconGrid.appendChild(appGrid);
-        page1.appendChild(iconGrid);
-
-        /* 第二页 */
-        var kids2 = Array.prototype.slice.call(page2.children);
-        for (var m = 0; m < kids2.length; m++) page2.removeChild(kids2[m]);
-        var grid2 = document.createElement("div");
-        grid2.className = "home-app-grid";
-        grid2.appendChild(widgetsBtn);
-        grid2.appendChild(letterBtn);
-        grid2.appendChild(cdBtn);
-        grid2.appendChild(galleryBtn);
-        grid2.appendChild(quizBtn);
-        grid2.appendChild(freqBtn);
-        page2.appendChild(grid2);
-
-        bindOnce(phoneBtn, function () {
-            var chat = document.getElementById("appChat");
-            if (chat) chat.click();
-            setTimeout(function () {
-                var call = document.getElementById("btnChatCall");
-                if (call) call.click();
-            }, 150);
-        });
-        bindOnce(wechatBtn, function () { alert("微信聊天还在搭，等气泡 CSS。"); });
-        bindOnce(galleryBtn, function () { alert("图库还没做。"); });
-        bindOnce(quizBtn, function () { alert("出题还没做。"); });
-        bindOnce(freqBtn, function () { alert("频率还没拆分。"); });
-
-        fillSmallWidget();
-    }
-
-    function markVersion() {
-        try {
-            var page = document.querySelector('[data-page="about"]');
-            if (!page) return;
-            var items = page.querySelectorAll(".settings-item");
-            for (var i = 0; i < items.length; i++) {
-                if ((items[i].textContent || "").indexOf("版本") >= 0) {
-                    var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H4";
-                }
-            }
-        } catch (e) {}
-    }
-
     function init() {
-        buildHeroRow();
-        applyHeroColor();
-        injectHomeStyles();
-        buildHomePages();
-        markVersion();
-        setTimeout(buildHomePages, 400);
-        setTimeout(buildHomePages, 1200);
-
+        buildRow();
+        apply();
         var mq = window.matchMedia("(prefers-color-scheme: dark)");
         if (mq && mq.addEventListener) {
             mq.addEventListener("change", function () {
@@ -305,9 +127,4 @@
     } else {
         init();
     }
-
-    window.addEventListener("load", function () {
-        buildHomePages();
-        setTimeout(buildHomePages, 600);
-    });
 })();
