@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏回退（恢复原始单屏布局）
+   大组件文字颜色 + 主屏分页（H6）
    ========================================================= */
 (function () {
     "use strict";
@@ -88,7 +88,6 @@
         card.addEventListener("click", function (e) {
             var target = e.target;
             if (!target || !target.closest) return;
-
             var preset = target.closest("[data-hero-text-preset]");
             if (preset) {
                 input.value = preset.getAttribute("data-hero-text-preset");
@@ -97,7 +96,6 @@
                 syncPresets(card, input.value);
                 return;
             }
-
             if (target.closest("[data-hero-text-clear]")) {
                 save("");
                 input.value = defaultColor();
@@ -107,70 +105,155 @@
         });
     }
 
-    /* ---------- 回退主屏分页 ---------- */
-    function injectRestoreStyles() {
-        if (document.getElementById("philos-restore-style")) return;
+    /* ---------- 分页 ---------- */
+    function injectStyles() {
+        if (document.getElementById("philos-home-style")) return;
         var st = document.createElement("style");
-        st.id = "philos-restore-style";
+        st.id = "philos-home-style";
         st.textContent =
-            ".desktop-content{overflow-y:auto !important;}" +
-            ".dock{grid-template-columns:repeat(4,1fr) !important;}" +
-            ".home-pager{display:none !important;}";
+            ".desktop-content{overflow:hidden !important;}" +
+            "#homePager{display:flex !important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
+            "#homePager::-webkit-scrollbar{display:none;}" +
+            "#homePager > .home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
+            "#homePager .home-app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;grid-auto-rows:80px;}" +
+            ".dock{grid-template-columns:repeat(3,1fr) !important;}";
         document.head.appendChild(st);
     }
 
-    function ensureSmallWidget() {
-        var el = document.getElementById("widgetSmallArea");
-        if (el) return el;
-        el = document.createElement("div");
-        el.className = "widget-small";
-        el.id = "widgetSmallArea";
-        el.setAttribute("role", "button");
-        el.setAttribute("tabindex", "0");
-        el.innerHTML = '<span class="ws-placeholder">Select Widget</span>';
-        return el;
+    function makeApp(id, label, symbol) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "app-icon";
+        btn.id = id;
+        btn.innerHTML =
+            '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span>' +
+            '<span class="app-label">' + label + '</span>';
+        return btn;
     }
 
-    function undoPages() {
-        var pager = document.querySelector(".home-pager");
-        if (!pager) return;
+    function bindOnce(btn, handler) {
+        if (!btn || btn.getAttribute("data-hbind")) return;
+        btn.setAttribute("data-hbind", "1");
+        btn.addEventListener("click", handler);
+    }
+
+    function fillSmallWidget() {
+        var el = document.getElementById("widgetSmallArea");
+        if (!el || (el.textContent || "").trim()) return;
+        try {
+            var data = JSON.parse(localStorage.getItem("private_chat_app_v1") || "{}");
+            var cfg = data.widgetConfig || {};
+            if (cfg.template) return;
+            var item = null;
+            var list = data.anniversaries || [];
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].id === data.activeCountdownId) { item = list[i]; break; }
+            }
+            if (!item) { el.innerHTML = '<span class="ws-placeholder">Select Widget</span>'; return; }
+            var d = new Date(item.date + "T00:00:00");
+            var now = new Date();
+            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            var days = Math.floor((today - d) / 86400000);
+            var label = days >= 0 ? "第 " + (days + 1) + " 天" : "还有 " + (-days) + " 天";
+            el.innerHTML = '<div class="ws-widget"><div class="ws-widget-title">' + item.title + '</div><div class="ws-widget-days">' + label + '</div></div>';
+        } catch (e) {}
+    }
+
+    function takeover() {
         var content = document.querySelector(".desktop-content");
         if (!content) return;
         var dock = content.querySelector(".dock");
         var widget = document.getElementById("widgetLarge");
-        var small = ensureSmallWidget();
+        if (!dock || !widget) return;
 
-        var letter = document.getElementById("appLetter");
+        var old = content.querySelector(".home-pager");
+        if (old && old.getAttribute("data-owner") === "hero") { fillSmallWidget(); return; }
+
+        var chat = document.getElementById("appChat");
         var settings = document.getElementById("appSettings");
+        var letter = document.getElementById("appLetter");
         var countdown = document.getElementById("appCountdown");
         var widgets = document.getElementById("appWidgets");
-        var chat = document.getElementById("appChat");
+
+        if (chat && !chat.querySelector(".app-label")) {
+            chat.className = "app-icon";
+            chat.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chat"></use></svg></span><span class="app-label">iMessage</span>';
+        }
+
+        var small = document.getElementById("widgetSmallArea");
+        if (!small) {
+            small = document.createElement("div");
+            small.className = "widget-small";
+            small.id = "widgetSmallArea";
+            small.setAttribute("role", "button");
+            small.setAttribute("tabindex", "0");
+        }
+
+        if (old) {
+            content.insertBefore(widget, old);
+            if (old.parentNode) old.parentNode.removeChild(old);
+        }
+
+        var pager = document.createElement("div");
+        pager.className = "home-pager";
+        pager.id = "homePager";
+        pager.setAttribute("data-owner", "hero");
+
+        var page1 = document.createElement("section");
+        page1.className = "home-page";
+        var page2 = document.createElement("section");
+        page2.className = "home-page";
 
         var iconGrid = document.createElement("div");
         iconGrid.className = "icon-grid";
         var appGrid = document.createElement("div");
         appGrid.className = "app-grid-small";
-        if (letter) appGrid.appendChild(letter);
+
+        var phone = document.getElementById("btnPhone") || makeApp("btnPhone", "电话", "ic-phone");
+        var wechat = document.getElementById("btnWechat") || makeApp("btnWechat", "微信", "ic-chat");
+
+        appGrid.appendChild(phone);
+        if (chat) appGrid.appendChild(chat);
+        appGrid.appendChild(wechat);
         if (settings) appGrid.appendChild(settings);
-        if (countdown) appGrid.appendChild(countdown);
-        if (widgets) appGrid.appendChild(widgets);
+
         iconGrid.appendChild(small);
         iconGrid.appendChild(appGrid);
 
-        if (widget) content.insertBefore(widget, pager);
-        content.insertBefore(iconGrid, pager);
+        page1.appendChild(widget);
+        page1.appendChild(iconGrid);
 
-        if (chat && dock) {
-            chat.className = "dock-btn";
-            dock.insertBefore(chat, dock.firstChild);
-        }
+        var grid2 = document.createElement("div");
+        grid2.className = "home-app-grid";
+        var gallery = document.getElementById("btnGallery") || makeApp("btnGallery", "图库", "ic-image");
+        var quiz = document.getElementById("btnQuiz") || makeApp("btnQuiz", "出题", "ic-card");
+        var freq = document.getElementById("btnFreq") || makeApp("btnFreq", "频率", "ic-calendar");
+        if (widgets) grid2.appendChild(widgets);
+        if (letter) grid2.appendChild(letter);
+        if (countdown) grid2.appendChild(countdown);
+        grid2.appendChild(gallery);
+        grid2.appendChild(quiz);
+        grid2.appendChild(freq);
+        page2.appendChild(grid2);
 
-        pager.parentNode.removeChild(pager);
+        pager.appendChild(page1);
+        pager.appendChild(page2);
+        content.insertBefore(pager, dock);
 
-        ["btnPhone", "btnWechat", "btnGallery", "btnQuiz", "btnFreq"].forEach(function (id) {
-            var b = document.getElementById(id);
-            if (b && b.parentNode) b.parentNode.removeChild(b);
+        bindOnce(phone, function () {
+            var c = document.getElementById("appChat");
+            if (c) c.click();
+            setTimeout(function () {
+                var call = document.getElementById("btnChatCall");
+                if (call) call.click();
+            }, 160);
         });
+        bindOnce(wechat, function () { alert("微信聊天还在搭，等气泡 CSS。"); });
+        bindOnce(gallery, function () { alert("图库还没做。"); });
+        bindOnce(quiz, function () { alert("出题还没做。"); });
+        bindOnce(freq, function () { alert("频率还没拆分。"); });
+
+        fillSmallWidget();
     }
 
     function markVersion() {
@@ -181,22 +264,20 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H5";
+                    if (val) val.textContent = "3.9 · H6";
                 }
             }
         } catch (e) {}
     }
 
     function init() {
-        injectRestoreStyles();
+        injectStyles();
         buildRow();
         apply();
-        undoPages();
+        takeover();
         markVersion();
-        setTimeout(undoPages, 200);
-        setTimeout(undoPages, 800);
-        setTimeout(undoPages, 1600);
-        setTimeout(undoPages, 2800);
+        setTimeout(takeover, 1800);
+        setTimeout(takeover, 3000);
 
         var mq = window.matchMedia("(prefers-color-scheme: dark)");
         if (mq && mq.addEventListener) {
@@ -215,10 +296,4 @@
     } else {
         init();
     }
-
-    window.addEventListener("load", function () {
-        undoPages();
-        setTimeout(undoPages, 700);
-        setTimeout(undoPages, 2000);
-    });
 })();
