@@ -1,9 +1,10 @@
 /* =========================================================
-   大组件四行文字颜色（独立存储，不干扰主数据）
+   大组件文字颜色 + 主屏分页（独立脚本，不依赖 SW 注入）
    ========================================================= */
 (function () {
     "use strict";
 
+    /* ---------- 一、大组件文字颜色 ---------- */
     var KEY = "philos_hero_text";
     var PRESETS = ["#1b1d21", "#ffffff", "#5b7fa6", "#8b909a", "#c9d3de"];
 
@@ -26,7 +27,7 @@
         return isDark() ? "#f4f5f7" : "#1b1d21";
     }
 
-    function apply() {
+    function applyHeroColor() {
         var big = document.getElementById("widgetLarge");
         if (!big) return;
         var color = load();
@@ -46,7 +47,7 @@
         }
     }
 
-    function buildRow() {
+    function buildHeroRow() {
         var pane = document.querySelector('[data-wpane="hero"]');
         if (!pane || pane.querySelector("[data-hero-text-card]")) return;
         var anchor = pane.querySelector(".group-card");
@@ -81,7 +82,7 @@
 
         input.addEventListener("input", function () {
             save(input.value);
-            apply();
+            applyHeroColor();
             syncPresets(card, input.value);
         });
 
@@ -93,7 +94,7 @@
             if (preset) {
                 input.value = preset.getAttribute("data-hero-text-preset");
                 save(input.value);
-                apply();
+                applyHeroColor();
                 syncPresets(card, input.value);
                 return;
             }
@@ -101,15 +102,134 @@
             if (target.closest("[data-hero-text-clear]")) {
                 save("");
                 input.value = defaultColor();
-                apply();
+                applyHeroColor();
                 syncPresets(card, "");
             }
         });
     }
 
+    /* ---------- 二、主屏分页 ---------- */
+    function injectHomeStyles() {
+        if (document.getElementById("philos-home-style")) return;
+        var st = document.createElement("style");
+        st.id = "philos-home-style";
+        st.textContent =
+            ".desktop-content{overflow:hidden !important;}" +
+            ".home-pager{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
+            ".home-pager::-webkit-scrollbar{display:none;}" +
+            ".home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
+            ".home-app-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;align-content:start;}" +
+            ".dock{grid-template-columns:repeat(3,1fr) !important;}";
+        document.head.appendChild(st);
+    }
+
+    function makeApp(id, label, symbol) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "app-icon";
+        btn.id = id;
+        btn.innerHTML =
+            '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span>' +
+            '<span class="app-label">' + label + '</span>';
+        return btn;
+    }
+
+    function buildHomePages() {
+        var content = document.querySelector(".desktop-content");
+        if (!content) return;
+        if (content.querySelector(".home-pager")) return;
+
+        var widget = document.getElementById("widgetLarge");
+        var dock = content.querySelector(".dock");
+        if (!widget || !dock) return;
+
+        var iconGrid = content.querySelector(".icon-grid");
+
+        var pager = document.createElement("div");
+        pager.className = "home-pager";
+        pager.id = "homePager";
+
+        var page1 = document.createElement("section");
+        page1.className = "home-page";
+        var page2 = document.createElement("section");
+        page2.className = "home-page";
+
+        var grid1 = document.createElement("div");
+        grid1.className = "home-app-grid";
+        var grid2 = document.createElement("div");
+        grid2.className = "home-app-grid";
+
+        page1.appendChild(widget);
+        page1.appendChild(grid1);
+        page2.appendChild(grid2);
+
+        var chatBtn = document.getElementById("appChat");
+        var setBtn = document.getElementById("appSettings");
+        var letterBtn = document.getElementById("appLetter");
+        var cdBtn = document.getElementById("appCountdown");
+        var widgetsBtn = document.getElementById("appWidgets");
+
+        var phoneBtn = makeApp("btnPhone", "电话", "ic-phone");
+        var wechatBtn = makeApp("btnWechat", "微信", "ic-chat");
+        var galleryBtn = makeApp("btnGallery", "图库", "ic-image");
+        var quizBtn = makeApp("btnQuiz", "出题", "ic-card");
+        var freqBtn = makeApp("btnFreq", "频率", "ic-calendar");
+
+        grid1.appendChild(phoneBtn);
+        if (chatBtn) grid1.appendChild(chatBtn);
+        grid1.appendChild(wechatBtn);
+        if (setBtn) grid1.appendChild(setBtn);
+
+        if (widgetsBtn) grid2.appendChild(widgetsBtn);
+        if (letterBtn) grid2.appendChild(letterBtn);
+        if (cdBtn) grid2.appendChild(cdBtn);
+        grid2.appendChild(galleryBtn);
+        grid2.appendChild(quizBtn);
+        grid2.appendChild(freqBtn);
+
+        if (iconGrid && iconGrid.parentNode) iconGrid.parentNode.removeChild(iconGrid);
+
+        pager.appendChild(page1);
+        pager.appendChild(page2);
+        content.insertBefore(pager, dock);
+
+        phoneBtn.addEventListener("click", function () {
+            var chat = document.getElementById("appChat");
+            if (chat) chat.click();
+            setTimeout(function () {
+                var call = document.getElementById("btnChatCall");
+                if (call) call.click();
+            }, 140);
+        });
+        wechatBtn.addEventListener("click", function () { alert("微信聊天还在搭，等气泡 CSS。"); });
+        galleryBtn.addEventListener("click", function () { alert("图库还没做。"); });
+        quizBtn.addEventListener("click", function () { alert("出题还没做。"); });
+        freqBtn.addEventListener("click", function () { alert("频率还没拆分。"); });
+    }
+
+    function markVersion() {
+        try {
+            var page = document.querySelector('[data-page="about"]');
+            if (!page) return;
+            var items = page.querySelectorAll(".settings-item");
+            for (var i = 0; i < items.length; i++) {
+                if ((items[i].textContent || "").indexOf("版本") >= 0) {
+                    var val = items[i].querySelector(".control-value");
+                    if (val) val.textContent = "3.9 · H1";
+                }
+            }
+        } catch (e) {}
+    }
+
     function init() {
-        buildRow();
-        apply();
+        buildHeroRow();
+        applyHeroColor();
+        injectHomeStyles();
+        buildHomePages();
+        markVersion();
+        setTimeout(buildHomePages, 400);
+        setTimeout(buildHomePages, 1200);
+
         var mq = window.matchMedia("(prefers-color-scheme: dark)");
         if (mq && mq.addEventListener) {
             mq.addEventListener("change", function () {
@@ -127,4 +247,9 @@
     } else {
         init();
     }
+
+    window.addEventListener("load", function () {
+        buildHomePages();
+        setTimeout(buildHomePages, 600);
+    });
 })();
