@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（独立脚本，不依赖 SW 注入）
+   大组件文字颜色 + 主屏分页（独立脚本，网络优先加载）
    ========================================================= */
 (function () {
     "use strict";
@@ -118,7 +118,10 @@
             ".home-pager{display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
             ".home-pager::-webkit-scrollbar{display:none;}" +
             ".home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
-            ".home-app-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;align-content:start;}" +
+            ".home-app-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;width:100%;}" +
+            ".home-app-grid .app-icon{grid-template-rows:auto auto;}" +
+            ".home-app-grid .app-icon-box{width:100%;height:auto;aspect-ratio:1 / 1;max-width:100%;}" +
+            ".home-app-grid .app-label{font-size:var(--app-label-size,11px);}" +
             ".dock{grid-template-columns:repeat(3,1fr) !important;}";
         document.head.appendChild(st);
     }
@@ -134,77 +137,141 @@
         return btn;
     }
 
+    function bindOnce(btn, handler) {
+        if (!btn || btn.getAttribute("data-hbind")) return;
+        btn.setAttribute("data-hbind", "1");
+        btn.addEventListener("click", handler);
+    }
+
+    function fillSmallWidget() {
+        var el = document.getElementById("widgetSmallArea");
+        if (!el || (el.textContent || "").trim()) return;
+        try {
+            var data = JSON.parse(localStorage.getItem("private_chat_app_v1") || "{}");
+            var cfg = data.widgetConfig || {};
+            if (cfg.template) return;
+            var item = null;
+            var list = data.anniversaries || [];
+            for (var i = 0; i < list.length; i++) {
+                if (list[i].id === data.activeCountdownId) { item = list[i]; break; }
+            }
+            if (!item) {
+                el.innerHTML = '<span class="ws-placeholder">Select Widget</span>';
+                return;
+            }
+            var d = new Date(item.date + "T00:00:00");
+            var now = new Date();
+            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            var days = Math.floor((today - d) / 86400000);
+            var label = days >= 0 ? "第 " + (days + 1) + " 天" : "还有 " + (-days) + " 天";
+            el.innerHTML = '<div class="ws-widget"><div class="ws-widget-title">' + item.title + '</div><div class="ws-widget-days">' + label + '</div></div>';
+        } catch (e) {}
+    }
+
     function buildHomePages() {
         var content = document.querySelector(".desktop-content");
         if (!content) return;
-        if (content.querySelector(".home-pager")) return;
-
-        var widget = document.getElementById("widgetLarge");
         var dock = content.querySelector(".dock");
-        if (!widget || !dock) return;
+        var widget = document.getElementById("widgetLarge");
+        if (!dock || !widget) return;
 
-        var iconGrid = content.querySelector(".icon-grid");
+        var pager = content.querySelector(".home-pager");
+        if (!pager) {
+            pager = document.createElement("div");
+            pager.className = "home-pager";
+            pager.id = "homePager";
+            var p1 = document.createElement("section");
+            p1.className = "home-page";
+            var p2 = document.createElement("section");
+            p2.className = "home-page";
+            pager.appendChild(p1);
+            pager.appendChild(p2);
+            content.insertBefore(pager, dock);
+        }
+        var page1 = pager.children[0];
+        var page2 = pager.children[1] || (function () {
+            var p = document.createElement("section");
+            p.className = "home-page";
+            pager.appendChild(p);
+            return p;
+        })();
 
-        var pager = document.createElement("div");
-        pager.className = "home-pager";
-        pager.id = "homePager";
+        if (widget.parentNode !== page1) page1.insertBefore(widget, page1.firstChild);
 
-        var page1 = document.createElement("section");
-        page1.className = "home-page";
-        var page2 = document.createElement("section");
-        page2.className = "home-page";
+        var iconGrid = page1.querySelector(".icon-grid");
+        if (!iconGrid) {
+            iconGrid = document.createElement("div");
+            iconGrid.className = "icon-grid";
 
-        var grid1 = document.createElement("div");
-        grid1.className = "home-app-grid";
-        var grid2 = document.createElement("div");
-        grid2.className = "home-app-grid";
+            var small = document.createElement("div");
+            small.className = "widget-small";
+            small.id = "widgetSmallArea";
+            small.setAttribute("role", "button");
+            small.setAttribute("tabindex", "0");
 
-        page1.appendChild(widget);
-        page1.appendChild(grid1);
-        page2.appendChild(grid2);
+            var appGrid = document.createElement("div");
+            appGrid.className = "app-grid-small";
 
-        var chatBtn = document.getElementById("appChat");
-        var setBtn = document.getElementById("appSettings");
-        var letterBtn = document.getElementById("appLetter");
-        var cdBtn = document.getElementById("appCountdown");
-        var widgetsBtn = document.getElementById("appWidgets");
+            var oldGrid = page1.querySelector(".home-app-grid");
+            if (oldGrid) {
+                while (oldGrid.firstChild) appGrid.appendChild(oldGrid.firstChild);
+                if (oldGrid.parentNode) oldGrid.parentNode.removeChild(oldGrid);
+            }
 
-        var phoneBtn = makeApp("btnPhone", "电话", "ic-phone");
-        var wechatBtn = makeApp("btnWechat", "微信", "ic-chat");
-        var galleryBtn = makeApp("btnGallery", "图库", "ic-image");
-        var quizBtn = makeApp("btnQuiz", "出题", "ic-card");
-        var freqBtn = makeApp("btnFreq", "频率", "ic-calendar");
+            iconGrid.appendChild(small);
+            iconGrid.appendChild(appGrid);
+            page1.appendChild(iconGrid);
+        }
 
-        grid1.appendChild(phoneBtn);
-        if (chatBtn) grid1.appendChild(chatBtn);
-        grid1.appendChild(wechatBtn);
-        if (setBtn) grid1.appendChild(setBtn);
+        var grid1 = iconGrid.querySelector(".app-grid-small");
+        if (grid1 && grid1.children.length === 0) {
+            var chatBtn = document.getElementById("appChat");
+            var setBtn = document.getElementById("appSettings");
+            var phoneBtn = makeApp("btnPhone", "电话", "ic-phone");
+            var wechatBtn = makeApp("btnWechat", "微信", "ic-chat");
 
-        if (widgetsBtn) grid2.appendChild(widgetsBtn);
-        if (letterBtn) grid2.appendChild(letterBtn);
-        if (cdBtn) grid2.appendChild(cdBtn);
-        grid2.appendChild(galleryBtn);
-        grid2.appendChild(quizBtn);
-        grid2.appendChild(freqBtn);
+            grid1.appendChild(phoneBtn);
+            if (chatBtn) grid1.appendChild(chatBtn);
+            grid1.appendChild(wechatBtn);
+            if (setBtn) grid1.appendChild(setBtn);
+        }
 
-        if (iconGrid && iconGrid.parentNode) iconGrid.parentNode.removeChild(iconGrid);
+        var grid2 = page2.querySelector(".home-app-grid");
+        if (!grid2) {
+            grid2 = document.createElement("div");
+            grid2.className = "home-app-grid";
+            page2.appendChild(grid2);
+        }
+        if (grid2.children.length === 0) {
+            var widgetsBtn = document.getElementById("appWidgets");
+            var letterBtn = document.getElementById("appLetter");
+            var cdBtn = document.getElementById("appCountdown");
+            var galleryBtn = makeApp("btnGallery", "图库", "ic-image");
+            var quizBtn = makeApp("btnQuiz", "出题", "ic-card");
+            var freqBtn = makeApp("btnFreq", "频率", "ic-calendar");
 
-        pager.appendChild(page1);
-        pager.appendChild(page2);
-        content.insertBefore(pager, dock);
+            if (widgetsBtn) grid2.appendChild(widgetsBtn);
+            if (letterBtn) grid2.appendChild(letterBtn);
+            if (cdBtn) grid2.appendChild(cdBtn);
+            grid2.appendChild(galleryBtn);
+            grid2.appendChild(quizBtn);
+            grid2.appendChild(freqBtn);
+        }
 
-        phoneBtn.addEventListener("click", function () {
+        bindOnce(document.getElementById("btnPhone"), function () {
             var chat = document.getElementById("appChat");
             if (chat) chat.click();
             setTimeout(function () {
                 var call = document.getElementById("btnChatCall");
                 if (call) call.click();
-            }, 140);
+            }, 150);
         });
-        wechatBtn.addEventListener("click", function () { alert("微信聊天还在搭，等气泡 CSS。"); });
-        galleryBtn.addEventListener("click", function () { alert("图库还没做。"); });
-        quizBtn.addEventListener("click", function () { alert("出题还没做。"); });
-        freqBtn.addEventListener("click", function () { alert("频率还没拆分。"); });
+        bindOnce(document.getElementById("btnWechat"), function () { alert("微信聊天还在搭，等气泡 CSS。"); });
+        bindOnce(document.getElementById("btnGallery"), function () { alert("图库还没做。"); });
+        bindOnce(document.getElementById("btnQuiz"), function () { alert("出题还没做。"); });
+        bindOnce(document.getElementById("btnFreq"), function () { alert("频率还没拆分。"); });
+
+        fillSmallWidget();
     }
 
     function markVersion() {
@@ -215,7 +282,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H1";
+                    if (val) val.textContent = "3.9 · H2";
                 }
             }
         } catch (e) {}
