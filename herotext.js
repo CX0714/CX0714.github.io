@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（H8）
+   大组件文字颜色 + 主屏分页（H9）
    ========================================================= */
 (function () {
     "use strict";
@@ -115,7 +115,7 @@
             "#homePager{display:flex !important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
             "#homePager::-webkit-scrollbar{display:none;}" +
             "#homePager > .home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
-            "#homePager .home-app-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;width:100%;grid-auto-rows:75px;align-content:start;}" +
+            "#homePager .home-app-grid{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:15px !important;width:100%;grid-auto-rows:75px !important;align-content:start;}" +
             ".dock{grid-template-columns:repeat(3,1fr) !important;}";
         document.head.appendChild(st);
     }
@@ -170,6 +170,20 @@
         }
     }
 
+    function syncIconSizes() {
+        var ref = document.querySelector("#homePager .app-grid-small .app-icon-box");
+        if (!ref) return;
+        var w = Math.round(ref.getBoundingClientRect().width);
+        if (!w || w < 20) return;
+        var boxes = document.querySelectorAll("#homePager .home-app-grid .app-icon-box");
+        for (var i = 0; i < boxes.length; i++) {
+            boxes[i].style.width = w + "px";
+            boxes[i].style.height = w + "px";
+            boxes[i].style.aspectRatio = "1 / 1";
+            boxes[i].style.maxWidth = "none";
+        }
+    }
+
     function takeover() {
         var content = document.querySelector(".desktop-content");
         if (!content) return;
@@ -181,6 +195,7 @@
         if (old && old.getAttribute("data-owner") === "hero") {
             cleanStrays(content, old);
             fillSmallWidget();
+            syncIconSizes();
             return;
         }
 
@@ -240,6 +255,11 @@
 
         var grid2 = document.createElement("div");
         grid2.className = "home-app-grid";
+        grid2.style.display = "grid";
+        grid2.style.gridTemplateColumns = "repeat(4, 1fr)";
+        grid2.style.gap = "15px";
+        grid2.style.gridAutoRows = "75px";
+
         var gallery = document.getElementById("btnGallery") || makeApp("btnGallery", "图库", "ic-image");
         var quiz = document.getElementById("btnQuiz") || makeApp("btnQuiz", "出题", "ic-card");
         var freq = document.getElementById("btnFreq") || makeApp("btnFreq", "频率", "ic-calendar");
@@ -271,6 +291,9 @@
         bindOnce(freq, function () { alert("频率还没拆分。"); });
 
         fillSmallWidget();
+        syncIconSizes();
+        setTimeout(syncIconSizes, 300);
+        setTimeout(syncIconSizes, 900);
     }
 
     function markVersion() {
@@ -281,7 +304,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H8";
+                    if (val) val.textContent = "3.9 · H9";
                 }
             }
         } catch (e) {}
