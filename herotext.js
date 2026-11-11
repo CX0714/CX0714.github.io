@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（H7）
+   大组件文字颜色 + 主屏分页（H8）
    ========================================================= */
 (function () {
     "use strict";
@@ -115,7 +115,7 @@
             "#homePager{display:flex !important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
             "#homePager::-webkit-scrollbar{display:none;}" +
             "#homePager > .home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
-            "#homePager .home-app-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;width:100%;grid-auto-rows:80px;}" +
+            "#homePager .home-app-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px;width:100%;grid-auto-rows:75px;align-content:start;}" +
             ".dock{grid-template-columns:repeat(3,1fr) !important;}";
         document.head.appendChild(st);
     }
@@ -241,8 +241,7 @@
         var grid2 = document.createElement("div");
         grid2.className = "home-app-grid";
         var gallery = document.getElementById("btnGallery") || makeApp("btnGallery", "图库", "ic-image");
-        var quiz = document.getElementById("btnQuiz", "出题", "ic-card");
-        if (!document.getElementById("btnQuiz")) quiz = makeApp("btnQuiz", "出题", "ic-card");
+        var quiz = document.getElementById("btnQuiz") || makeApp("btnQuiz", "出题", "ic-card");
         var freq = document.getElementById("btnFreq") || makeApp("btnFreq", "频率", "ic-calendar");
         if (widgets) grid2.appendChild(widgets);
         if (letter) grid2.appendChild(letter);
@@ -282,7 +281,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H7";
+                    if (val) val.textContent = "3.9 · H8";
                 }
             }
         } catch (e) {}
