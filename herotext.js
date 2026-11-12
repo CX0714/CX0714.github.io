@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（H10）
+   大组件文字颜色 + 主屏分页（H11）
    ========================================================= */
 (function () {
     "use strict";
@@ -184,6 +184,25 @@
         }
     }
 
+    function applyRowGap() {
+        var grid = document.querySelector("#homePager .home-app-grid");
+        if (!grid) return;
+        var box = grid.querySelector(".app-icon-box");
+        if (!box) return;
+        var w = box.getBoundingClientRect().width;
+        var rh = box.parentNode.getBoundingClientRect().height;
+        var W = grid.clientWidth;
+        if (!w || !rh || !W) return;
+        var g = 15;
+        var cw = (W - g * 3) / 4;
+        var hGap = (cw - w) + g;
+        var labelH = Math.max(0, rh - w);
+        var rowGap = Math.round(hGap - labelH);
+        if (rowGap < 8) rowGap = 8;
+        if (rowGap > 40) rowGap = 40;
+        grid.style.rowGap = rowGap + "px";
+    }
+
     function applyShift() {
         var small = document.getElementById("widgetSmallArea");
         if (!small) return;
@@ -206,6 +225,7 @@
             cleanStrays(content, old);
             fillSmallWidget();
             syncIconSizes();
+            applyRowGap();
             applyShift();
             return;
         }
@@ -303,10 +323,13 @@
 
         fillSmallWidget();
         syncIconSizes();
+        applyRowGap();
         applyShift();
         setTimeout(syncIconSizes, 300);
-        setTimeout(syncIconSizes, 900);
+        setTimeout(applyRowGap, 300);
         setTimeout(applyShift, 300);
+        setTimeout(syncIconSizes, 900);
+        setTimeout(applyRowGap, 900);
         setTimeout(applyShift, 900);
     }
 
@@ -318,7 +341,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H10";
+                    if (val) val.textContent = "3.9 · H11";
                 }
             }
         } catch (e) {}
