@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H19）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H20）
    ========================================================= */
 (function () {
     "use strict";
@@ -10,6 +10,9 @@
     var MAIN_KEY = "private_chat_app_v1";
     var wx = null;
     var wxTyping = false;
+    var wxPanelOpen = "";
+
+    var FACES = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕"];
 
     function load() { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } }
     function save(v) { try { if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch (e) {} }
@@ -28,9 +31,7 @@
     function syncPresets(card, color) {
         if (!card) return;
         var btns = card.querySelectorAll("[data-hero-text-preset]");
-        for (var i = 0; i < btns.length; i++) {
-            btns[i].classList.toggle("active", btns[i].getAttribute("data-hero-text-preset").toLowerCase() === String(color || "").toLowerCase());
-        }
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-hero-text-preset").toLowerCase() === String(color || "").toLowerCase());
     }
 
     function buildRow() {
@@ -38,41 +39,25 @@
         if (!pane || pane.querySelector("[data-hero-text-card]")) return;
         var anchor = pane.querySelector(".group-card");
         if (!anchor) return;
-
         var card = document.createElement("div");
         card.className = "group-card control-card";
         card.setAttribute("data-hero-text-card", "");
         var swatches = PRESETS.map(function (color) {
             return '<button class="hero-swatch" type="button" data-hero-text-preset="' + color + '" style="background:' + color + '" aria-label="' + color + '"></button>';
         }).join("");
-
-        card.innerHTML =
-            '<div class="hero-group-title">文字颜色</div>' +
-            '<div class="control-row"><span class="control-label">四行文字</span>' +
-                '<div class="row-actions"><label class="color-dot"><input type="color" data-hero-text-color></label>' +
-                '<button class="clear-text" type="button" data-hero-text-clear>恢复默认</button></div></div>' +
-            '<div class="hero-color-presets">' + swatches + '</div>';
-
+        card.innerHTML = '<div class="hero-group-title">文字颜色</div><div class="control-row"><span class="control-label">四行文字</span><div class="row-actions"><label class="color-dot"><input type="color" data-hero-text-color></label><button class="clear-text" type="button" data-hero-text-clear>恢复默认</button></div></div><div class="hero-color-presets">' + swatches + '</div>';
         anchor.parentNode.insertBefore(card, anchor.nextSibling);
-
         var input = card.querySelector("[data-hero-text-color]");
         var current = load();
         input.value = current || defaultColor();
         syncPresets(card, current);
-
         input.addEventListener("input", function () { save(input.value); apply(); syncPresets(card, input.value); });
         card.addEventListener("click", function (e) {
             var target = e.target;
             if (!target || !target.closest) return;
             var preset = target.closest("[data-hero-text-preset]");
-            if (preset) {
-                input.value = preset.getAttribute("data-hero-text-preset");
-                save(input.value); apply(); syncPresets(card, input.value);
-                return;
-            }
-            if (target.closest("[data-hero-text-clear]")) {
-                save(""); input.value = defaultColor(); apply(); syncPresets(card, "");
-            }
+            if (preset) { input.value = preset.getAttribute("data-hero-text-preset"); save(input.value); apply(); syncPresets(card, input.value); return; }
+            if (target.closest("[data-hero-text-clear]")) { save(""); input.value = defaultColor(); apply(); syncPresets(card, ""); }
         });
     }
 
@@ -104,13 +89,30 @@
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
             ".wx-sticker{max-width:120px;border-radius:6px;display:block;}" +
-            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#F7F7F7;border-top:1px solid #E5E5E5;}" +
-            ".wx-ibar-btn{width:38px;height:38px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
-            ".wx-ibar-btn .svg-icon{width:32px;height:32px;stroke-width:1.5;}" +
-            ".wx-inputwrap{flex:1;min-width:0;height:36px;border-radius:6px;background:#FFFFFF;display:flex;align-items:center;padding:0 10px;}" +
+            ".wx-loc{width:210px;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
+            ".wx-loc-top{height:33.333%;display:flex;align-items:center;justify-content:center;background:#FFFFFF;color:#1a1a1a;font-size:12px;}" +
+            ".wx-loc-map{flex:1;background:#E9F1EA;position:relative;overflow:hidden;}" +
+            ".wx-loc-map svg{width:100%;height:100%;display:block;}" +
+            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:4px;padding:8px 8px calc(env(safe-area-inset-bottom) + 8px);background:#F7F7F7;border-top:1px solid #E5E5E5;}" +
+            ".wx-ibar-btn{width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
+            ".wx-ibar-btn .svg-icon{width:28px;height:28px;stroke-width:1.5;}" +
+            ".wx-inputwrap{flex:1;min-width:0;height:36px;border-radius:6px;background:#FFFFFF;display:flex;align-items:center;padding:0 8px;}" +
             ".wx-inputwrap input{width:100%;border:none;background:transparent;outline:none;font-size:15px;color:#1a1a1a;text-align:center;}" +
             ".wx-inputwrap input::placeholder{color:#C7C7C7;font-size:13px;}" +
-            ".wx-send{flex:0 0 auto;height:32px;padding:0 12px;border-radius:5px;background:#07C160;color:#fff;font-size:14px;border:none;}" +
+            ".wx-send{flex:0 0 auto;height:32px;padding:0 10px;border-radius:5px;background:#07C160;color:#fff;font-size:14px;border:none;}" +
+            ".wx-panel{display:none;flex:0 0 auto;background:#F7F7F7;border-top:1px solid #E5E5E5;padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);max-height:250px;overflow-y:auto;}" +
+            ".wx-panel.show{display:block;}" +
+            ".wx-emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;}" +
+            ".wx-emoji{height:34px;font-size:22px;line-height:1;background:#fff;border:none;border-radius:8px;}" +
+            ".wx-emoji.add{font-size:20px;color:#888;}" +
+            ".wx-stk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}" +
+            ".wx-stk{aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:#fff;border:none;padding:0;}" +
+            ".wx-stk img{width:100%;height:100%;object-fit:cover;display:block;}" +
+            ".wx-stk.add{border:1px dashed #BBB;color:#888;font-size:24px;}" +
+            ".wx-plus-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}" +
+            ".wx-plus-item{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;font-size:12px;color:#333;}" +
+            ".wx-plus-icon{width:56px;height:56px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;color:#1a1a1a;}" +
+            ".wx-plus-icon .svg-icon{width:26px;height:26px;stroke-width:1.5;}" +
             ".wx-sheet-mask{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.35);display:none;}" +
             ".wx-sheet-mask.show{display:block;}" +
             ".wx-sheet{position:fixed;left:0;right:0;bottom:0;z-index:521;background:#fff;border-radius:16px 16px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);transform:translateY(100%);transition:transform .25s ease;}" +
@@ -214,8 +216,10 @@
     function wxData() {
         if (wx) return wx;
         try { wx = JSON.parse(localStorage.getItem(WX_KEY) || "null"); } catch (e) { wx = null; }
-        if (!wx || typeof wx !== "object") wx = { name: "Ta", avatar: "", myAvatar: "", bg: "#F7F7F7", bgImage: "", history: [] };
+        if (!wx || typeof wx !== "object") wx = { name: "Ta", avatar: "", myAvatar: "", bg: "#F7F7F7", bgImage: "", history: [], emojis: [], stickers: [] };
         if (!Array.isArray(wx.history)) wx.history = [];
+        if (!Array.isArray(wx.emojis)) wx.emojis = [];
+        if (!Array.isArray(wx.stickers)) wx.stickers = [];
         if (typeof wx.name !== "string" || !wx.name) wx.name = "Ta";
         if (typeof wx.bg !== "string" || !wx.bg) wx.bg = "#F7F7F7";
         if (typeof wx.avatar !== "string") wx.avatar = "";
@@ -224,7 +228,7 @@
         return wx;
     }
 
-    function wxSave() { try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) {} }
+    function wxSave() { try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) { alert("微信数据空间已满，图片可能没存下。"); } }
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
 
     function wxAvatar(src, fallback) {
@@ -240,10 +244,31 @@
         return span;
     }
 
-    function wxSetTyping(on) {
-        wxTyping = !!on;
-        var t = document.getElementById("wxTitle");
-        if (t) t.textContent = on ? "对方正在输入…" : (wxData().name || "Ta");
+    function wxLocCard(distance) {
+        var wrap = document.createElement("div");
+        wrap.className = "wx-loc";
+        var top = document.createElement("div");
+        top.className = "wx-loc-top";
+        top.textContent = distance > 100 ? "不在你周围" : ("距离你 " + distance + " 米");
+        var map = document.createElement("div");
+        map.className = "wx-loc-map";
+        map.innerHTML =
+            '<svg viewBox="0 0 210 80" preserveAspectRatio="none">' +
+                '<rect width="210" height="80" fill="#E9F1EA"/>' +
+                '<path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/>' +
+                '<path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/>' +
+                '<path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/>' +
+                '<path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/>' +
+                '<path d="M-10 26 H220" stroke="#DCE6DC" stroke-width="1"/>' +
+                '<path d="M-10 58 H220" stroke="#DCE6DC" stroke-width="1"/>' +
+                '<path d="M52 -10 V90" stroke="#DCE6DC" stroke-width="1"/>' +
+                '<path d="M150 -10 V90" stroke="#DCE6DC" stroke-width="1"/>' +
+                '<circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/>' +
+                '<circle cx="105" cy="42" r="5" fill="#07C160"/>' +
+            '</svg>';
+        wrap.appendChild(top);
+        wrap.appendChild(map);
+        return wrap;
     }
 
     function wxRender() {
@@ -278,6 +303,8 @@
                 img.className = "wx-sticker";
                 img.src = m.text || "";
                 row.appendChild(img);
+            } else if (m.type === "location") {
+                row.appendChild(wxLocCard(Number(m.distance) || 0));
             } else {
                 var b = document.createElement("div");
                 b.className = "wx-bubble";
@@ -287,6 +314,14 @@
             box.appendChild(row);
         });
         box.scrollTop = box.scrollHeight;
+    }
+
+    function wxPush(msg) {
+        var d = wxData();
+        msg.time = Date.now();
+        d.history.push(msg);
+        wxSave();
+        wxRender();
     }
 
     function wxScheduleReply() {
@@ -308,6 +343,9 @@
                 var card = pool[Math.floor(Math.random() * pool.length)];
                 d.history.push({ from: "ta", type: "text", text: card.content, time: now + i });
             }
+            if (Math.random() < 0.12) {
+                d.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: now + count });
+            }
             wxSave();
             wxSetTyping(false);
             var view = document.getElementById("wechatView");
@@ -315,17 +353,20 @@
         }, delay);
     }
 
+    function wxSetTyping(on) {
+        wxTyping = !!on;
+        var t = document.getElementById("wxTitle");
+        if (t) t.textContent = on ? "对方正在输入…" : (wxData().name || "Ta");
+    }
+
     function wxSend() {
         var input = document.getElementById("wxInput");
         if (!input) return;
         var text = input.value.trim();
         if (!text) return;
-        var d = wxData();
-        d.history.push({ from: "me", type: "text", text: text, time: Date.now() });
-        wxSave();
         input.value = "";
         wxToggleSend();
-        wxRender();
+        wxPush({ from: "me", type: "text", text: text });
         wxScheduleReply();
     }
 
@@ -336,21 +377,91 @@
         send.style.display = input.value.trim() ? "block" : "none";
     }
 
-    function openSheet(show) {
-        var mask = document.getElementById("wxSheetMask");
-        var sheet = document.getElementById("wxSheet");
-        if (!mask || !sheet) return;
-        mask.classList.toggle("show", !!show);
-        sheet.classList.toggle("show", !!show);
+    function compressImage(file, cb) {
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function () {
+            var max = 260;
+            var scale = Math.min(1, max / Math.max(img.width, img.height));
+            var w = Math.max(1, Math.round(img.width * scale));
+            var h = Math.max(1, Math.round(img.height * scale));
+            var c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            c.getContext("2d").drawImage(img, 0, 0, w, h);
+            var out = "";
+            try { out = c.toDataURL("image/webp", 0.7); } catch (e) {}
+            if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
+            URL.revokeObjectURL(url);
+            cb(out);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); cb(""); };
+        img.src = url;
     }
 
-    function readFile(input, cb) {
-        var f = input.files && input.files[0];
-        if (!f) return;
-        var r = new FileReader();
-        r.onload = function () { cb(r.result); };
-        r.readAsDataURL(f);
-        input.value = "";
+    function togglePanel(name) {
+        var panels = document.querySelectorAll(".wx-panel");
+        var target = document.getElementById("wxPanel-" + name);
+        if (!target) return;
+        var isOpen = wxPanelOpen === name;
+        for (var i = 0; i < panels.length; i++) panels[i].classList.remove("show");
+        wxPanelOpen = isOpen ? "" : name;
+        if (!isOpen) target.classList.add("show");
+        var box = document.getElementById("wxMessages");
+        if (box) box.scrollTop = box.scrollHeight;
+    }
+
+    function renderEmojiPanel() {
+        var grid = document.getElementById("wxEmojiGrid");
+        if (!grid) return;
+        var d = wxData();
+        var list = FACES.concat(d.emojis || []);
+        grid.innerHTML = "";
+        list.forEach(function (ch) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "wx-emoji";
+            b.textContent = ch;
+            b.addEventListener("click", function () { wxPush({ from: "me", type: "text", text: ch }); wxScheduleReply(); });
+            grid.appendChild(b);
+        });
+        var add = document.createElement("button");
+        add.type = "button";
+        add.className = "wx-emoji add";
+        add.textContent = "+";
+        add.addEventListener("click", function () {
+            var v = prompt("输入或粘贴一个 emoji");
+            if (!v) return;
+            v = v.trim().slice(0, 8);
+            if (!v) return;
+            var d2 = wxData();
+            if (d2.emojis.indexOf(v) < 0) d2.emojis.push(v);
+            wxSave();
+            renderEmojiPanel();
+        });
+        grid.appendChild(add);
+    }
+
+    function renderStickerPanel() {
+        var grid = document.getElementById("wxStkGrid");
+        if (!grid) return;
+        var d = wxData();
+        grid.innerHTML = "";
+        (d.stickers || []).forEach(function (src) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "wx-stk";
+            var img = document.createElement("img");
+            img.src = src;
+            b.appendChild(img);
+            b.addEventListener("click", function () { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); });
+            grid.appendChild(b);
+        });
+        var add = document.createElement("button");
+        add.type = "button";
+        add.className = "wx-stk add";
+        add.textContent = "+";
+        add.addEventListener("click", function () { var f = document.getElementById("wxStkFile"); if (f) f.click(); });
+        grid.appendChild(add);
     }
 
     function wxBuild() {
@@ -365,13 +476,25 @@
                 '<button class="wx-head-btn" id="wxMore" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button>' +
             '</header>' +
             '<div class="wx-messages" id="wxMessages"></div>' +
+            '<div class="wx-panel" id="wxPanel-emoji"><div class="wx-emoji-grid" id="wxEmojiGrid"></div></div>' +
+            '<div class="wx-panel" id="wxPanel-stk"><div class="wx-stk-grid" id="wxStkGrid"></div></div>' +
+            '<div class="wx-panel" id="wxPanel-plus">' +
+                '<div class="wx-plus-grid">' +
+                    '<button class="wx-plus-item" id="wxPickPhoto" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></span><span>照片</span></button>' +
+                    '<button class="wx-plus-item" id="wxPickLoc" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-pin"></use></svg></span><span>位置</span></button>' +
+                    '<button class="wx-plus-item" id="wxPickFile" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg></span><span>文件</span></button>' +
+                '</div>' +
+            '</div>' +
             '<div class="wx-inputbar">' +
                 '<button class="wx-ibar-btn" type="button" aria-label="语音"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button>' +
                 '<div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div>' +
                 '<button class="wx-send" id="wxSend" type="button" style="display:none">发送</button>' +
-                '<button class="wx-ibar-btn" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
-                '<button class="wx-ibar-btn" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button>' +
+                '<button class="wx-ibar-btn" id="wxBtnEmoji" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
+                '<button class="wx-ibar-btn" id="wxBtnStk" type="button" aria-label="表情包"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3.5" fill="none"/><circle cx="9" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M7.2 15.2c1.6 1.6 7.6 1.6 9.6 0" fill="none"/></svg></button>' +
+                '<button class="wx-ibar-btn" id="wxBtnPlus" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button>' +
             '</div>' +
+            '<input type="file" id="wxPhotoFile" accept="image/*" hidden>' +
+            '<input type="file" id="wxStkFile" accept="image/*" hidden>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
             '<div class="wx-sheet" id="wxSheet">' +
                 '<h3>聊天设置</h3>' +
@@ -412,6 +535,38 @@
         input.addEventListener("input", wxToggleSend);
         input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); wxSend(); } });
         document.getElementById("wxSend").addEventListener("click", wxSend);
+
+        document.getElementById("wxBtnEmoji").addEventListener("click", function () { togglePanel("emoji"); });
+        document.getElementById("wxBtnStk").addEventListener("click", function () { togglePanel("stk"); });
+        document.getElementById("wxBtnPlus").addEventListener("click", function () { togglePanel("plus"); });
+
+        document.getElementById("wxPickLoc").addEventListener("click", function () {
+            var d = 1 + Math.floor(Math.random() * 110);
+            wxPush({ from: "me", type: "location", distance: d });
+            wxScheduleReply();
+            togglePanel("plus");
+        });
+        document.getElementById("wxPickPhoto").addEventListener("click", function () { document.getElementById("wxPhotoFile").click(); });
+        document.getElementById("wxPhotoFile").addEventListener("change", function (e) {
+            var f = e.target.files && e.target.files[0];
+            if (!f) return;
+            compressImage(f, function (src) {
+                if (src) { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); }
+            });
+            e.target.value = "";
+            togglePanel("plus");
+        });
+        document.getElementById("wxStkFile").addEventListener("change", function (e) {
+            var f = e.target.files && e.target.files[0];
+            if (!f) return;
+            compressImage(f, function (src) {
+                if (src) { wxData().stickers.push(src); wxSave(); renderStickerPanel(); }
+            });
+            e.target.value = "";
+        });
+
+        renderEmojiPanel();
+        renderStickerPanel();
     }
 
     function wxOpen() {
@@ -419,6 +574,8 @@
         var view = document.getElementById("wechatView");
         if (!view) return;
         wxRender();
+        renderEmojiPanel();
+        renderStickerPanel();
         view.classList.add("show");
         setTimeout(function () { var box = document.getElementById("wxMessages"); if (box) box.scrollTop = box.scrollHeight; }, 60);
     }
@@ -540,7 +697,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H19";
+                    if (val) val.textContent = "3.9 · H20";
                 }
             }
         } catch (e) {}
