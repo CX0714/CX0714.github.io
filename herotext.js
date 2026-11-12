@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H13）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H14）
    ========================================================= */
 (function () {
     "use strict";
@@ -89,11 +89,11 @@
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
-            ".wx-head-btn{width:38px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
-            ".wx-head-btn .svg-icon{width:20px;height:20px;}" +
+            ".wx-head-btn{width:40px;height:36px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
+            ".wx-head-btn .svg-icon{width:24px;height:24px;stroke-width:2;}" +
             ".wx-title{flex:1;text-align:center;font-size:17px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;background-size:cover;background-position:center;}" +
-            ".wx-time{width:fit-content;margin:8px auto;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.05);color:#B2B2B2;font-size:12px;}" +
+            ".wx-time{width:fit-content;margin:8px auto;padding:2px 8px;border-radius:4px;background:transparent;border:1px solid #9A9A9A;color:#555555;font-size:14px;}" +
             ".wx-row{display:flex;align-items:flex-start;gap:8px;padding:6px 12px;}" +
             ".wx-row.mine{flex-direction:row-reverse;}" +
             ".wx-avatar{width:40px;height:40px;border-radius:4px;overflow:hidden;flex:0 0 auto;background:#DEDEDE;display:flex;align-items:center;justify-content:center;color:#8A8A8A;font-size:13px;}" +
@@ -103,12 +103,12 @@
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
             ".wx-sticker{max-width:120px;border-radius:6px;display:block;}" +
-            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#FFFFFF;border-top:1px solid #E5E5E5;}" +
-            ".wx-ibar-btn{width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3A3A3A;}" +
-            ".wx-ibar-btn .svg-icon{width:22px;height:22px;}" +
-            ".wx-inputwrap{flex:1;min-width:0;height:36px;border-radius:6px;background:#F7F7F7;display:flex;align-items:center;padding:0 10px;}" +
+            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#F7F7F7;border-top:1px solid #E5E5E5;}" +
+            ".wx-ibar-btn{width:36px;height:36px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
+            ".wx-ibar-btn .svg-icon{width:25px;height:25px;stroke-width:2;}" +
+            ".wx-inputwrap{flex:1;min-width:0;height:36px;border-radius:6px;background:#FFFFFF;display:flex;align-items:center;padding:0 10px;}" +
             ".wx-inputwrap input{width:100%;border:none;background:transparent;outline:none;font-size:15px;color:#1a1a1a;text-align:center;}" +
-            ".wx-inputwrap input::placeholder{color:#B2B2B2;}" +
+            ".wx-inputwrap input::placeholder{color:#C7C7C7;font-size:13px;}" +
             ".wx-send{flex:0 0 auto;height:32px;padding:0 12px;border-radius:5px;background:#07C160;color:#fff;font-size:14px;border:none;}" +
             ".wx-sheet-mask{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.35);display:none;}" +
             ".wx-sheet-mask.show{display:block;}" +
@@ -529,7 +529,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H13";
+                    if (val) val.textContent = "3.9 · H14";
                 }
             }
         } catch (e) {}
