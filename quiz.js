@@ -1,90 +1,149 @@
-/* Philos 出题 app + iMessage 表情包修正 */
+/* Philos 出题 app v2 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
-    var mask = null, card = null, qInput = null, optWrap = null, resultEl = null, askBtn = null;
-    var asking = false;
+    var HIST_KEY = "philos_quiz_history";
+    var LETTERS = ["A", "B", "C", "D"];
+
+    var page = null, qInput = null, optWrap = null, askBtn = null, histBtn = null, histBox = null;
+    var asking = false, showingHistory = false;
 
     function injectStyles() {
         if (document.getElementById("philos-quiz-style")) return;
         var st = document.createElement("style");
         st.id = "philos-quiz-style";
         st.textContent =
-            ".qz-mask{position:fixed;inset:0;z-index:610;background:rgba(18,24,32,.34);display:none;align-items:center;justify-content:center;padding:20px;}" +
-            ".qz-mask.show{display:flex;}" +
-            ".qz-card{width:100%;max-width:360px;max-height:78vh;overflow-y:auto;border-radius:24px;padding:22px 20px;background:rgba(255,255,255,0.82);-webkit-backdrop-filter:blur(22px);backdrop-filter:blur(22px);border:2px solid #E5E5E5;box-shadow:0 24px 60px rgba(20,30,45,0.22);}" +
-            "[data-theme=\"dark\"] .qz-card{background:rgba(30,32,37,0.82);border-color:#333;}" +
-            ".qz-title{font-size:17px;font-weight:600;color:var(--text-primary,#1b1d21);margin-bottom:14px;}" +
-            ".qz-q{width:100%;border:none;background:rgba(0,0,0,0.045);border-radius:14px;padding:12px 14px;font-size:16px;line-height:1.5;color:var(--text-primary,#1b1d21);outline:none;resize:none;min-height:62px;}" +
-            ".qz-opt{display:flex;align-items:center;gap:8px;margin-top:10px;}" +
-            ".qz-opt input{flex:1;min-width:0;border:none;background:rgba(0,0,0,0.045);border-radius:12px;padding:10px 12px;font-size:15px;color:var(--text-primary,#1b1d21);outline:none;}" +
-            ".qz-opt input.chosen{background:rgba(91,127,166,0.22);font-weight:600;}" +
-            ".qz-opt .qz-del{width:28px;height:28px;flex:0 0 auto;border:none;background:none;color:#ff3b30;font-size:16px;}" +
-            ".qz-add{margin-top:10px;height:36px;width:100%;border:1px dashed #C9CFD6;border-radius:12px;background:none;color:#6b7683;font-size:13px;}" +
-            ".qz-result{margin-top:14px;font-size:14px;line-height:1.6;color:var(--text-primary,#1b1d21);min-height:22px;}" +
-            ".qz-actions{display:flex;gap:10px;margin-top:16px;}" +
-            ".qz-btn{flex:1;height:44px;border-radius:14px;border:none;font-size:15px;font-weight:500;}" +
-            ".qz-btn.ghost{background:rgba(125,140,160,0.14);color:var(--text-primary,#1b1d21);}" +
+            ".qz-page{position:fixed;inset:0;z-index:610;display:none;flex-direction:column;background:rgba(250,251,252,0.78);-webkit-backdrop-filter:blur(26px) saturate(115%);backdrop-filter:blur(26px) saturate(115%);}" +
+            ".qz-page.show{display:flex;}" +
+            "[data-theme=\"dark\"] .qz-page{background:rgba(26,28,32,0.78);}" +
+            ".qz-top{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;}" +
+            ".qz-top .nav-back{background:rgba(255,255,255,0.55);border:1px solid rgba(255,255,255,0.6);}" +
+            ".qz-name{font-size:20px;font-weight:600;color:var(--text-primary,#1b1d21);}" +
+            ".qz-body{flex:1;min-height:0;overflow-y:auto;padding:6px 16px calc(env(safe-area-inset-bottom) + 24px);}" +
+            ".qz-q{width:100%;box-sizing:border-box;border:none;background:rgba(255,255,255,0.62);border-radius:16px;padding:14px;font-size:16px;line-height:1.5;color:var(--text-primary,#1b1d21);outline:none;resize:none;min-height:78px;box-shadow:0 6px 18px rgba(70,95,125,0.08);}" +
+            "[data-theme=\"dark\"] .qz-q{background:rgba(255,255,255,0.08);}" +
+            ".qz-opt{display:flex;align-items:center;gap:10px;margin-top:10px;background:rgba(255,255,255,0.55);border-radius:14px;padding:6px 12px;}" +
+            "[data-theme=\"dark\"] .qz-opt{background:rgba(255,255,255,0.07);}" +
+            ".qz-letter{flex:0 0 auto;width:20px;font-size:15px;color:var(--text-secondary,#8b909a);text-align:center;}" +
+            ".qz-opt input{flex:1;min-width:0;border:none;background:transparent;padding:8px 0;font-size:15px;color:var(--text-primary,#1b1d21);outline:none;}" +
+            ".qz-opt.chosen{background:rgba(91,127,166,0.13);}" +
+            ".qz-opt.chosen .qz-letter,.qz-opt.chosen input{color:#4a6b8c;}" +
+            "[data-theme=\"dark\"] .qz-opt.chosen{background:rgba(91,127,166,0.22);}" +
+            "[data-theme=\"dark\"] .qz-opt.chosen .qz-letter,[data-theme=\"dark\"] .qz-opt.chosen input{color:#c9d8e6;}" +
+            ".qz-add{margin-top:12px;height:38px;width:100%;border:1px dashed rgba(120,135,155,0.45);border-radius:12px;background:none;color:var(--text-secondary,#8b909a);font-size:13px;}" +
+            ".qz-actions{display:flex;flex-direction:column;gap:10px;margin-top:18px;}" +
+            ".qz-btn{width:100%;height:46px;border-radius:14px;border:none;font-size:15px;font-weight:500;}" +
             ".qz-btn.primary{background:#5b7fa6;color:#fff;}" +
+            ".qz-btn.ghost{background:rgba(255,255,255,0.62);color:var(--text-primary,#1b1d21);border:1px solid rgba(255,255,255,0.7);}" +
+            "[data-theme=\"dark\"] .qz-btn.ghost{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.1);}" +
             ".qz-btn:disabled{opacity:.5;}" +
-            ".sticker-del{display:none !important;}" +
-            ".philos-im-del{position:absolute !important;top:3px !important;left:3px !important;width:20px !important;height:20px !important;border-radius:50% !important;background:rgba(0,0,0,.55) !important;color:#fff !important;font-size:13px !important;line-height:20px !important;text-align:center !important;z-index:6 !important;}";
+            ".qz-hist{margin-top:16px;display:none;flex-direction:column;gap:12px;}" +
+            ".qz-hist.show{display:flex;}" +
+            ".qz-hist-item{background:rgba(255,255,255,0.6);border-radius:16px;padding:14px;box-shadow:0 6px 18px rgba(70,95,125,0.07);}" +
+            "[data-theme=\"dark\"] .qz-hist-item{background:rgba(255,255,255,0.07);}" +
+            ".qz-hist-q{font-size:15px;font-weight:600;color:var(--text-primary,#1b1d21);margin-bottom:8px;}" +
+            ".qz-hist-opt{font-size:14px;line-height:1.7;color:var(--text-secondary,#8b909a);}" +
+            ".qz-hist-opt.chosen{color:#4a6b8c;background:rgba(91,127,166,0.13);border-radius:8px;padding:2px 8px;}" +
+            "[data-theme=\"dark\"] .qz-hist-opt.chosen{color:#c9d8e6;}" +
+            ".qz-empty{font-size:13px;color:var(--text-secondary,#8b909a);text-align:center;padding:24px 0;}";
         document.head.appendChild(st);
     }
 
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
+    function loadHist() { try { var v = JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+    function saveHist(list) { try { localStorage.setItem(HIST_KEY, JSON.stringify(list.slice(0, 50))); } catch (e) {} }
 
     function addOption(value) {
         var row = document.createElement("div");
         row.className = "qz-opt";
+        var letter = document.createElement("span");
+        letter.className = "qz-letter";
+        letter.textContent = LETTERS[optWrap.querySelectorAll(".qz-opt").length] || "";
         var input = document.createElement("input");
         input.type = "text";
         input.placeholder = "选项";
         input.value = value || "";
-        var del = document.createElement("button");
-        del.type = "button";
-        del.className = "qz-del";
-        del.textContent = "×";
-        del.addEventListener("click", function () {
-            if (optWrap.querySelectorAll(".qz-opt").length <= 2) return;
-            optWrap.removeChild(row);
-        });
+        row.appendChild(letter);
         row.appendChild(input);
-        row.appendChild(del);
         optWrap.appendChild(row);
     }
 
+    function relabel() {
+        var rows = optWrap.querySelectorAll(".qz-opt");
+        for (var i = 0; i < rows.length; i++) {
+            var l = rows[i].querySelector(".qz-letter");
+            if (l) l.textContent = LETTERS[i] || "";
+        }
+    }
+
+    function renderHistory() {
+        if (!histBox) return;
+        var list = loadHist();
+        histBox.innerHTML = "";
+        if (!list.length) {
+            var p = document.createElement("div");
+            p.className = "qz-empty";
+            p.textContent = "还没有历史题目";
+            histBox.appendChild(p);
+            return;
+        }
+        list.forEach(function (item) {
+            var card = document.createElement("div");
+            card.className = "qz-hist-item";
+            var q = document.createElement("div");
+            q.className = "qz-hist-q";
+            q.textContent = item.q || "";
+            card.appendChild(q);
+            (item.opts || []).forEach(function (text, i) {
+                var o = document.createElement("div");
+                o.className = "qz-hist-opt" + (i === item.pick ? " chosen" : "");
+                o.textContent = (LETTERS[i] || "") + "． " + text;
+                card.appendChild(o);
+            });
+            histBox.appendChild(card);
+        });
+    }
+
     function build() {
-        if (mask) return;
+        if (page) return;
         injectStyles();
-        mask = document.createElement("div");
-        mask.className = "qz-mask";
-        mask.id = "qzMask";
-        card = document.createElement("div");
-        card.className = "qz-card";
-        card.innerHTML =
-            '<div class="qz-title">出题</div>' +
-            '<textarea class="qz-q" id="qzQuestion" placeholder="想问他的问题…"></textarea>' +
-            '<div id="qzOptions"></div>' +
-            '<button type="button" class="qz-add" id="qzAdd">+ 添加选项</button>' +
-            '<div class="qz-result" id="qzResult"></div>' +
-            '<div class="qz-actions"><button type="button" class="qz-btn ghost" id="qzClose">关闭</button><button type="button" class="qz-btn primary" id="qzAsk">让他答</button></div>';
-        mask.appendChild(card);
-        document.body.appendChild(mask);
+        page = document.createElement("div");
+        page.className = "qz-page";
+        page.id = "qzPage";
+        page.innerHTML =
+            '<div class="qz-top"><button class="nav-back" id="qzBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><span class="qz-name">题目</span></div>' +
+            '<div class="qz-body">' +
+                '<textarea class="qz-q" id="qzQuestion" placeholder="想问他的问题…"></textarea>' +
+                '<div id="qzOptions"></div>' +
+                '<button type="button" class="qz-add" id="qzAdd">+ 添加选项</button>' +
+                '<div class="qz-actions">' +
+                    '<button type="button" class="qz-btn primary" id="qzAsk">让他来答</button>' +
+                    '<button type="button" class="qz-btn ghost" id="qzHistBtn">查看历史题目</button>' +
+                '</div>' +
+                '<div class="qz-hist" id="qzHist"></div>' +
+            '</div>';
+        document.body.appendChild(page);
 
         qInput = document.getElementById("qzQuestion");
         optWrap = document.getElementById("qzOptions");
-        resultEl = document.getElementById("qzResult");
         askBtn = document.getElementById("qzAsk");
+        histBtn = document.getElementById("qzHistBtn");
+        histBox = document.getElementById("qzHist");
 
+        document.getElementById("qzBack").addEventListener("click", close);
         document.getElementById("qzAdd").addEventListener("click", function () {
             if (optWrap.querySelectorAll(".qz-opt").length >= 4) return;
             addOption("");
+            relabel();
         });
-        document.getElementById("qzClose").addEventListener("click", close);
-        mask.addEventListener("click", function (e) { if (e.target === mask) close(); });
         askBtn.addEventListener("click", ask);
+        histBtn.addEventListener("click", function () {
+            showingHistory = !showingHistory;
+            histBox.classList.toggle("show", showingHistory);
+            histBtn.textContent = showingHistory ? "收起历史题目" : "查看历史题目";
+            if (showingHistory) renderHistory();
+        });
     }
 
     function reset() {
@@ -92,92 +151,71 @@
         optWrap.innerHTML = "";
         addOption("");
         addOption("");
-        resultEl.textContent = "";
+        relabel();
         asking = false;
         askBtn.disabled = false;
-        askBtn.textContent = "让他答";
+        askBtn.textContent = "让他来答";
+        showingHistory = false;
+        if (histBox) histBox.classList.remove("show");
+        if (histBtn) histBtn.textContent = "查看历史题目";
     }
 
     function open() {
         build();
         if (!optWrap.querySelector(".qz-opt")) reset();
-        mask.classList.add("show");
+        page.classList.add("show");
     }
 
     function close() {
-        if (mask) mask.classList.remove("show");
+        if (page) page.classList.remove("show");
     }
 
     function ask() {
         if (asking) return;
         var q = qInput.value.trim();
+        var rows = optWrap.querySelectorAll(".qz-opt");
         var opts = [];
-        var inputs = optWrap.querySelectorAll(".qz-opt input");
-        for (var i = 0; i < inputs.length; i++) {
-            inputs[i].classList.remove("chosen");
-            var v = inputs[i].value.trim();
-            if (v) opts.push({ el: inputs[i], text: v });
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].classList.remove("chosen");
+            var input = rows[i].querySelector("input");
+            var v = input ? input.value.trim() : "";
+            if (v) opts.push({ row: rows[i], text: v });
         }
-        if (!q) { resultEl.textContent = "先写个问题。"; return; }
-        if (opts.length < 2) { resultEl.textContent = "至少两个选项。"; return; }
+        if (!q) { alert("先写个问题。"); return; }
+        if (opts.length < 2) { alert("至少两个选项。"); return; }
 
         asking = true;
         askBtn.disabled = true;
         askBtn.textContent = "等他回答…";
-        resultEl.textContent = "他在想…";
 
         var main = mainData();
         var perm = (main.settings && main.settings.permission) || {};
         var delay = Math.max(0.6, Number(perm.replyDelay) || 3) * 1000;
 
         setTimeout(function () {
-            var pick = opts[Math.floor(Math.random() * opts.length)];
-            pick.el.classList.add("chosen");
-            resultEl.textContent = "他选了：" + pick.text;
+            var idx = Math.floor(Math.random() * opts.length);
+            var pick = opts[idx];
+            pick.row.classList.add("chosen");
+
+            var hist = loadHist();
+            hist.unshift({ q: q, opts: opts.map(function (o) { return o.text; }), pick: idx, time: Date.now() });
+            saveHist(hist);
+            if (showingHistory) renderHistory();
+
             asking = false;
             askBtn.disabled = false;
-            askBtn.textContent = "再答一次";
+            askBtn.textContent = "让他来答";
         }, delay);
-    }
-
-    function decorateIMStickers() {
-        injectStyles();
-        var grid = document.getElementById("stickerGrid");
-        if (!grid) return;
-        var cells = grid.querySelectorAll(".sticker-cell");
-        for (var i = 0; i < cells.length; i++) {
-            if (cells[i].querySelector(".philos-im-del")) continue;
-            (function (cell) {
-                var btn = document.createElement("span");
-                btn.className = "philos-im-del";
-                btn.textContent = "×";
-                btn.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    var idx = Number(cell.getAttribute("data-sticker"));
-                    if (!confirm("删除这个表情包？")) return;
-                    try {
-                        var data = JSON.parse(localStorage.getItem(MAIN_KEY) || "{}");
-                        if (Array.isArray(data.stickers) && data.stickers[idx] != null) {
-                            data.stickers.splice(idx, 1);
-                            localStorage.setItem(MAIN_KEY, JSON.stringify(data));
-                        }
-                    } catch (err) {}
-                    location.reload();
-                });
-                cell.appendChild(btn);
-            })(cells[i]);
-        }
     }
 
     function markVersion() {
         try {
-            var page = document.querySelector('[data-page="about"]'); if (!page) return;
-            var items = page.querySelectorAll(".settings-item");
+            var about = document.querySelector('[data-page="about"]'); if (!about) return;
+            var items = about.querySelectorAll(".settings-item");
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H32";
+                    if (val) val.textContent = "3.9 · H33";
                 }
             }
         } catch (e) {}
@@ -192,16 +230,6 @@
         open();
     }, true);
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", function () { injectStyles(); decorateIMStickers(); markVersion(); });
-    } else {
-        setTimeout(function () { injectStyles(); decorateIMStickers(); markVersion(); }, 0);
-    }
-
-    setTimeout(function () { decorateIMStickers(); markVersion(); }, 1200);
-    setTimeout(function () { decorateIMStickers(); markVersion(); }, 2600);
-    if (window.MutationObserver) {
-        var sg = document.getElementById("stickerGrid");
-        if (sg) new MutationObserver(decorateIMStickers).observe(sg, { childList: true, subtree: true });
-    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", markVersion);
+    else setTimeout(markVersion, 0);
 })();
