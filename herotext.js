@@ -1,4 +1,4 @@
-/* H22 */
+/* H24 */
 (function () {
     "use strict";
 
@@ -112,6 +112,11 @@
             ".dock{grid-template-columns:repeat(3,1fr) !important;}" +
             "#editSheet{left:50% !important;right:auto !important;top:50% !important;bottom:auto !important;width:86% !important;max-width:340px !important;border-radius:22px !important;transform:translate(-50%,-50%) scale(.94) !important;opacity:0;}" +
             "#editSheet.show{transform:translate(-50%,-50%) scale(1) !important;opacity:1;}" +
+            ".freq-view{position:fixed;inset:0;z-index:470;display:none;flex-direction:column;background:#EEEEEE;}" +
+            ".freq-view.show{display:flex;}" +
+            ".freq-header{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;}" +
+            ".freq-title{font-size:20px;font-weight:600;color:var(--text-primary,#1b1d21);}" +
+            ".freq-body{flex:1;min-height:0;overflow-y:auto;padding:8px 16px calc(env(safe-area-inset-bottom) + 24px);}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -250,6 +255,37 @@
         var pad = Math.round(h / 4);
         var pages = document.querySelectorAll("#homePager > .home-page");
         for (var i = 0; i < pages.length; i++) pages[i].style.paddingTop = pad + "px";
+    }
+
+    function buildFreqView() {
+        if (document.getElementById("freqView")) return;
+        var v = document.createElement("div");
+        v.className = "freq-view";
+        v.id = "freqView";
+        v.innerHTML = '<div class="freq-header"><button class="nav-back" id="freqBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><span class="freq-title">频率</span></div><div class="freq-body" id="freqBody"></div>';
+        document.body.appendChild(v);
+        document.getElementById("freqBack").addEventListener("click", function () { v.classList.remove("show"); });
+    }
+
+    function openFreq() {
+        buildFreqView();
+        var v = document.getElementById("freqView");
+        var body = document.getElementById("freqBody");
+        var page = document.querySelector('[data-page="permission"]');
+        if (!v || !body || !page) return;
+        var keys = ["permission.replyDelay", "permission.replyMin", "permission.activeMin", "permission.callMin"];
+        for (var i = 0; i < keys.length; i++) {
+            var el = page.querySelector('[data-key="' + keys[i] + '"]');
+            if (!el) continue;
+            var card = el.closest(".group-card");
+            if (card && card.parentNode !== body) body.appendChild(card);
+        }
+        var extra = page.querySelector("[data-rm-combo]");
+        if (extra) {
+            var c2 = extra.closest(".group-card");
+            if (c2 && c2.parentNode !== body) body.appendChild(c2);
+        }
+        v.classList.add("show");
     }
 
     /* 微信 */
@@ -560,7 +596,7 @@
         bindOnce(wechat, function () { wxOpen(); });
         bindOnce(gallery, function () { alert("图库还没做。"); });
         bindOnce(quiz, function () { alert("出题还没做。"); });
-        bindOnce(freq, function () { alert("频率还没拆分。"); });
+        bindOnce(freq, function () { openFreq(); });
 
         fillSmallWidget(); syncIconSizes(); applyRowGap(); applyShift(); applyHeroAvatar(); buildHeroAvatarRow();
         setTimeout(function () { syncIconSizes(); applyRowGap(); applyShift(); }, 300);
@@ -574,7 +610,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H22";
+                    if (val) val.textContent = "3.9 · H24";
                 }
             }
         } catch (e) {}
