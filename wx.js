@@ -1,4 +1,4 @@
-/* Philos 微信模块 v3 + 小修（由 herotext.js 加载） */
+/* Philos 微信模块 v4（由 herotext.js 加载） */
 (function () {
     "use strict";
 
@@ -25,13 +25,15 @@
             ".wx-time{display:flex;width:fit-content;height:auto;margin:8px auto;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:0.5px solid rgba(0,0,0,0.10);color:#9A9A9A;font-size:14px;line-height:1.2;}" +
             ".wx-row{display:flex;align-items:flex-start;gap:8px;padding:6px 12px;}" +
             ".wx-row.mine{flex-direction:row-reverse;}" +
+            ".wx-col{display:flex;flex-direction:column;max-width:72%;min-width:0;}" +
+            ".wx-row.mine .wx-col{align-items:flex-end;}" +
             ".wx-avatar{width:40px;height:40px;border-radius:4px;overflow:hidden;flex:0 0 auto;background:#DEDEDE;display:flex;align-items:center;justify-content:center;color:#8A8A8A;font-size:13px;}" +
             ".wx-avatar img{width:100%;height:100%;object-fit:cover;display:block;}" +
-            ".wx-bubble{position:relative;max-width:72%;padding:9px 13px;border-radius:4px;background:#FFFFFF;color:#1a1a1a;line-height:1.5;font-size:15px;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
+            ".wx-bubble{position:relative;max-width:100%;padding:9px 13px;border-radius:4px;background:#FFFFFF;color:#1a1a1a;line-height:1.5;font-size:15px;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
             ".wx-bubble::before{content:\"\";position:absolute;top:14px;left:-5px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #FFFFFF;}" +
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
-            ".wx-quote{font-size:12px;line-height:1.4;color:#8A8A8A;background:rgba(0,0,0,.05);border-radius:4px;padding:4px 6px;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".wx-quote{margin-top:6px;max-width:100%;font-size:12px;line-height:1.4;color:#8A8A8A;background:rgba(0,0,0,0.05);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-radius:4px;padding:4px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-menubar{position:fixed;z-index:600;display:none;gap:2px;padding:4px;border-radius:10px;background:rgba(28,28,30,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 8px 24px rgba(0,0,0,.3);}" +
             ".wx-menubar button{height:34px;padding:0 12px;border:none;background:none;color:#fff;font-size:14px;border-radius:7px;}" +
             ".wx-menubar button.danger{color:#FF453A;}" +
@@ -152,14 +154,20 @@
             row.className = "wx-row" + (m.from === "me" ? " mine" : "");
             row.setAttribute("data-wi", String(idx));
             row.appendChild(wxAvatar(m.from === "me" ? (d.myAvatar || main.myAvatar) : (d.avatar || main.taAvatar), m.from === "me" ? "我" : "Ta"));
-            if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; row.appendChild(img); }
-            else if (m.type === "location") row.appendChild(wxLocCard(Number(m.distance) || 0));
+
+            var col = document.createElement("div");
+            col.className = "wx-col";
+
+            if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; col.appendChild(img); }
+            else if (m.type === "location") col.appendChild(wxLocCard(Number(m.distance) || 0));
             else {
-                var b = document.createElement("div"); b.className = "wx-bubble";
-                if (m.quote) { var q = document.createElement("div"); q.className = "wx-quote"; q.textContent = m.quote; b.appendChild(q); }
-                var sp = document.createElement("span"); sp.textContent = m.text || ""; b.appendChild(sp);
-                row.appendChild(b);
+                var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; col.appendChild(b);
             }
+
+            if (m.quote) {
+                var q = document.createElement("div"); q.className = "wx-quote"; q.textContent = m.quote; col.appendChild(q);
+            }
+            row.appendChild(col);
             box.appendChild(row);
         });
         box.scrollTop = box.scrollHeight;
@@ -300,17 +308,20 @@
 
     function hideMenu() { var m = document.getElementById("wxMenuBar"); if (m) m.style.display = "none"; }
 
-    function openMenu(row, x, y) {
+    function openMenu(target, x, y) {
         var menu = document.getElementById("wxMenuBar");
         if (!menu) return;
         menu.style.display = "flex";
         menu.style.visibility = "hidden";
         menu.style.left = "0px"; menu.style.top = "0px";
         var mw = menu.offsetWidth, mh = menu.offsetHeight;
+        var top = y - mh - 10;
+        if (top < 70) top = y + 10;
         menu.style.left = Math.max(8, Math.min(x - mw / 2, window.innerWidth - mw - 8)) + "px";
-        menu.style.top = Math.max(8, y - mh - 10) + "px";
+        menu.style.top = top + "px";
         menu.style.visibility = "";
-        menu.setAttribute("data-wi", row.getAttribute("data-wi"));
+        var row = target.closest(".wx-row");
+        menu.setAttribute("data-wi", row ? row.getAttribute("data-wi") : "-1");
     }
 
     function openSheet(show) {
@@ -379,10 +390,10 @@
 
         document.getElementById("wxMessages").addEventListener("click", function (e) {
             hideMenu();
-            var row = e.target.closest ? e.target.closest(".wx-row") : null;
-            if (!row) return;
-            var r = row.getBoundingClientRect();
-            openMenu(row, r.left + r.width / 2, r.top);
+            var target = e.target.closest ? e.target.closest(".wx-bubble, .wx-sticker, .wx-loc") : null;
+            if (!target) return;
+            var r = target.getBoundingClientRect();
+            openMenu(target, r.left + r.width / 2, r.top);
         });
         menu.addEventListener("click", function (e) {
             var act = e.target.getAttribute ? e.target.getAttribute("data-wxact") : null;
@@ -396,7 +407,7 @@
         document.addEventListener("click", function (e) {
             var mb = document.getElementById("wxMenuBar");
             if (!mb || mb.style.display !== "flex") return;
-            if (!e.target.closest(".wx-menubar") && !e.target.closest(".wx-row")) hideMenu();
+            if (!e.target.closest(".wx-menubar") && !e.target.closest(".wx-bubble") && !e.target.closest(".wx-sticker") && !e.target.closest(".wx-loc")) hideMenu();
         });
 
         document.getElementById("wxPickLoc").addEventListener("click", function () {
@@ -480,7 +491,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H28";
+                    if (val) val.textContent = "3.9 · H29";
                 }
             }
         } catch (e) {}
