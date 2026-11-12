@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H12）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H13）
    ========================================================= */
 (function () {
     "use strict";
@@ -10,24 +10,10 @@
     var MAIN_KEY = "private_chat_app_v1";
     var wx = null;
 
-    function load() {
-        try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; }
-    }
-
-    function save(value) {
-        try {
-            if (value) localStorage.setItem(KEY, value);
-            else localStorage.removeItem(KEY);
-        } catch (e) {}
-    }
-
-    function isDark() {
-        return document.documentElement.getAttribute("data-theme") === "dark";
-    }
-
-    function defaultColor() {
-        return isDark() ? "#f4f5f7" : "#1b1d21";
-    }
+    function load() { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } }
+    function save(v) { try { if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch (e) {} }
+    function isDark() { return document.documentElement.getAttribute("data-theme") === "dark"; }
+    function defaultColor() { return isDark() ? "#f4f5f7" : "#1b1d21"; }
 
     function apply() {
         var big = document.getElementById("widgetLarge");
@@ -89,7 +75,6 @@
         });
     }
 
-    /* ---------- 主屏分页 ---------- */
     function injectStyles() {
         if (document.getElementById("philos-home-style")) return;
         var st = document.createElement("style");
@@ -103,26 +88,26 @@
             ".dock{grid-template-columns:repeat(3,1fr) !important;}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
-            ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#FFFFFF;border-bottom:1px solid #E6E6E6;}" +
+            ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
             ".wx-head-btn{width:38px;height:34px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
             ".wx-head-btn .svg-icon{width:20px;height:20px;}" +
-            ".wx-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".wx-title{flex:1;text-align:center;font-size:17px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;background-size:cover;background-position:center;}" +
-            ".wx-time{align-self:center;margin:8px auto;padding:2px 8px;border-radius:5px;background:rgba(0,0,0,.05);color:#B2B2B2;font-size:11px;width:fit-content;}" +
+            ".wx-time{width:fit-content;margin:8px auto;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,0.05);color:#B2B2B2;font-size:12px;}" +
             ".wx-row{display:flex;align-items:flex-start;gap:8px;padding:6px 12px;}" +
             ".wx-row.mine{flex-direction:row-reverse;}" +
             ".wx-avatar{width:40px;height:40px;border-radius:4px;overflow:hidden;flex:0 0 auto;background:#DEDEDE;display:flex;align-items:center;justify-content:center;color:#8A8A8A;font-size:13px;}" +
             ".wx-avatar img{width:100%;height:100%;object-fit:cover;display:block;}" +
-            ".wx-bubble{position:relative;max-width:72%;padding:9px 13px;border-radius:6px;background:#FFFFFF;color:#1a1a1a;line-height:1.5;font-size:15px;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
+            ".wx-bubble{position:relative;max-width:72%;padding:9px 13px;border-radius:4px;background:#FFFFFF;color:#1a1a1a;line-height:1.5;font-size:15px;word-break:break-word;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
             ".wx-bubble::before{content:\"\";position:absolute;top:14px;left:-5px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #FFFFFF;}" +
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
             ".wx-sticker{max-width:120px;border-radius:6px;display:block;}" +
-            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#FFFFFF;border-top:1px solid #E6E6E6;}" +
-            ".wx-ibar-btn{width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#5A5A5A;}" +
+            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#FFFFFF;border-top:1px solid #E5E5E5;}" +
+            ".wx-ibar-btn{width:34px;height:34px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#3A3A3A;}" +
             ".wx-ibar-btn .svg-icon{width:22px;height:22px;}" +
             ".wx-inputwrap{flex:1;min-width:0;height:36px;border-radius:6px;background:#F7F7F7;display:flex;align-items:center;padding:0 10px;}" +
-            ".wx-inputwrap input{width:100%;border:none;background:transparent;outline:none;font-size:15px;color:#1a1a1a;}" +
+            ".wx-inputwrap input{width:100%;border:none;background:transparent;outline:none;font-size:15px;color:#1a1a1a;text-align:center;}" +
             ".wx-inputwrap input::placeholder{color:#B2B2B2;}" +
             ".wx-send{flex:0 0 auto;height:32px;padding:0 12px;border-radius:5px;background:#07C160;color:#fff;font-size:14px;border:none;}" +
             ".wx-sheet-mask{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.35);display:none;}" +
@@ -131,8 +116,8 @@
             ".wx-sheet.show{transform:translateY(0);}" +
             ".wx-sheet h3{margin:0 0 12px;font-size:16px;text-align:center;color:#1a1a1a;}" +
             ".wx-field{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:14px;color:#333;}" +
-            ".wx-field input[type=text]{flex:1;height:36px;border:1px solid #E6E6E6;border-radius:8px;padding:0 10px;font-size:15px;}" +
-            ".wx-mini{height:32px;padding:0 10px;border-radius:8px;border:1px solid #E6E6E6;background:#fff;font-size:13px;color:#333;}" +
+            ".wx-field input[type=text]{flex:1;height:36px;border:1px solid #E5E5E5;border-radius:8px;padding:0 10px;font-size:15px;}" +
+            ".wx-mini{height:32px;padding:0 10px;border-radius:8px;border:1px solid #E5E5E5;background:#fff;font-size:13px;color:#333;}" +
             ".wx-mini.danger{color:#FF3B30;border-color:#FFD6D2;}";
         document.head.appendChild(st);
     }
@@ -238,13 +223,8 @@
         return wx;
     }
 
-    function wxSave() {
-        try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) {}
-    }
-
-    function mainData() {
-        try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; }
-    }
+    function wxSave() { try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) {} }
+    function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
 
     function wxAvatar(src, fallback) {
         var span = document.createElement("span");
@@ -375,11 +355,11 @@
             '</header>' +
             '<div class="wx-messages" id="wxMessages"></div>' +
             '<div class="wx-inputbar">' +
-                '<button class="wx-ibar-btn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 3v10M8 7c0 4 8 4 8 0M5 15a7 7 0 0 0 14 0" fill="none"/></svg></button>' +
+                '<button class="wx-ibar-btn" type="button" aria-label="语音"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button>' +
                 '<div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div>' +
                 '<button class="wx-send" id="wxSend" type="button" style="display:none">发送</button>' +
-                '<button class="wx-ibar-btn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
-                '<button class="wx-ibar-btn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg></button>' +
+                '<button class="wx-ibar-btn" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
+                '<button class="wx-ibar-btn" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg></button>' +
             '</div>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
             '<div class="wx-sheet" id="wxSheet">' +
@@ -549,7 +529,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H12";
+                    if (val) val.textContent = "3.9 · H13";
                 }
             }
         } catch (e) {}
