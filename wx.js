@@ -1,4 +1,4 @@
-/* Philos 微信模块 v4（由 herotext.js 加载） */
+/* Philos 微信模块 v5（由 herotext.js 加载） */
 (function () {
     "use strict";
 
@@ -14,7 +14,7 @@
         st.id = "philos-wx-style";
         st.textContent =
             "#btnChatCall{display:none !important;}" +
-            ".philos-im-del{position:absolute !important;top:2px !important;left:2px !important;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:13px;line-height:20px;text-align:center;z-index:5;}" +
+            ".chat-center{position:absolute !important;left:50% !important;transform:translateX(-50%) !important;top:calc(env(safe-area-inset-top) + 6px) !important;}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -157,16 +157,10 @@
 
             var col = document.createElement("div");
             col.className = "wx-col";
-
             if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; col.appendChild(img); }
             else if (m.type === "location") col.appendChild(wxLocCard(Number(m.distance) || 0));
-            else {
-                var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; col.appendChild(b);
-            }
-
-            if (m.quote) {
-                var q = document.createElement("div"); q.className = "wx-quote"; q.textContent = m.quote; col.appendChild(q);
-            }
+            else { var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; col.appendChild(b); }
+            if (m.quote) { var q = document.createElement("div"); q.className = "wx-quote"; q.textContent = m.quote; col.appendChild(q); }
             row.appendChild(col);
             box.appendChild(row);
         });
@@ -179,6 +173,14 @@
         wxTyping = !!on;
         var t = document.getElementById("wxTitle");
         if (t) t.textContent = on ? "对方正在输入…" : (wxData().name || "Ta");
+    }
+
+    function quoteLabel(m) {
+        var main = mainData();
+        var who;
+        if (m && m.from === "me") who = (main.myName && main.myName !== "your账户名") ? main.myName : "我";
+        else who = (wxData().name || "Ta");
+        return who + "：" + ((m && m.text) || "");
     }
 
     function wxScheduleReply() {
@@ -194,9 +196,9 @@
         setTimeout(function () {
             var d = wxData(); var now = Date.now();
             var mine = [];
-            d.history.forEach(function (mm) { if (mm && mm.from === "me" && mm.type === "text" && mm.text) mine.push(mm.text); });
+            d.history.forEach(function (mm) { if (mm && mm.from === "me" && mm.type === "text" && mm.text) mine.push(mm); });
             var quoteText = null;
-            if (mine.length && Math.random() < 0.15) quoteText = mine[Math.floor(Math.random() * mine.length)];
+            if (mine.length && Math.random() < 0.15) quoteText = quoteLabel(mine[Math.floor(Math.random() * mine.length)]);
             var first = "";
             for (var i = 0; i < count; i++) {
                 var content = pool[Math.floor(Math.random() * pool.length)].content;
@@ -401,7 +403,7 @@
             var idx = Number(menu.getAttribute("data-wi"));
             var d = wxData();
             if (act === "del") { d.history.splice(idx, 1); wxSave(); wxRender(); }
-            else if (act === "quote") { var mm = d.history[idx]; if (mm) setQuote(mm.text || ""); }
+            else if (act === "quote") { var mm = d.history[idx]; if (mm) setQuote(quoteLabel(mm)); }
             hideMenu();
         });
         document.addEventListener("click", function (e) {
@@ -446,35 +448,6 @@
         });
     }
 
-    function decorateIMStickers() {
-        var grid = document.getElementById("stickerGrid");
-        if (!grid) return;
-        var cells = grid.querySelectorAll(".sticker-cell");
-        for (var i = 0; i < cells.length; i++) {
-            if (cells[i].querySelector(".philos-im-del")) continue;
-            (function (cell) {
-                var btn = document.createElement("span");
-                btn.className = "philos-im-del";
-                btn.textContent = "×";
-                btn.addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    var idx = Number(cell.getAttribute("data-sticker"));
-                    if (!confirm("删除这个表情包？")) return;
-                    try {
-                        var data = JSON.parse(localStorage.getItem(MAIN_KEY) || "{}");
-                        if (Array.isArray(data.stickers) && data.stickers[idx] != null) {
-                            data.stickers.splice(idx, 1);
-                            localStorage.setItem(MAIN_KEY, JSON.stringify(data));
-                        }
-                    } catch (err) {}
-                    location.reload();
-                });
-                cell.appendChild(btn);
-            })(cells[i]);
-        }
-    }
-
     function fixAvatarLabels() {
         ["headerAvatar", "callAvatar", "peekAvatar"].forEach(function (id) {
             var el = document.getElementById(id);
@@ -491,27 +464,33 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H29";
+                    if (val) val.textContent = "3.9 · H30";
                 }
             }
         } catch (e) {}
+    }
+
+    function loadQuiz() {
+        if (document.querySelector('script[data-philos="quiz.js"]')) return;
+        var s = document.createElement("script");
+        s.src = "quiz.js";
+        s.setAttribute("data-philos", "quiz.js");
+        document.body.appendChild(s);
     }
 
     function init() {
         injectStyles();
         tuneRanges();
         fixAvatarLabels();
-        decorateIMStickers();
         markVersion();
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); decorateIMStickers(); markVersion(); }, 900);
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); decorateIMStickers(); markVersion(); }, 2200);
+        loadQuiz();
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); }, 900);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); }, 2200);
         if (window.MutationObserver) {
             var hd = document.getElementById("chatHeader");
             if (hd) new MutationObserver(fixAvatarLabels).observe(hd, { childList: true, subtree: true });
             var cs = document.getElementById("callScreen");
             if (cs) new MutationObserver(fixAvatarLabels).observe(cs, { childList: true, subtree: true });
-            var sg = document.getElementById("stickerGrid");
-            if (sg) new MutationObserver(decorateIMStickers).observe(sg, { childList: true, subtree: true });
         }
     }
 
