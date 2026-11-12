@@ -1,4 +1,4 @@
-/* H22 */
+/* H23 */
 (function () {
     "use strict";
 
@@ -6,9 +6,7 @@
     var HERO_AV = "philos_hero_avatar";
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
-    var wx = null;
-    var wxTyping = false;
-    var wxPanelOpen = "";
+    var wx = null, wxTyping = false, wxPanelOpen = "";
 
     var FACES = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕"];
 
@@ -18,84 +16,54 @@
     function defaultColor() { return isDark() ? "#f4f5f7" : "#1b1d21"; }
 
     function applyHeroColor() {
-        var big = document.getElementById("widgetLarge");
-        if (!big) return;
+        var big = document.getElementById("widgetLarge"); if (!big) return;
         var color = load();
         big.classList.toggle("hero-text-custom", !!color);
-        if (color) big.style.setProperty("--hero-text", color);
-        else big.style.removeProperty("--hero-text");
+        if (color) big.style.setProperty("--hero-text", color); else big.style.removeProperty("--hero-text");
     }
 
     function applyHeroAvatar() {
-        var box = document.getElementById("widgetAvatar");
-        if (!box) return;
+        var box = document.getElementById("widgetAvatar"); if (!box) return;
         var src = "";
         try { src = localStorage.getItem(HERO_AV) || ""; } catch (e) {}
         if (src && /^(data:image\/|https?:\/\/)/.test(src)) {
-            if (!box.querySelector("img") || box.querySelector("img").getAttribute("src") !== src) {
-                box.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
-            }
+            var img = box.querySelector("img");
+            if (!img || img.getAttribute("src") !== src) box.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
         }
-    }
-
-    function syncPresets(card, color) {
-        if (!card) return;
-        var btns = card.querySelectorAll("[data-hero-text-preset]");
-        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-hero-text-preset").toLowerCase() === String(color || "").toLowerCase());
-    }
-
-    function buildRow() {
-        var pane = document.querySelector('[data-wpane="hero"]');
-        if (!pane || pane.querySelector("[data-hero-text-card]")) return;
-        var anchor = pane.querySelector(".group-card");
-        if (!anchor) return;
-        var card = document.createElement("div");
-        card.className = "group-card control-card";
-        card.setAttribute("data-hero-text-card", "");
-        var swatches = ["#1b1d21","#ffffff","#5b7fa6","#8b909a","#c9d3de"].map(function (color) {
-            return '<button class="hero-swatch" type="button" data-hero-text-preset="' + color + '" style="background:' + color + '"></button>';
-        }).join("");
-        card.innerHTML = '<div class="hero-group-title">文字颜色</div><div class="control-row"><span class="control-label">四行文字</span><div class="row-actions"><label class="color-dot"><input type="color" data-hero-text-color></label><button class="clear-text" type="button" data-hero-text-clear>恢复默认</button></div></div><div class="hero-color-presets">' + swatches + '</div>';
-        anchor.parentNode.insertBefore(card, anchor.nextSibling);
-        var input = card.querySelector("[data-hero-text-color]");
-        var current = load();
-        input.value = current || defaultColor();
-        syncPresets(card, current);
-        input.addEventListener("input", function () { save(input.value); applyHeroColor(); syncPresets(card, input.value); });
-        card.addEventListener("click", function (e) {
-            var t = e.target;
-            if (!t || !t.closest) return;
-            var p = t.closest("[data-hero-text-preset]");
-            if (p) { input.value = p.getAttribute("data-hero-text-preset"); save(input.value); applyHeroColor(); syncPresets(card, input.value); return; }
-            if (t.closest("[data-hero-text-clear]")) { save(""); input.value = defaultColor(); applyHeroColor(); syncPresets(card, ""); }
-        });
     }
 
     function buildHeroAvatarRow() {
         var sheet = document.getElementById("editSheet");
         if (!sheet || sheet.querySelector("[data-hero-av-row]")) return;
-        var fields = sheet.querySelector(".sheet-fields");
-        if (!fields) return;
+        var fields = sheet.querySelector(".sheet-fields"); if (!fields) return;
         var row = document.createElement("div");
-        row.setAttribute("data-hero-av-row", "");
-        row.className = "sheet-field";
+        row.className = "sheet-field"; row.setAttribute("data-hero-av-row", "");
         row.innerHTML = '<span>大组件头像</span><div class="row-actions"><label class="text-btn">上传<input type="file" accept="image/*" data-hero-av-file hidden></label><button class="clear-text" type="button" data-hero-av-clear>清除</button></div>';
         fields.appendChild(row);
         row.querySelector("[data-hero-av-file]").addEventListener("change", function (e) {
-            var f = e.target.files && e.target.files[0];
-            if (!f) return;
+            var f = e.target.files && e.target.files[0]; if (!f) return;
             var r = new FileReader();
-            r.onload = function () {
-                try { localStorage.setItem(HERO_AV, r.result); } catch (err) {}
-                applyHeroAvatar();
-            };
-            r.readAsDataURL(f);
-            e.target.value = "";
+            r.onload = function () { try { localStorage.setItem(HERO_AV, r.result); } catch (err) {} applyHeroAvatar(); };
+            r.readAsDataURL(f); e.target.value = "";
         });
         row.querySelector("[data-hero-av-clear]").addEventListener("click", function () {
             try { localStorage.removeItem(HERO_AV); } catch (e) {}
-            var box = document.getElementById("widgetAvatar");
-            if (box) { box.innerHTML = "Me"; }
+            var box = document.getElementById("widgetAvatar"); if (box) box.innerHTML = "Me";
+        });
+    }
+
+    function normalizeBackgrounds() {
+        var pairs = [
+            ["appearance.homeBg.color", "#e9edf2"],
+            ["appearance.chatBg.color", "#f2f4f7"]
+        ];
+        pairs.forEach(function (p) {
+            var el = document.querySelector('[data-key="' + p[0] + '"]');
+            if (!el) return;
+            if ((el.value || "").toLowerCase() === p[1]) {
+                el.value = "#eeeeee";
+                el.dispatchEvent(new Event("input", { bubbles: true }));
+            }
         });
     }
 
@@ -112,6 +80,11 @@
             ".dock{grid-template-columns:repeat(3,1fr) !important;}" +
             "#editSheet{left:50% !important;right:auto !important;top:50% !important;bottom:auto !important;width:86% !important;max-width:340px !important;border-radius:22px !important;transform:translate(-50%,-50%) scale(.94) !important;opacity:0;}" +
             "#editSheet.show{transform:translate(-50%,-50%) scale(1) !important;opacity:1;}" +
+            ".freq-view{position:fixed;inset:0;z-index:470;display:none;flex-direction:column;background:#EEEEEE;}" +
+            ".freq-view.show{display:flex;}" +
+            ".freq-header{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 16px 8px;}" +
+            ".freq-title{font-size:20px;font-weight:600;color:#1b1d21;}" +
+            ".freq-body{flex:1;min-height:0;overflow-y:auto;padding:8px 16px calc(env(safe-area-inset-bottom) + 24px);}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -170,17 +143,13 @@
 
     function makeApp(id, label, symbol) {
         var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "app-icon";
-        btn.id = id;
+        btn.type = "button"; btn.className = "app-icon"; btn.id = id;
         btn.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span><span class="app-label">' + label + '</span>';
         return btn;
     }
-
     function bindOnce(btn, handler) {
         if (!btn || btn.getAttribute("data-hbind")) return;
-        btn.setAttribute("data-hbind", "1");
-        btn.addEventListener("click", handler);
+        btn.setAttribute("data-hbind", "1"); btn.addEventListener("click", handler);
     }
 
     function fillSmallWidget() {
@@ -192,8 +161,7 @@
             var item = null;
             (data.anniversaries || []).forEach(function (a) { if (a.id === data.activeCountdownId) item = a; });
             if (!item) { el.innerHTML = '<span class="ws-placeholder">Select Widget</span>'; return; }
-            var d = new Date(item.date + "T00:00:00");
-            var now = new Date();
+            var d = new Date(item.date + "T00:00:00"), now = new Date();
             var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             var days = Math.floor((today - d) / 86400000);
             var label = days >= 0 ? "第 " + (days + 1) + " 天" : "还有 " + (-days) + " 天";
@@ -213,27 +181,22 @@
     function syncIconSizes() {
         var ref = document.querySelector("#homePager .app-grid-small .app-icon-box");
         if (!ref) return;
-        var w = Math.round(ref.getBoundingClientRect().width);
-        if (!w || w < 20) return;
+        var w = Math.round(ref.getBoundingClientRect().width); if (!w || w < 20) return;
         var boxes = document.querySelectorAll("#homePager .home-app-grid .app-icon-box");
         for (var i = 0; i < boxes.length; i++) {
-            boxes[i].style.width = w + "px";
-            boxes[i].style.height = w + "px";
-            boxes[i].style.aspectRatio = "1 / 1";
-            boxes[i].style.maxWidth = "none";
+            boxes[i].style.width = w + "px"; boxes[i].style.height = w + "px";
+            boxes[i].style.aspectRatio = "1 / 1"; boxes[i].style.maxWidth = "none";
         }
     }
 
     function applyRowGap() {
         var grid = document.querySelector("#homePager .home-app-grid");
         if (!grid) return;
-        var box = grid.querySelector(".app-icon-box");
-        if (!box) return;
+        var box = grid.querySelector(".app-icon-box"); if (!box) return;
         var w = box.getBoundingClientRect().width;
         var rh = box.parentNode.getBoundingClientRect().height;
-        var W = grid.clientWidth;
-        if (!w || !rh || !W) return;
-        var cw = (W - 15 * 3) / 4;
+        var W = grid.clientWidth; if (!w || !rh || !W) return;
+        var cw = (W - 45) / 4;
         var hGap = (cw - w) + 15;
         var labelH = Math.max(0, rh - w);
         var rowGap = Math.round(hGap) + Math.round(labelH);
@@ -243,13 +206,41 @@
     }
 
     function applyShift() {
-        var small = document.getElementById("widgetSmallArea");
-        if (!small) return;
-        var h = small.getBoundingClientRect().height;
-        if (!h || h < 40) return;
+        var small = document.getElementById("widgetSmallArea"); if (!small) return;
+        var h = small.getBoundingClientRect().height; if (!h || h < 40) return;
         var pad = Math.round(h / 4);
         var pages = document.querySelectorAll("#homePager > .home-page");
         for (var i = 0; i < pages.length; i++) pages[i].style.paddingTop = pad + "px";
+    }
+
+    /* 频率 app */
+    function buildFreqView() {
+        if (document.getElementById("freqView")) return;
+        var v = document.createElement("div");
+        v.className = "freq-view"; v.id = "freqView";
+        v.innerHTML = '<div class="freq-header"><button class="nav-back" id="freqBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><span class="freq-title">频率</span></div><div class="freq-body" id="freqBody"></div>';
+        document.body.appendChild(v);
+        document.getElementById("freqBack").addEventListener("click", function () { v.classList.remove("show"); });
+    }
+
+    function openFreq() {
+        buildFreqView();
+        var v = document.getElementById("freqView"), body = document.getElementById("freqBody");
+        var page = document.querySelector('[data-page="permission"]');
+        if (!v || !body || !page) return;
+        var marks = ["permission.replyDelay", "permission.replyMin", "permission.activeMin", "permission.callMin"];
+        marks.forEach(function (key) {
+            var el = page.querySelector('[data-key="' + key + '"]');
+            if (!el) return;
+            var card = el.closest(".group-card");
+            if (card && card.parentNode !== body) body.appendChild(card);
+        });
+        ["[data-rm-combo]", "[data-rm-lettercount]"].forEach(function (sel) {
+            var el = page.querySelector(sel); if (!el) return;
+            var card = el.closest(".group-card");
+            if (card && card.parentNode !== body) body.appendChild(card);
+        });
+        v.classList.add("show");
     }
 
     /* 微信 */
@@ -271,36 +262,28 @@
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
 
     function wxAvatar(src, fallback) {
-        var span = document.createElement("span");
-        span.className = "wx-avatar";
-        if (src && /^(data:image\/|https?:\/\/)/.test(src)) { var img = document.createElement("img"); img.src = src; span.appendChild(img); }
-        else span.textContent = fallback || "";
-        return span;
+        var s = document.createElement("span"); s.className = "wx-avatar";
+        if (src && /^(data:image\/|https?:\/\/)/.test(src)) { var i = document.createElement("img"); i.src = src; s.appendChild(i); }
+        else s.textContent = fallback || "";
+        return s;
     }
 
     function wxLocCard(distance) {
-        var wrap = document.createElement("div");
-        wrap.className = "wx-loc";
-        var top = document.createElement("div");
-        top.className = "wx-loc-top";
-        top.textContent = distance > 100 ? "不在你周围" : ("距离你 " + distance + " 米");
-        var map = document.createElement("div");
-        map.className = "wx-loc-map";
-        map.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><path d="M-10 26 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M-10 58 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M52 -10 V90" stroke="#DCE6DC" stroke-width="1"/><path d="M150 -10 V90" stroke="#DCE6DC" stroke-width="1"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
-        wrap.appendChild(top); wrap.appendChild(map);
-        return wrap;
+        var w = document.createElement("div"); w.className = "wx-loc";
+        var t = document.createElement("div"); t.className = "wx-loc-top";
+        t.textContent = distance > 100 ? "不在你周围" : ("距离你 " + distance + " 米");
+        var m = document.createElement("div"); m.className = "wx-loc-map";
+        m.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
+        w.appendChild(t); w.appendChild(m); return w;
     }
 
     function wxRender() {
-        var box = document.getElementById("wxMessages");
-        var title = document.getElementById("wxTitle");
-        var view = document.getElementById("wechatView");
+        var box = document.getElementById("wxMessages"), title = document.getElementById("wxTitle"), view = document.getElementById("wechatView");
         if (!box || !view) return;
-        var d = wxData(); var main = mainData();
+        var d = wxData(), main = mainData();
         if (title) title.textContent = wxTyping ? "对方正在输入…" : (d.name || "Ta");
         view.style.background = d.bgImage ? 'url("' + d.bgImage + '") center/cover no-repeat' : (d.bg || "#F7F7F7");
-        box.innerHTML = "";
-        var last = 0;
+        box.innerHTML = ""; var last = 0;
         d.history.forEach(function (m) {
             if (!m) return;
             if (m.time && (!last || m.time - last > 300000)) {
@@ -310,10 +293,9 @@
                 box.appendChild(t);
             }
             if (m.time) last = m.time;
-            var row = document.createElement("div");
-            row.className = "wx-row" + (m.from === "me" ? " mine" : "");
+            var row = document.createElement("div"); row.className = "wx-row" + (m.from === "me" ? " mine" : "");
             row.appendChild(wxAvatar(m.from === "me" ? (d.myAvatar || main.myAvatar) : (d.avatar || main.taAvatar), m.from === "me" ? "我" : "Ta"));
-            if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; row.appendChild(img); }
+            if (m.type === "image") { var im = document.createElement("img"); im.className = "wx-sticker"; im.src = m.text || ""; row.appendChild(im); }
             else if (m.type === "location") row.appendChild(wxLocCard(Number(m.distance) || 0));
             else { var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; row.appendChild(b); }
             box.appendChild(row);
@@ -323,9 +305,14 @@
 
     function wxPush(msg) { var d = wxData(); msg.time = Date.now(); d.history.push(msg); wxSave(); wxRender(); }
 
+    function wxSetTyping(on) {
+        wxTyping = !!on;
+        var t = document.getElementById("wxTitle");
+        if (t) t.textContent = on ? "对方正在输入…" : (wxData().name || "Ta");
+    }
+
     function wxScheduleReply() {
-        var main = mainData();
-        var perm = (main.settings && main.settings.permission) || {};
+        var main = mainData(), perm = (main.settings && main.settings.permission) || {};
         var pool = (main.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; });
         if (!pool.length) return;
         var min = Math.max(1, Math.min(10, Number(perm.replyMin) || 1));
@@ -334,40 +321,29 @@
         var delay = Math.max(0, perm.replyDelay == null ? 3 : Number(perm.replyDelay)) * 1000;
         wxSetTyping(true);
         setTimeout(function () {
-            var d = wxData(); var now = Date.now();
-            for (var i = 0; i < count; i++) { var card = pool[Math.floor(Math.random() * pool.length)]; d.history.push({ from: "ta", type: "text", text: card.content, time: now + i }); }
+            var d = wxData(), now = Date.now();
+            for (var i = 0; i < count; i++) d.history.push({ from: "ta", type: "text", text: pool[Math.floor(Math.random() * pool.length)].content, time: now + i });
             if (Math.random() < 0.12) d.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: now + count });
             wxSave(); wxSetTyping(false);
             var v = document.getElementById("wechatView"); if (v && v.classList.contains("show")) wxRender();
         }, delay);
     }
 
-    function wxSetTyping(on) {
-        wxTyping = !!on;
-        var t = document.getElementById("wxTitle");
-        if (t) t.textContent = on ? "对方正在输入…" : (wxData().name || "Ta");
-    }
-
     function wxSend() {
         var input = document.getElementById("wxInput"); if (!input) return;
         var text = input.value.trim(); if (!text) return;
-        input.value = ""; wxToggleSend();
-        wxPush({ from: "me", type: "text", text: text });
-        wxScheduleReply();
+        input.value = ""; wxToggleSend(); wxPush({ from: "me", type: "text", text: text }); wxScheduleReply();
     }
-
     function wxToggleSend() {
-        var input = document.getElementById("wxInput"), send = document.getElementById("wxSend");
-        if (input && send) send.style.display = input.value.trim() ? "block" : "none";
+        var i = document.getElementById("wxInput"), s = document.getElementById("wxSend");
+        if (i && s) s.style.display = i.value.trim() ? "block" : "none";
     }
-
     function compressImage(file, cb) {
-        var url = URL.createObjectURL(file); var img = new Image();
+        var url = URL.createObjectURL(file), img = new Image();
         img.onload = function () {
-            var max = 260, scale = Math.min(1, max / Math.max(img.width, img.height));
-            var w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
-            var c = document.createElement("canvas"); c.width = w; c.height = h;
-            c.getContext("2d").drawImage(img, 0, 0, w, h);
+            var max = 260, sc = Math.min(1, max / Math.max(img.width, img.height));
+            var w = Math.max(1, Math.round(img.width * sc)), h = Math.max(1, Math.round(img.height * sc));
+            var c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h);
             var out = ""; try { out = c.toDataURL("image/webp", 0.7); } catch (e) {}
             if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
             URL.revokeObjectURL(url); cb(out);
@@ -375,29 +351,24 @@
         img.onerror = function () { URL.revokeObjectURL(url); cb(""); };
         img.src = url;
     }
-
     function togglePanel(name) {
-        var panels = document.querySelectorAll(".wx-panel");
-        var target = document.getElementById("wxPanel-" + name);
+        var panels = document.querySelectorAll(".wx-panel"), target = document.getElementById("wxPanel-" + name);
         if (!target) return;
         var isOpen = wxPanelOpen === name;
         for (var i = 0; i < panels.length; i++) panels[i].classList.remove("show");
         wxPanelOpen = isOpen ? "" : name;
         if (!isOpen) target.classList.add("show");
     }
-
     function switchFaceTab(tab) {
         var eg = document.getElementById("wxEmojiGrid"), sg = document.getElementById("wxStkGrid");
         if (eg) eg.style.display = tab === "emoji" ? "grid" : "none";
         if (sg) sg.style.display = tab === "stk" ? "grid" : "none";
-        var btns = document.querySelectorAll("[data-wxtab]");
-        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-wxtab") === tab);
+        var b = document.querySelectorAll("[data-wxtab]");
+        for (var i = 0; i < b.length; i++) b[i].classList.toggle("active", b[i].getAttribute("data-wxtab") === tab);
     }
-
     function renderEmojiPanel() {
         var grid = document.getElementById("wxEmojiGrid"); if (!grid) return;
-        var d = wxData();
-        grid.innerHTML = "";
+        var d = wxData(); grid.innerHTML = "";
         FACES.concat(d.emojis || []).forEach(function (ch) {
             var b = document.createElement("button"); b.type = "button"; b.className = "wx-emoji"; b.textContent = ch;
             b.addEventListener("click", function () { wxPush({ from: "me", type: "text", text: ch }); wxScheduleReply(); });
@@ -412,13 +383,12 @@
         });
         grid.appendChild(add);
     }
-
     function renderStickerPanel() {
         var grid = document.getElementById("wxStkGrid"); if (!grid) return;
         var d = wxData(); grid.innerHTML = "";
         (d.stickers || []).forEach(function (src) {
             var b = document.createElement("button"); b.type = "button"; b.className = "wx-stk";
-            var img = document.createElement("img"); img.src = src; b.appendChild(img);
+            var im = document.createElement("img"); im.src = src; b.appendChild(im);
             b.addEventListener("click", function () { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); });
             grid.appendChild(b);
         });
@@ -429,9 +399,8 @@
 
     function wxBuild() {
         if (document.getElementById("wechatView")) return;
-        var view = document.createElement("div");
-        view.className = "wx-view"; view.id = "wechatView";
-        view.innerHTML =
+        var v = document.createElement("div"); v.className = "wx-view"; v.id = "wechatView";
+        v.innerHTML =
             '<header class="wx-header"><button class="wx-head-btn" id="wxBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><div class="wx-title" id="wxTitle">Ta</div><button class="wx-head-btn" id="wxMore" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button></header>' +
             '<div class="wx-messages" id="wxMessages"></div>' +
             '<div class="wx-panel" id="wxPanel-face"><div class="wx-panel-tabs"><button class="wx-ptab active" data-wxtab="emoji" type="button">小黄脸</button><button class="wx-ptab" data-wxtab="stk" type="button">表情包</button></div><div class="wx-emoji-grid" id="wxEmojiGrid"></div><div class="wx-stk-grid" id="wxStkGrid" style="display:none"></div></div>' +
@@ -440,30 +409,23 @@
             '<input type="file" id="wxPhotoFile" accept="image/*" hidden><input type="file" id="wxStkFile" accept="image/*" hidden>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
             '<div class="wx-sheet" id="wxSheet"><h3>聊天设置</h3><div class="wx-field"><span>备注</span><input type="text" id="wxName" maxlength="16"></div><div class="wx-field"><span>他的头像</span><label class="wx-mini">上传<input type="file" id="wxFileTa" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearTa" type="button">清除</button></div><div class="wx-field"><span>我的头像</span><label class="wx-mini">上传<input type="file" id="wxFileMe" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearMe" type="button">清除</button></div><div class="wx-field"><span>背景颜色</span><input type="color" id="wxBg" style="width:48px;height:32px;border:none;background:none;"></div><div class="wx-field"><span>背景图</span><label class="wx-mini">上传<input type="file" id="wxFileBg" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearBg" type="button">清除</button></div><button class="wide-btn" id="wxSaveBtn" type="button" style="margin-top:8px;">保存并关闭</button></div>';
-        document.body.appendChild(view);
-
-        document.getElementById("wxBack").addEventListener("click", function () { view.classList.remove("show"); });
+        document.body.appendChild(v);
+        document.getElementById("wxBack").addEventListener("click", function () { v.classList.remove("show"); });
         document.getElementById("wxMore").addEventListener("click", function () {
-            var d = wxData();
-            document.getElementById("wxName").value = d.name || "";
-            document.getElementById("wxBg").value = d.bg || "#F7F7F7";
-            openSheet(true);
+            var d = wxData(); document.getElementById("wxName").value = d.name || ""; document.getElementById("wxBg").value = d.bg || "#F7F7F7"; openSheet(true);
         });
         document.getElementById("wxSheetMask").addEventListener("click", function () { openSheet(false); });
         document.getElementById("wxSaveBtn").addEventListener("click", function () {
-            var d = wxData();
-            var name = document.getElementById("wxName").value.trim();
-            d.name = name || "Ta";
-            d.bg = document.getElementById("wxBg").value || "#F7F7F7";
+            var d = wxData(); var n = document.getElementById("wxName").value.trim();
+            d.name = n || "Ta"; d.bg = document.getElementById("wxBg").value || "#F7F7F7";
             wxSave(); openSheet(false); wxRender();
         });
-        document.getElementById("wxFileTa").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().avatar = src; wxSave(); wxRender(); }); });
-        document.getElementById("wxFileMe").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().myAvatar = src; wxSave(); wxRender(); }); });
-        document.getElementById("wxFileBg").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().bgImage = src; wxSave(); wxRender(); }); });
+        document.getElementById("wxFileTa").addEventListener("change", function (e) { readFile(e.target, function (s) { wxData().avatar = s; wxSave(); wxRender(); }); });
+        document.getElementById("wxFileMe").addEventListener("change", function (e) { readFile(e.target, function (s) { wxData().myAvatar = s; wxSave(); wxRender(); }); });
+        document.getElementById("wxFileBg").addEventListener("change", function (e) { readFile(e.target, function (s) { wxData().bgImage = s; wxSave(); wxRender(); }); });
         document.getElementById("wxClearTa").addEventListener("click", function () { wxData().avatar = ""; wxSave(); wxRender(); });
         document.getElementById("wxClearMe").addEventListener("click", function () { wxData().myAvatar = ""; wxSave(); wxRender(); });
         document.getElementById("wxClearBg").addEventListener("click", function () { wxData().bgImage = ""; wxSave(); wxRender(); });
-
         var input = document.getElementById("wxInput");
         input.addEventListener("input", wxToggleSend);
         input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); wxSend(); } });
@@ -472,7 +434,6 @@
         document.getElementById("wxBtnPlus").addEventListener("click", function () { togglePanel("plus"); });
         var tabs = document.querySelectorAll("[data-wxtab]");
         for (var i = 0; i < tabs.length; i++) tabs[i].addEventListener("click", function () { switchFaceTab(this.getAttribute("data-wxtab")); });
-
         document.getElementById("wxPickLoc").addEventListener("click", function () {
             wxPush({ from: "me", type: "location", distance: 1 + Math.floor(Math.random() * 110) });
             wxScheduleReply(); togglePanel("plus");
@@ -480,34 +441,30 @@
         document.getElementById("wxPickPhoto").addEventListener("click", function () { document.getElementById("wxPhotoFile").click(); });
         document.getElementById("wxPhotoFile").addEventListener("change", function (e) {
             var f = e.target.files && e.target.files[0]; if (!f) return;
-            compressImage(f, function (src) { if (src) { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); } });
+            compressImage(f, function (s) { if (s) { wxPush({ from: "me", type: "image", text: s }); wxScheduleReply(); } });
             e.target.value = ""; togglePanel("plus");
         });
         document.getElementById("wxStkFile").addEventListener("change", function (e) {
             var f = e.target.files && e.target.files[0]; if (!f) return;
-            compressImage(f, function (src) { if (src) { wxData().stickers.push(src); wxSave(); renderStickerPanel(); } });
+            compressImage(f, function (s) { if (s) { wxData().stickers.push(s); wxSave(); renderStickerPanel(); } });
             e.target.value = "";
         });
         renderEmojiPanel(); renderStickerPanel();
     }
 
     function openSheet(show) {
-        var mask = document.getElementById("wxSheetMask"), sheet = document.getElementById("wxSheet");
-        if (!mask || !sheet) return;
-        mask.classList.toggle("show", !!show);
-        sheet.classList.toggle("show", !!show);
+        var m = document.getElementById("wxSheetMask"), s = document.getElementById("wxSheet");
+        if (!m || !s) return;
+        m.classList.toggle("show", !!show); s.classList.toggle("show", !!show);
     }
-
     function readFile(input, cb) {
         var f = input.files && input.files[0]; if (!f) return;
         var r = new FileReader(); r.onload = function () { cb(r.result); }; r.readAsDataURL(f); input.value = "";
     }
-
     function wxOpen() {
         wxBuild();
-        var view = document.getElementById("wechatView"); if (!view) return;
-        wxRender(); renderEmojiPanel(); renderStickerPanel();
-        view.classList.add("show");
+        var v = document.getElementById("wechatView"); if (!v) return;
+        wxRender(); renderEmojiPanel(); renderStickerPanel(); v.classList.add("show");
         setTimeout(function () { var b = document.getElementById("wxMessages"); if (b) b.scrollTop = b.scrollHeight; }, 60);
     }
 
@@ -519,31 +476,25 @@
         if (old && old.getAttribute("data-owner") === "hero") {
             cleanStrays(content, old); fillSmallWidget(); syncIconSizes(); applyRowGap(); applyShift(); applyHeroAvatar(); return;
         }
-
         var chat = document.getElementById("appChat"), settings = document.getElementById("appSettings");
         var letter = document.getElementById("appLetter"), countdown = document.getElementById("appCountdown"), widgets = document.getElementById("appWidgets");
-
         if (chat && !chat.querySelector(".app-label")) {
             chat.className = "app-icon";
             chat.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-chat"></use></svg></span><span class="app-label">iMessage</span>';
         }
-
         var small = document.getElementById("widgetSmallArea");
-        if (!small) { small = document.createElement("div"); small.className = "widget-small"; small.id = "widgetSmallArea"; small.setAttribute("role", "button"); small.setAttribute("tabindex", "0"); }
+        if (!small) { small = document.createElement("div"); small.className = "widget-small"; small.id = "widgetSmallArea"; }
         if (old) { content.insertBefore(widget, old); if (old.parentNode) old.parentNode.removeChild(old); }
-
         var pager = document.createElement("div"); pager.className = "home-pager"; pager.id = "homePager"; pager.setAttribute("data-owner", "hero");
         var page1 = document.createElement("section"); page1.className = "home-page";
         var page2 = document.createElement("section"); page2.className = "home-page";
         var iconGrid = document.createElement("div"); iconGrid.className = "icon-grid";
         var appGrid = document.createElement("div"); appGrid.className = "app-grid-small";
-
         var phone = document.getElementById("btnPhone") || makeApp("btnPhone", "电话", "ic-phone");
         var wechat = document.getElementById("btnWechat") || makeApp("btnWechat", "微信", "ic-chat");
         appGrid.appendChild(phone); if (chat) appGrid.appendChild(chat); appGrid.appendChild(wechat); if (settings) appGrid.appendChild(settings);
         iconGrid.appendChild(small); iconGrid.appendChild(appGrid);
         page1.appendChild(widget); page1.appendChild(iconGrid);
-
         var grid2 = document.createElement("div"); grid2.className = "home-app-grid";
         grid2.style.display = "grid"; grid2.style.gridTemplateColumns = "repeat(4, 1fr)"; grid2.style.columnGap = "15px"; grid2.style.gridAutoRows = "75px";
         var gallery = document.getElementById("btnGallery") || makeApp("btnGallery", "图库", "ic-image");
@@ -552,16 +503,13 @@
         if (widgets) grid2.appendChild(widgets); if (letter) grid2.appendChild(letter); if (countdown) grid2.appendChild(countdown);
         grid2.appendChild(gallery); grid2.appendChild(quiz); grid2.appendChild(freq);
         page2.appendChild(grid2);
-
         pager.appendChild(page1); pager.appendChild(page2); content.insertBefore(pager, dock);
         cleanStrays(content, pager);
-
         bindOnce(phone, function () { var c = document.getElementById("appChat"); if (c) c.click(); setTimeout(function () { var call = document.getElementById("btnChatCall"); if (call) call.click(); }, 160); });
         bindOnce(wechat, function () { wxOpen(); });
         bindOnce(gallery, function () { alert("图库还没做。"); });
         bindOnce(quiz, function () { alert("出题还没做。"); });
-        bindOnce(freq, function () { alert("频率还没拆分。"); });
-
+        bindOnce(freq, function () { openFreq(); });
         fillSmallWidget(); syncIconSizes(); applyRowGap(); applyShift(); applyHeroAvatar(); buildHeroAvatarRow();
         setTimeout(function () { syncIconSizes(); applyRowGap(); applyShift(); }, 300);
         setTimeout(function () { syncIconSizes(); applyRowGap(); applyShift(); }, 900);
@@ -574,21 +522,18 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H22";
+                    if (val) val.textContent = "3.9 · H23";
                 }
             }
         } catch (e) {}
     }
 
     function init() {
-        injectStyles(); buildRow(); applyHeroColor(); applyHeroAvatar(); buildHeroAvatarRow(); takeover(); markVersion();
+        injectStyles(); buildRow(); applyHeroColor(); applyHeroAvatar(); buildHeroAvatarRow(); normalizeBackgrounds(); takeover(); markVersion();
         setTimeout(takeover, 600); setTimeout(takeover, 1800); setTimeout(takeover, 3000);
         if (window.MutationObserver) {
             var box = document.getElementById("widgetAvatar");
-            if (box) {
-                var mo = new MutationObserver(function () { applyHeroAvatar(); });
-                mo.observe(box, { childList: true, subtree: true });
-            }
+            if (box) new MutationObserver(function () { applyHeroAvatar(); }).observe(box, { childList: true, subtree: true });
         }
     }
 
