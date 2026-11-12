@@ -1,4 +1,4 @@
-/* Philos 微信模块 v2（由 herotext.js 加载） */
+/* Philos 微信模块 v3 + 小修（由 herotext.js 加载） */
 (function () {
     "use strict";
 
@@ -14,6 +14,7 @@
         st.id = "philos-wx-style";
         st.textContent =
             "#btnChatCall{display:none !important;}" +
+            ".philos-im-del{position:absolute !important;top:2px !important;left:2px !important;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:13px;line-height:20px;text-align:center;z-index:5;}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -38,6 +39,10 @@
             ".wx-quotebar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-quotebar button{border:none;background:none;color:#999;font-size:14px;}" +
             ".wx-sticker{max-width:120px;border-radius:6px;display:block;}" +
+            ".wx-stk{position:relative;aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:#fff;border:none;padding:0;}" +
+            ".wx-stk img{width:100%;height:100%;object-fit:cover;display:block;}" +
+            ".wx-stk.add{border:1px dashed #BBB;color:#888;font-size:24px;}" +
+            ".wx-stk-del{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:12px;line-height:18px;text-align:center;z-index:3;}" +
             ".wx-loc{width:210px;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
             ".wx-loc-top{height:33.333%;display:flex;align-items:center;justify-content:center;background:#FFFFFF;color:#1a1a1a;font-size:12px;}" +
             ".wx-loc-map{flex:1;background:#E9F1EA;position:relative;overflow:hidden;}" +
@@ -58,9 +63,6 @@
             ".wx-emoji{height:34px;font-size:22px;line-height:1;background:#fff;border:none;border-radius:8px;}" +
             ".wx-emoji.add{font-size:20px;color:#888;}" +
             ".wx-stk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}" +
-            ".wx-stk{aspect-ratio:1/1;border-radius:8px;overflow:hidden;background:#fff;border:none;padding:0;}" +
-            ".wx-stk img{width:100%;height:100%;object-fit:cover;display:block;}" +
-            ".wx-stk.add{border:1px dashed #BBB;color:#888;font-size:24px;}" +
             ".wx-plus-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}" +
             ".wx-plus-item{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;font-size:12px;color:#333;}" +
             ".wx-plus-icon{width:56px;height:56px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;color:#1a1a1a;}" +
@@ -270,9 +272,16 @@
     function renderStickerPanel() {
         var grid = document.getElementById("wxStkGrid"); if (!grid) return;
         var d = wxData(); grid.innerHTML = "";
-        (d.stickers || []).forEach(function (src) {
+        (d.stickers || []).forEach(function (src, idx) {
             var b = document.createElement("button"); b.type = "button"; b.className = "wx-stk";
             var img = document.createElement("img"); img.src = src; b.appendChild(img);
+            var del = document.createElement("span"); del.className = "wx-stk-del"; del.textContent = "×";
+            del.addEventListener("click", function (e) {
+                e.stopPropagation();
+                if (!confirm("删除这个表情包？")) return;
+                var d2 = wxData(); d2.stickers.splice(idx, 1); wxSave(); renderStickerPanel();
+            });
+            b.appendChild(del);
             b.addEventListener("click", function () { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); });
             grid.appendChild(b);
         });
@@ -417,6 +426,44 @@
         setTimeout(function () { var b = document.getElementById("wxMessages"); if (b) b.scrollTop = b.scrollHeight; }, 60);
     }
 
+    function tuneRanges() {
+        var d = document.querySelector('[data-key="permission.replyDelay"]');
+        if (d) { d.setAttribute("max", "300"); d.max = "300"; }
+        ["permission.activeMin", "permission.callMin"].forEach(function (k) {
+            var el = document.querySelector('[data-key="' + k + '"]');
+            if (el) { el.setAttribute("min", "0"); el.min = "0"; }
+        });
+    }
+
+    function decorateIMStickers() {
+        var grid = document.getElementById("stickerGrid");
+        if (!grid) return;
+        var cells = grid.querySelectorAll(".sticker-cell");
+        for (var i = 0; i < cells.length; i++) {
+            if (cells[i].querySelector(".philos-im-del")) continue;
+            (function (cell) {
+                var btn = document.createElement("span");
+                btn.className = "philos-im-del";
+                btn.textContent = "×";
+                btn.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    var idx = Number(cell.getAttribute("data-sticker"));
+                    if (!confirm("删除这个表情包？")) return;
+                    try {
+                        var data = JSON.parse(localStorage.getItem(MAIN_KEY) || "{}");
+                        if (Array.isArray(data.stickers) && data.stickers[idx] != null) {
+                            data.stickers.splice(idx, 1);
+                            localStorage.setItem(MAIN_KEY, JSON.stringify(data));
+                        }
+                    } catch (err) {}
+                    location.reload();
+                });
+                cell.appendChild(btn);
+            })(cells[i]);
+        }
+    }
+
     function fixAvatarLabels() {
         ["headerAvatar", "callAvatar", "peekAvatar"].forEach(function (id) {
             var el = document.getElementById(id);
@@ -433,7 +480,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H27";
+                    if (val) val.textContent = "3.9 · H28";
                 }
             }
         } catch (e) {}
@@ -441,17 +488,19 @@
 
     function init() {
         injectStyles();
+        tuneRanges();
         fixAvatarLabels();
+        decorateIMStickers();
         markVersion();
-        setTimeout(fixAvatarLabels, 800);
-        setTimeout(fixAvatarLabels, 2000);
-        setTimeout(markVersion, 800);
-        setTimeout(markVersion, 2000);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); decorateIMStickers(); markVersion(); }, 900);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); decorateIMStickers(); markVersion(); }, 2200);
         if (window.MutationObserver) {
             var hd = document.getElementById("chatHeader");
             if (hd) new MutationObserver(fixAvatarLabels).observe(hd, { childList: true, subtree: true });
             var cs = document.getElementById("callScreen");
             if (cs) new MutationObserver(fixAvatarLabels).observe(cs, { childList: true, subtree: true });
+            var sg = document.getElementById("stickerGrid");
+            if (sg) new MutationObserver(decorateIMStickers).observe(sg, { childList: true, subtree: true });
         }
     }
 
