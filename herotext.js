@@ -1,11 +1,9 @@
-/* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H21）
-   ========================================================= */
+/* H22 */
 (function () {
     "use strict";
 
     var KEY = "philos_hero_text";
-    var PRESETS = ["#1b1d21", "#ffffff", "#5b7fa6", "#8b909a", "#c9d3de"];
+    var HERO_AV = "philos_hero_avatar";
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
     var wx = null;
@@ -19,13 +17,25 @@
     function isDark() { return document.documentElement.getAttribute("data-theme") === "dark"; }
     function defaultColor() { return isDark() ? "#f4f5f7" : "#1b1d21"; }
 
-    function apply() {
+    function applyHeroColor() {
         var big = document.getElementById("widgetLarge");
         if (!big) return;
         var color = load();
         big.classList.toggle("hero-text-custom", !!color);
         if (color) big.style.setProperty("--hero-text", color);
         else big.style.removeProperty("--hero-text");
+    }
+
+    function applyHeroAvatar() {
+        var box = document.getElementById("widgetAvatar");
+        if (!box) return;
+        var src = "";
+        try { src = localStorage.getItem(HERO_AV) || ""; } catch (e) {}
+        if (src && /^(data:image\/|https?:\/\/)/.test(src)) {
+            if (!box.querySelector("img") || box.querySelector("img").getAttribute("src") !== src) {
+                box.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
+            }
+        }
     }
 
     function syncPresets(card, color) {
@@ -42,8 +52,8 @@
         var card = document.createElement("div");
         card.className = "group-card control-card";
         card.setAttribute("data-hero-text-card", "");
-        var swatches = PRESETS.map(function (color) {
-            return '<button class="hero-swatch" type="button" data-hero-text-preset="' + color + '" style="background:' + color + '" aria-label="' + color + '"></button>';
+        var swatches = ["#1b1d21","#ffffff","#5b7fa6","#8b909a","#c9d3de"].map(function (color) {
+            return '<button class="hero-swatch" type="button" data-hero-text-preset="' + color + '" style="background:' + color + '"></button>';
         }).join("");
         card.innerHTML = '<div class="hero-group-title">文字颜色</div><div class="control-row"><span class="control-label">四行文字</span><div class="row-actions"><label class="color-dot"><input type="color" data-hero-text-color></label><button class="clear-text" type="button" data-hero-text-clear>恢复默认</button></div></div><div class="hero-color-presets">' + swatches + '</div>';
         anchor.parentNode.insertBefore(card, anchor.nextSibling);
@@ -51,13 +61,41 @@
         var current = load();
         input.value = current || defaultColor();
         syncPresets(card, current);
-        input.addEventListener("input", function () { save(input.value); apply(); syncPresets(card, input.value); });
+        input.addEventListener("input", function () { save(input.value); applyHeroColor(); syncPresets(card, input.value); });
         card.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
-            var preset = t.closest("[data-hero-text-preset]");
-            if (preset) { input.value = preset.getAttribute("data-hero-text-preset"); save(input.value); apply(); syncPresets(card, input.value); return; }
-            if (t.closest("[data-hero-text-clear]")) { save(""); input.value = defaultColor(); apply(); syncPresets(card, ""); }
+            var p = t.closest("[data-hero-text-preset]");
+            if (p) { input.value = p.getAttribute("data-hero-text-preset"); save(input.value); applyHeroColor(); syncPresets(card, input.value); return; }
+            if (t.closest("[data-hero-text-clear]")) { save(""); input.value = defaultColor(); applyHeroColor(); syncPresets(card, ""); }
+        });
+    }
+
+    function buildHeroAvatarRow() {
+        var sheet = document.getElementById("editSheet");
+        if (!sheet || sheet.querySelector("[data-hero-av-row]")) return;
+        var fields = sheet.querySelector(".sheet-fields");
+        if (!fields) return;
+        var row = document.createElement("div");
+        row.setAttribute("data-hero-av-row", "");
+        row.className = "sheet-field";
+        row.innerHTML = '<span>大组件头像</span><div class="row-actions"><label class="text-btn">上传<input type="file" accept="image/*" data-hero-av-file hidden></label><button class="clear-text" type="button" data-hero-av-clear>清除</button></div>';
+        fields.appendChild(row);
+        row.querySelector("[data-hero-av-file]").addEventListener("change", function (e) {
+            var f = e.target.files && e.target.files[0];
+            if (!f) return;
+            var r = new FileReader();
+            r.onload = function () {
+                try { localStorage.setItem(HERO_AV, r.result); } catch (err) {}
+                applyHeroAvatar();
+            };
+            r.readAsDataURL(f);
+            e.target.value = "";
+        });
+        row.querySelector("[data-hero-av-clear]").addEventListener("click", function () {
+            try { localStorage.removeItem(HERO_AV); } catch (e) {}
+            var box = document.getElementById("widgetAvatar");
+            if (box) { box.innerHTML = "Me"; }
         });
     }
 
@@ -70,8 +108,10 @@
             "#homePager{display:flex !important;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;flex:1 1 auto;min-height:0;width:100%;}" +
             "#homePager::-webkit-scrollbar{display:none;}" +
             "#homePager > .home-page{flex:0 0 100%;width:100%;scroll-snap-align:start;display:flex;flex-direction:column;gap:20px;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:4px;}" +
-            "#homePager .home-app-grid{display:grid !important;grid-template-columns:repeat(4,1fr) !important;gap:15px !important;width:100%;grid-auto-rows:75px !important;align-content:start;}" +
+            "#homePager .home-app-grid{display:grid !important;grid-template-columns:repeat(4,1fr) !important;column-gap:15px !important;width:100%;grid-auto-rows:75px !important;align-content:start;}" +
             ".dock{grid-template-columns:repeat(3,1fr) !important;}" +
+            "#editSheet{left:50% !important;right:auto !important;top:50% !important;bottom:auto !important;width:86% !important;max-width:340px !important;border-radius:22px !important;transform:translate(-50%,-50%) scale(.94) !important;opacity:0;}" +
+            "#editSheet.show{transform:translate(-50%,-50%) scale(1) !important;opacity:1;}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -118,11 +158,11 @@
             ".wx-plus-icon .svg-icon{width:26px;height:26px;stroke-width:1.5;}" +
             ".wx-sheet-mask{position:fixed;inset:0;z-index:520;background:rgba(0,0,0,.35);display:none;}" +
             ".wx-sheet-mask.show{display:block;}" +
-            ".wx-sheet{position:fixed;left:0;right:0;bottom:0;z-index:521;background:#fff;border-radius:16px 16px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);transform:translateY(100%);transition:transform .25s ease;}" +
-            ".wx-sheet.show{transform:translateY(0);}" +
-            ".wx-sheet h3{margin:0 0 12px;font-size:16px;text-align:center;color:#1a1a1a;}" +
-            ".wx-field{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:14px;color:#333;}" +
-            ".wx-field input[type=text]{flex:1;height:36px;border:1px solid #E5E5E5;border-radius:8px;padding:0 10px;font-size:15px;}" +
+            ".wx-sheet{position:fixed;left:50%;top:50%;right:auto;bottom:auto;width:86%;max-width:340px;z-index:521;background:#fff;border-radius:18px;padding:20px 18px;transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;transition:transform .2s ease,opacity .2s ease;box-shadow:0 20px 50px rgba(0,0,0,.25);}" +
+            ".wx-sheet.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}" +
+            ".wx-sheet h3{margin:0 0 16px;font-size:16px;text-align:center;color:#1a1a1a;}" +
+            ".wx-field{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:14px;color:#333;}" +
+            ".wx-field input[type=text]{flex:1;height:38px;border:1px solid #E5E5E5;border-radius:10px;padding:0 12px;font-size:15px;}" +
             ".wx-mini{height:32px;padding:0 10px;border-radius:8px;border:1px solid #E5E5E5;background:#fff;font-size:13px;color:#333;}" +
             ".wx-mini.danger{color:#FF3B30;border-color:#FFD6D2;}";
         document.head.appendChild(st);
@@ -148,11 +188,9 @@
         if (!el || (el.textContent || "").trim()) return;
         try {
             var data = JSON.parse(localStorage.getItem(MAIN_KEY) || "{}");
-            var cfg = data.widgetConfig || {};
-            if (cfg.template) return;
+            if ((data.widgetConfig || {}).template) return;
             var item = null;
-            var list = data.anniversaries || [];
-            for (var i = 0; i < list.length; i++) { if (list[i].id === data.activeCountdownId) { item = list[i]; break; } }
+            (data.anniversaries || []).forEach(function (a) { if (a.id === data.activeCountdownId) item = a; });
             if (!item) { el.innerHTML = '<span class="ws-placeholder">Select Widget</span>'; return; }
             var d = new Date(item.date + "T00:00:00");
             var now = new Date();
@@ -195,14 +233,13 @@
         var rh = box.parentNode.getBoundingClientRect().height;
         var W = grid.clientWidth;
         if (!w || !rh || !W) return;
-        var g = 15;
-        var cw = (W - g * 3) / 4;
-        var hGap = (cw - w) + g;
+        var cw = (W - 15 * 3) / 4;
+        var hGap = (cw - w) + 15;
         var labelH = Math.max(0, rh - w);
-        var rowGap = Math.round(hGap - labelH);
-        if (rowGap < 8) rowGap = 8;
-        if (rowGap > 40) rowGap = 40;
-        grid.style.rowGap = rowGap + "px";
+        var rowGap = Math.round(hGap) + Math.round(labelH);
+        if (rowGap < 10) rowGap = 10;
+        if (rowGap > 44) rowGap = 44;
+        grid.style.setProperty("row-gap", rowGap + "px", "important");
     }
 
     function applyShift() {
@@ -215,7 +252,7 @@
         for (var i = 0; i < pages.length; i++) pages[i].style.paddingTop = pad + "px";
     }
 
-    /* ---------- 微信 ---------- */
+    /* 微信 */
     function wxData() {
         if (wx) return wx;
         try { wx = JSON.parse(localStorage.getItem(WX_KEY) || "null"); } catch (e) { wx = null; }
@@ -230,20 +267,14 @@
         if (typeof wx.bgImage !== "string") wx.bgImage = "";
         return wx;
     }
-
-    function wxSave() { try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) { alert("微信数据空间已满，图片可能没存下。"); } }
+    function wxSave() { try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) { alert("微信数据空间已满。"); } }
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
 
     function wxAvatar(src, fallback) {
         var span = document.createElement("span");
         span.className = "wx-avatar";
-        if (src && /^(data:image\/|https?:\/\/)/.test(src)) {
-            var img = document.createElement("img");
-            img.src = src;
-            span.appendChild(img);
-        } else {
-            span.textContent = fallback || "";
-        }
+        if (src && /^(data:image\/|https?:\/\/)/.test(src)) { var img = document.createElement("img"); img.src = src; span.appendChild(img); }
+        else span.textContent = fallback || "";
         return span;
     }
 
@@ -256,8 +287,7 @@
         var map = document.createElement("div");
         map.className = "wx-loc-map";
         map.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><path d="M-10 26 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M-10 58 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M52 -10 V90" stroke="#DCE6DC" stroke-width="1"/><path d="M150 -10 V90" stroke="#DCE6DC" stroke-width="1"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
-        wrap.appendChild(top);
-        wrap.appendChild(map);
+        wrap.appendChild(top); wrap.appendChild(map);
         return wrap;
     }
 
@@ -266,53 +296,32 @@
         var title = document.getElementById("wxTitle");
         var view = document.getElementById("wechatView");
         if (!box || !view) return;
-        var d = wxData();
-        var main = mainData();
+        var d = wxData(); var main = mainData();
         if (title) title.textContent = wxTyping ? "对方正在输入…" : (d.name || "Ta");
         view.style.background = d.bgImage ? 'url("' + d.bgImage + '") center/cover no-repeat' : (d.bg || "#F7F7F7");
-
         box.innerHTML = "";
         var last = 0;
         d.history.forEach(function (m) {
             if (!m) return;
             if (m.time && (!last || m.time - last > 300000)) {
-                var t = document.createElement("div");
-                t.className = "wx-time";
+                var t = document.createElement("div"); t.className = "wx-time";
                 var dt = new Date(m.time);
                 t.textContent = (dt.getHours() < 10 ? "0" : "") + dt.getHours() + ":" + (dt.getMinutes() < 10 ? "0" : "") + dt.getMinutes();
                 box.appendChild(t);
             }
             if (m.time) last = m.time;
-
             var row = document.createElement("div");
             row.className = "wx-row" + (m.from === "me" ? " mine" : "");
             row.appendChild(wxAvatar(m.from === "me" ? (d.myAvatar || main.myAvatar) : (d.avatar || main.taAvatar), m.from === "me" ? "我" : "Ta"));
-
-            if (m.type === "image") {
-                var img = document.createElement("img");
-                img.className = "wx-sticker";
-                img.src = m.text || "";
-                row.appendChild(img);
-            } else if (m.type === "location") {
-                row.appendChild(wxLocCard(Number(m.distance) || 0));
-            } else {
-                var b = document.createElement("div");
-                b.className = "wx-bubble";
-                b.textContent = m.text || "";
-                row.appendChild(b);
-            }
+            if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; row.appendChild(img); }
+            else if (m.type === "location") row.appendChild(wxLocCard(Number(m.distance) || 0));
+            else { var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; row.appendChild(b); }
             box.appendChild(row);
         });
         box.scrollTop = box.scrollHeight;
     }
 
-    function wxPush(msg) {
-        var d = wxData();
-        msg.time = Date.now();
-        d.history.push(msg);
-        wxSave();
-        wxRender();
-    }
+    function wxPush(msg) { var d = wxData(); msg.time = Date.now(); d.history.push(msg); wxSave(); wxRender(); }
 
     function wxScheduleReply() {
         var main = mainData();
@@ -323,23 +332,13 @@
         var max = Math.max(min, Math.min(10, Number(perm.replyMax) || min));
         var count = min + Math.floor(Math.random() * (max - min + 1));
         var delay = Math.max(0, perm.replyDelay == null ? 3 : Number(perm.replyDelay)) * 1000;
-
         wxSetTyping(true);
-
         setTimeout(function () {
-            var d = wxData();
-            var now = Date.now();
-            for (var i = 0; i < count; i++) {
-                var card = pool[Math.floor(Math.random() * pool.length)];
-                d.history.push({ from: "ta", type: "text", text: card.content, time: now + i });
-            }
-            if (Math.random() < 0.12) {
-                d.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: now + count });
-            }
-            wxSave();
-            wxSetTyping(false);
-            var view = document.getElementById("wechatView");
-            if (view && view.classList.contains("show")) wxRender();
+            var d = wxData(); var now = Date.now();
+            for (var i = 0; i < count; i++) { var card = pool[Math.floor(Math.random() * pool.length)]; d.history.push({ from: "ta", type: "text", text: card.content, time: now + i }); }
+            if (Math.random() < 0.12) d.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: now + count });
+            wxSave(); wxSetTyping(false);
+            var v = document.getElementById("wechatView"); if (v && v.classList.contains("show")) wxRender();
         }, delay);
     }
 
@@ -350,39 +349,28 @@
     }
 
     function wxSend() {
-        var input = document.getElementById("wxInput");
-        if (!input) return;
-        var text = input.value.trim();
-        if (!text) return;
-        input.value = "";
-        wxToggleSend();
+        var input = document.getElementById("wxInput"); if (!input) return;
+        var text = input.value.trim(); if (!text) return;
+        input.value = ""; wxToggleSend();
         wxPush({ from: "me", type: "text", text: text });
         wxScheduleReply();
     }
 
     function wxToggleSend() {
-        var input = document.getElementById("wxInput");
-        var send = document.getElementById("wxSend");
-        if (!input || !send) return;
-        send.style.display = input.value.trim() ? "block" : "none";
+        var input = document.getElementById("wxInput"), send = document.getElementById("wxSend");
+        if (input && send) send.style.display = input.value.trim() ? "block" : "none";
     }
 
     function compressImage(file, cb) {
-        var url = URL.createObjectURL(file);
-        var img = new Image();
+        var url = URL.createObjectURL(file); var img = new Image();
         img.onload = function () {
-            var max = 260;
-            var scale = Math.min(1, max / Math.max(img.width, img.height));
-            var w = Math.max(1, Math.round(img.width * scale));
-            var h = Math.max(1, Math.round(img.height * scale));
-            var c = document.createElement("canvas");
-            c.width = w; c.height = h;
+            var max = 260, scale = Math.min(1, max / Math.max(img.width, img.height));
+            var w = Math.max(1, Math.round(img.width * scale)), h = Math.max(1, Math.round(img.height * scale));
+            var c = document.createElement("canvas"); c.width = w; c.height = h;
             c.getContext("2d").drawImage(img, 0, 0, w, h);
-            var out = "";
-            try { out = c.toDataURL("image/webp", 0.7); } catch (e) {}
+            var out = ""; try { out = c.toDataURL("image/webp", 0.7); } catch (e) {}
             if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
-            URL.revokeObjectURL(url);
-            cb(out);
+            URL.revokeObjectURL(url); cb(out);
         };
         img.onerror = function () { URL.revokeObjectURL(url); cb(""); };
         img.src = url;
@@ -396,13 +384,10 @@
         for (var i = 0; i < panels.length; i++) panels[i].classList.remove("show");
         wxPanelOpen = isOpen ? "" : name;
         if (!isOpen) target.classList.add("show");
-        var box = document.getElementById("wxMessages");
-        if (box) box.scrollTop = box.scrollHeight;
     }
 
     function switchFaceTab(tab) {
-        var eg = document.getElementById("wxEmojiGrid");
-        var sg = document.getElementById("wxStkGrid");
+        var eg = document.getElementById("wxEmojiGrid"), sg = document.getElementById("wxStkGrid");
         if (eg) eg.style.display = tab === "emoji" ? "grid" : "none";
         if (sg) sg.style.display = tab === "stk" ? "grid" : "none";
         var btns = document.querySelectorAll("[data-wxtab]");
@@ -410,55 +395,34 @@
     }
 
     function renderEmojiPanel() {
-        var grid = document.getElementById("wxEmojiGrid");
-        if (!grid) return;
+        var grid = document.getElementById("wxEmojiGrid"); if (!grid) return;
         var d = wxData();
-        var list = FACES.concat(d.emojis || []);
         grid.innerHTML = "";
-        list.forEach(function (ch) {
-            var b = document.createElement("button");
-            b.type = "button";
-            b.className = "wx-emoji";
-            b.textContent = ch;
+        FACES.concat(d.emojis || []).forEach(function (ch) {
+            var b = document.createElement("button"); b.type = "button"; b.className = "wx-emoji"; b.textContent = ch;
             b.addEventListener("click", function () { wxPush({ from: "me", type: "text", text: ch }); wxScheduleReply(); });
             grid.appendChild(b);
         });
-        var add = document.createElement("button");
-        add.type = "button";
-        add.className = "wx-emoji add";
-        add.textContent = "+";
+        var add = document.createElement("button"); add.type = "button"; add.className = "wx-emoji add"; add.textContent = "+";
         add.addEventListener("click", function () {
-            var v = prompt("输入或粘贴一个 emoji");
-            if (!v) return;
-            v = v.trim().slice(0, 8);
-            if (!v) return;
-            var d2 = wxData();
-            if (d2.emojis.indexOf(v) < 0) d2.emojis.push(v);
-            wxSave();
-            renderEmojiPanel();
+            var v = prompt("输入或粘贴一个 emoji"); if (!v) return;
+            v = v.trim().slice(0, 8); if (!v) return;
+            var d2 = wxData(); if (d2.emojis.indexOf(v) < 0) d2.emojis.push(v);
+            wxSave(); renderEmojiPanel();
         });
         grid.appendChild(add);
     }
 
     function renderStickerPanel() {
-        var grid = document.getElementById("wxStkGrid");
-        if (!grid) return;
-        var d = wxData();
-        grid.innerHTML = "";
+        var grid = document.getElementById("wxStkGrid"); if (!grid) return;
+        var d = wxData(); grid.innerHTML = "";
         (d.stickers || []).forEach(function (src) {
-            var b = document.createElement("button");
-            b.type = "button";
-            b.className = "wx-stk";
-            var img = document.createElement("img");
-            img.src = src;
-            b.appendChild(img);
+            var b = document.createElement("button"); b.type = "button"; b.className = "wx-stk";
+            var img = document.createElement("img"); img.src = src; b.appendChild(img);
             b.addEventListener("click", function () { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); });
             grid.appendChild(b);
         });
-        var add = document.createElement("button");
-        add.type = "button";
-        add.className = "wx-stk add";
-        add.textContent = "+";
+        var add = document.createElement("button"); add.type = "button"; add.className = "wx-stk add"; add.textContent = "+";
         add.addEventListener("click", function () { var f = document.getElementById("wxStkFile"); if (f) f.click(); });
         grid.appendChild(add);
     }
@@ -466,46 +430,16 @@
     function wxBuild() {
         if (document.getElementById("wechatView")) return;
         var view = document.createElement("div");
-        view.className = "wx-view";
-        view.id = "wechatView";
+        view.className = "wx-view"; view.id = "wechatView";
         view.innerHTML =
-            '<header class="wx-header">' +
-                '<button class="wx-head-btn" id="wxBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button>' +
-                '<div class="wx-title" id="wxTitle">Ta</div>' +
-                '<button class="wx-head-btn" id="wxMore" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button>' +
-            '</header>' +
+            '<header class="wx-header"><button class="wx-head-btn" id="wxBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><div class="wx-title" id="wxTitle">Ta</div><button class="wx-head-btn" id="wxMore" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button></header>' +
             '<div class="wx-messages" id="wxMessages"></div>' +
-            '<div class="wx-panel" id="wxPanel-face">' +
-                '<div class="wx-panel-tabs"><button class="wx-ptab active" data-wxtab="emoji" type="button">小黄脸</button><button class="wx-ptab" data-wxtab="stk" type="button">表情包</button></div>' +
-                '<div class="wx-emoji-grid" id="wxEmojiGrid"></div>' +
-                '<div class="wx-stk-grid" id="wxStkGrid" style="display:none"></div>' +
-            '</div>' +
-            '<div class="wx-panel" id="wxPanel-plus">' +
-                '<div class="wx-plus-grid">' +
-                    '<button class="wx-plus-item" id="wxPickPhoto" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></span><span>照片</span></button>' +
-                    '<button class="wx-plus-item" id="wxPickLoc" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-pin"></use></svg></span><span>位置</span></button>' +
-                    '<button class="wx-plus-item" id="wxPickFile" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg></span><span>文件</span></button>' +
-                '</div>' +
-            '</div>' +
-            '<div class="wx-inputbar">' +
-                '<button class="wx-ibar-btn" type="button" aria-label="语音"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button>' +
-                '<div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div>' +
-                '<button class="wx-send" id="wxSend" type="button" style="display:none">发送</button>' +
-                '<button class="wx-ibar-btn" id="wxBtnFace" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
-                '<button class="wx-ibar-btn" id="wxBtnPlus" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button>' +
-            '</div>' +
-            '<input type="file" id="wxPhotoFile" accept="image/*" hidden>' +
-            '<input type="file" id="wxStkFile" accept="image/*" hidden>' +
+            '<div class="wx-panel" id="wxPanel-face"><div class="wx-panel-tabs"><button class="wx-ptab active" data-wxtab="emoji" type="button">小黄脸</button><button class="wx-ptab" data-wxtab="stk" type="button">表情包</button></div><div class="wx-emoji-grid" id="wxEmojiGrid"></div><div class="wx-stk-grid" id="wxStkGrid" style="display:none"></div></div>' +
+            '<div class="wx-panel" id="wxPanel-plus"><div class="wx-plus-grid"><button class="wx-plus-item" id="wxPickPhoto" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></span><span>照片</span></button><button class="wx-plus-item" id="wxPickLoc" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-pin"></use></svg></span><span>位置</span></button><button class="wx-plus-item" id="wxPickFile" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg></span><span>文件</span></button></div></div>' +
+            '<div class="wx-inputbar"><button class="wx-ibar-btn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button><div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div><button class="wx-send" id="wxSend" type="button" style="display:none">发送</button><button class="wx-ibar-btn" id="wxBtnFace" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button><button class="wx-ibar-btn" id="wxBtnPlus" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button></div>' +
+            '<input type="file" id="wxPhotoFile" accept="image/*" hidden><input type="file" id="wxStkFile" accept="image/*" hidden>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
-            '<div class="wx-sheet" id="wxSheet">' +
-                '<h3>聊天设置</h3>' +
-                '<div class="wx-field"><span>备注</span><input type="text" id="wxName" maxlength="16"></div>' +
-                '<div class="wx-field"><span>他的头像</span><label class="wx-mini">上传<input type="file" id="wxFileTa" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearTa" type="button">清除</button></div>' +
-                '<div class="wx-field"><span>我的头像</span><label class="wx-mini">上传<input type="file" id="wxFileMe" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearMe" type="button">清除</button></div>' +
-                '<div class="wx-field"><span>背景颜色</span><input type="color" id="wxBg" style="width:48px;height:32px;border:none;background:none;"></div>' +
-                '<div class="wx-field"><span>背景图</span><label class="wx-mini">上传<input type="file" id="wxFileBg" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearBg" type="button">清除</button></div>' +
-                '<button class="wide-btn" id="wxSaveBtn" type="button" style="margin-top:8px;">保存并关闭</button>' +
-            '</div>';
+            '<div class="wx-sheet" id="wxSheet"><h3>聊天设置</h3><div class="wx-field"><span>备注</span><input type="text" id="wxName" maxlength="16"></div><div class="wx-field"><span>他的头像</span><label class="wx-mini">上传<input type="file" id="wxFileTa" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearTa" type="button">清除</button></div><div class="wx-field"><span>我的头像</span><label class="wx-mini">上传<input type="file" id="wxFileMe" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearMe" type="button">清除</button></div><div class="wx-field"><span>背景颜色</span><input type="color" id="wxBg" style="width:48px;height:32px;border:none;background:none;"></div><div class="wx-field"><span>背景图</span><label class="wx-mini">上传<input type="file" id="wxFileBg" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearBg" type="button">清除</button></div><button class="wide-btn" id="wxSaveBtn" type="button" style="margin-top:8px;">保存并关闭</button></div>';
         document.body.appendChild(view);
 
         document.getElementById("wxBack").addEventListener("click", function () { view.classList.remove("show"); });
@@ -521,9 +455,7 @@
             var name = document.getElementById("wxName").value.trim();
             d.name = name || "Ta";
             d.bg = document.getElementById("wxBg").value || "#F7F7F7";
-            wxSave();
-            openSheet(false);
-            wxRender();
+            wxSave(); openSheet(false); wxRender();
         });
         document.getElementById("wxFileTa").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().avatar = src; wxSave(); wxRender(); }); });
         document.getElementById("wxFileMe").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().myAvatar = src; wxSave(); wxRender(); }); });
@@ -536,77 +468,60 @@
         input.addEventListener("input", wxToggleSend);
         input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); wxSend(); } });
         document.getElementById("wxSend").addEventListener("click", wxSend);
-
         document.getElementById("wxBtnFace").addEventListener("click", function () { switchFaceTab("emoji"); togglePanel("face"); });
         document.getElementById("wxBtnPlus").addEventListener("click", function () { togglePanel("plus"); });
-
         var tabs = document.querySelectorAll("[data-wxtab]");
-        for (var i = 0; i < tabs.length; i++) {
-            tabs[i].addEventListener("click", function () { switchFaceTab(this.getAttribute("data-wxtab")); });
-        }
+        for (var i = 0; i < tabs.length; i++) tabs[i].addEventListener("click", function () { switchFaceTab(this.getAttribute("data-wxtab")); });
 
         document.getElementById("wxPickLoc").addEventListener("click", function () {
-            var d = 1 + Math.floor(Math.random() * 110);
-            wxPush({ from: "me", type: "location", distance: d });
-            wxScheduleReply();
-            togglePanel("plus");
+            wxPush({ from: "me", type: "location", distance: 1 + Math.floor(Math.random() * 110) });
+            wxScheduleReply(); togglePanel("plus");
         });
         document.getElementById("wxPickPhoto").addEventListener("click", function () { document.getElementById("wxPhotoFile").click(); });
         document.getElementById("wxPhotoFile").addEventListener("change", function (e) {
-            var f = e.target.files && e.target.files[0];
-            if (!f) return;
-            compressImage(f, function (src) {
-                if (src) { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); }
-            });
-            e.target.value = "";
-            togglePanel("plus");
+            var f = e.target.files && e.target.files[0]; if (!f) return;
+            compressImage(f, function (src) { if (src) { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); } });
+            e.target.value = ""; togglePanel("plus");
         });
         document.getElementById("wxStkFile").addEventListener("change", function (e) {
-            var f = e.target.files && e.target.files[0];
-            if (!f) return;
-            compressImage(f, function (src) {
-                if (src) { wxData().stickers.push(src); wxSave(); renderStickerPanel(); }
-            });
+            var f = e.target.files && e.target.files[0]; if (!f) return;
+            compressImage(f, function (src) { if (src) { wxData().stickers.push(src); wxSave(); renderStickerPanel(); } });
             e.target.value = "";
         });
+        renderEmojiPanel(); renderStickerPanel();
+    }
 
-        renderEmojiPanel();
-        renderStickerPanel();
+    function openSheet(show) {
+        var mask = document.getElementById("wxSheetMask"), sheet = document.getElementById("wxSheet");
+        if (!mask || !sheet) return;
+        mask.classList.toggle("show", !!show);
+        sheet.classList.toggle("show", !!show);
+    }
+
+    function readFile(input, cb) {
+        var f = input.files && input.files[0]; if (!f) return;
+        var r = new FileReader(); r.onload = function () { cb(r.result); }; r.readAsDataURL(f); input.value = "";
     }
 
     function wxOpen() {
         wxBuild();
-        var view = document.getElementById("wechatView");
-        if (!view) return;
-        wxRender();
-        renderEmojiPanel();
-        renderStickerPanel();
+        var view = document.getElementById("wechatView"); if (!view) return;
+        wxRender(); renderEmojiPanel(); renderStickerPanel();
         view.classList.add("show");
-        setTimeout(function () { var box = document.getElementById("wxMessages"); if (box) box.scrollTop = box.scrollHeight; }, 60);
+        setTimeout(function () { var b = document.getElementById("wxMessages"); if (b) b.scrollTop = b.scrollHeight; }, 60);
     }
 
     function takeover() {
-        var content = document.querySelector(".desktop-content");
-        if (!content) return;
-        var dock = content.querySelector(".dock");
-        var widget = document.getElementById("widgetLarge");
+        var content = document.querySelector(".desktop-content"); if (!content) return;
+        var dock = content.querySelector(".dock"), widget = document.getElementById("widgetLarge");
         if (!dock || !widget) return;
-
         var old = content.querySelector(".home-pager");
         if (old && old.getAttribute("data-owner") === "hero") {
-            cleanStrays(content, old);
-            fillSmallWidget();
-            syncIconSizes();
-            applyRowGap();
-            applyShift();
-            return;
+            cleanStrays(content, old); fillSmallWidget(); syncIconSizes(); applyRowGap(); applyShift(); applyHeroAvatar(); return;
         }
 
-        var chat = document.getElementById("appChat");
-        var settings = document.getElementById("appSettings");
-        var letter = document.getElementById("appLetter");
-        var countdown = document.getElementById("appCountdown");
-        var widgets = document.getElementById("appWidgets");
+        var chat = document.getElementById("appChat"), settings = document.getElementById("appSettings");
+        var letter = document.getElementById("appLetter"), countdown = document.getElementById("appCountdown"), widgets = document.getElementById("appWidgets");
 
         if (chat && !chat.querySelector(".app-label")) {
             chat.className = "app-icon";
@@ -614,125 +529,69 @@
         }
 
         var small = document.getElementById("widgetSmallArea");
-        if (!small) {
-            small = document.createElement("div");
-            small.className = "widget-small";
-            small.id = "widgetSmallArea";
-            small.setAttribute("role", "button");
-            small.setAttribute("tabindex", "0");
-        }
+        if (!small) { small = document.createElement("div"); small.className = "widget-small"; small.id = "widgetSmallArea"; small.setAttribute("role", "button"); small.setAttribute("tabindex", "0"); }
+        if (old) { content.insertBefore(widget, old); if (old.parentNode) old.parentNode.removeChild(old); }
 
-        if (old) {
-            content.insertBefore(widget, old);
-            if (old.parentNode) old.parentNode.removeChild(old);
-        }
-
-        var pager = document.createElement("div");
-        pager.className = "home-pager";
-        pager.id = "homePager";
-        pager.setAttribute("data-owner", "hero");
-
+        var pager = document.createElement("div"); pager.className = "home-pager"; pager.id = "homePager"; pager.setAttribute("data-owner", "hero");
         var page1 = document.createElement("section"); page1.className = "home-page";
         var page2 = document.createElement("section"); page2.className = "home-page";
-
         var iconGrid = document.createElement("div"); iconGrid.className = "icon-grid";
         var appGrid = document.createElement("div"); appGrid.className = "app-grid-small";
 
         var phone = document.getElementById("btnPhone") || makeApp("btnPhone", "电话", "ic-phone");
         var wechat = document.getElementById("btnWechat") || makeApp("btnWechat", "微信", "ic-chat");
+        appGrid.appendChild(phone); if (chat) appGrid.appendChild(chat); appGrid.appendChild(wechat); if (settings) appGrid.appendChild(settings);
+        iconGrid.appendChild(small); iconGrid.appendChild(appGrid);
+        page1.appendChild(widget); page1.appendChild(iconGrid);
 
-        appGrid.appendChild(phone);
-        if (chat) appGrid.appendChild(chat);
-        appGrid.appendChild(wechat);
-        if (settings) appGrid.appendChild(settings);
-
-        iconGrid.appendChild(small);
-        iconGrid.appendChild(appGrid);
-
-        page1.appendChild(widget);
-        page1.appendChild(iconGrid);
-
-        var grid2 = document.createElement("div");
-        grid2.className = "home-app-grid";
-        grid2.style.display = "grid";
-        grid2.style.gridTemplateColumns = "repeat(4, 1fr)";
-        grid2.style.gap = "15px";
-        grid2.style.gridAutoRows = "75px";
-
+        var grid2 = document.createElement("div"); grid2.className = "home-app-grid";
+        grid2.style.display = "grid"; grid2.style.gridTemplateColumns = "repeat(4, 1fr)"; grid2.style.columnGap = "15px"; grid2.style.gridAutoRows = "75px";
         var gallery = document.getElementById("btnGallery") || makeApp("btnGallery", "图库", "ic-image");
         var quiz = document.getElementById("btnQuiz") || makeApp("btnQuiz", "出题", "ic-card");
         var freq = document.getElementById("btnFreq") || makeApp("btnFreq", "频率", "ic-calendar");
-        if (widgets) grid2.appendChild(widgets);
-        if (letter) grid2.appendChild(letter);
-        if (countdown) grid2.appendChild(countdown);
-        grid2.appendChild(gallery);
-        grid2.appendChild(quiz);
-        grid2.appendChild(freq);
+        if (widgets) grid2.appendChild(widgets); if (letter) grid2.appendChild(letter); if (countdown) grid2.appendChild(countdown);
+        grid2.appendChild(gallery); grid2.appendChild(quiz); grid2.appendChild(freq);
         page2.appendChild(grid2);
 
-        pager.appendChild(page1);
-        pager.appendChild(page2);
-        content.insertBefore(pager, dock);
-
+        pager.appendChild(page1); pager.appendChild(page2); content.insertBefore(pager, dock);
         cleanStrays(content, pager);
 
-        bindOnce(phone, function () {
-            var c = document.getElementById("appChat");
-            if (c) c.click();
-            setTimeout(function () { var call = document.getElementById("btnChatCall"); if (call) call.click(); }, 160);
-        });
+        bindOnce(phone, function () { var c = document.getElementById("appChat"); if (c) c.click(); setTimeout(function () { var call = document.getElementById("btnChatCall"); if (call) call.click(); }, 160); });
         bindOnce(wechat, function () { wxOpen(); });
         bindOnce(gallery, function () { alert("图库还没做。"); });
         bindOnce(quiz, function () { alert("出题还没做。"); });
         bindOnce(freq, function () { alert("频率还没拆分。"); });
 
-        fillSmallWidget();
-        syncIconSizes();
-        applyRowGap();
-        applyShift();
+        fillSmallWidget(); syncIconSizes(); applyRowGap(); applyShift(); applyHeroAvatar(); buildHeroAvatarRow();
         setTimeout(function () { syncIconSizes(); applyRowGap(); applyShift(); }, 300);
         setTimeout(function () { syncIconSizes(); applyRowGap(); applyShift(); }, 900);
     }
 
     function markVersion() {
         try {
-            var page = document.querySelector('[data-page="about"]');
-            if (!page) return;
+            var page = document.querySelector('[data-page="about"]'); if (!page) return;
             var items = page.querySelectorAll(".settings-item");
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H21";
+                    if (val) val.textContent = "3.9 · H22";
                 }
             }
         } catch (e) {}
     }
 
     function init() {
-        injectStyles();
-        buildRow();
-        apply();
-        takeover();
-        markVersion();
-        setTimeout(takeover, 600);
-        setTimeout(takeover, 1800);
-        setTimeout(takeover, 3000);
-
-        var mq = window.matchMedia("(prefers-color-scheme: dark)");
-        if (mq && mq.addEventListener) {
-            mq.addEventListener("change", function () {
-                var input = document.querySelector("[data-hero-text-color]");
-                if (input && !load()) {
-                    input.value = defaultColor();
-                    syncPresets(input.closest("[data-hero-text-card]"), "");
-                }
-            });
+        injectStyles(); buildRow(); applyHeroColor(); applyHeroAvatar(); buildHeroAvatarRow(); takeover(); markVersion();
+        setTimeout(takeover, 600); setTimeout(takeover, 1800); setTimeout(takeover, 3000);
+        if (window.MutationObserver) {
+            var box = document.getElementById("widgetAvatar");
+            if (box) {
+                var mo = new MutationObserver(function () { applyHeroAvatar(); });
+                mo.observe(box, { childList: true, subtree: true });
+            }
         }
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", init);
-    } else {
-        init();
-    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else init();
 })();
