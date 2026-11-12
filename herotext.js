@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页（H9）
+   大组件文字颜色 + 主屏分页（H10）
    ========================================================= */
 (function () {
     "use strict";
@@ -184,6 +184,16 @@
         }
     }
 
+    function applyShift() {
+        var small = document.getElementById("widgetSmallArea");
+        if (!small) return;
+        var h = small.getBoundingClientRect().height;
+        if (!h || h < 40) return;
+        var pad = Math.round(h / 4);
+        var pages = document.querySelectorAll("#homePager > .home-page");
+        for (var i = 0; i < pages.length; i++) pages[i].style.paddingTop = pad + "px";
+    }
+
     function takeover() {
         var content = document.querySelector(".desktop-content");
         if (!content) return;
@@ -196,6 +206,7 @@
             cleanStrays(content, old);
             fillSmallWidget();
             syncIconSizes();
+            applyShift();
             return;
         }
 
@@ -292,8 +303,11 @@
 
         fillSmallWidget();
         syncIconSizes();
+        applyShift();
         setTimeout(syncIconSizes, 300);
         setTimeout(syncIconSizes, 900);
+        setTimeout(applyShift, 300);
+        setTimeout(applyShift, 900);
     }
 
     function markVersion() {
@@ -304,7 +318,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H9";
+                    if (val) val.textContent = "3.9 · H10";
                 }
             }
         } catch (e) {}
