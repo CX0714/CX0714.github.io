@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H17）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H18）
    ========================================================= */
 (function () {
     "use strict";
@@ -93,7 +93,7 @@
             ".wx-head-btn .svg-icon{width:27px;height:27px;stroke-width:1.5;}" +
             ".wx-title{flex:1;text-align:center;font-size:17px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;background-size:cover;background-position:center;}" +
-            ".wx-time{display:flex;width:fit-content;height:auto;margin:8px auto;padding:4px 5px;border-radius:3px;background:rgba(255,255,255,0.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:0.5px solid rgba(0,0,0,0.10);color:#9A9A9A;font-size:14px;line-height:1.2;}" +
+            ".wx-time{display:flex;width:fit-content;height:auto;margin:8px auto;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:0.5px solid rgba(0,0,0,0.10);color:#9A9A9A;font-size:14px;line-height:1.2;}" +
             ".wx-row{display:flex;align-items:flex-start;gap:8px;padding:6px 12px;}" +
             ".wx-row.mine{flex-direction:row-reverse;}" +
             ".wx-avatar{width:40px;height:40px;border-radius:4px;overflow:hidden;flex:0 0 auto;background:#DEDEDE;display:flex;align-items:center;justify-content:center;color:#8A8A8A;font-size:13px;}" +
@@ -529,7 +529,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H17";
+                    if (val) val.textContent = "3.9 · H18";
                 }
             }
         } catch (e) {}
