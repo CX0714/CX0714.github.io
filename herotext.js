@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H14）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H15）
    ========================================================= */
 (function () {
     "use strict";
@@ -89,11 +89,11 @@
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
-            ".wx-head-btn{width:40px;height:36px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
-            ".wx-head-btn .svg-icon{width:24px;height:24px;stroke-width:2;}" +
+            ".wx-head-btn{width:44px;height:40px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
+            ".wx-head-btn .svg-icon{width:27px;height:27px;stroke-width:2.2;}" +
             ".wx-title{flex:1;text-align:center;font-size:17px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;background-size:cover;background-position:center;}" +
-            ".wx-time{width:fit-content;margin:8px auto;padding:2px 8px;border-radius:4px;background:transparent;border:1px solid #9A9A9A;color:#555555;font-size:14px;}" +
+            ".wx-time{display:flex;align-items:center;justify-content:center;width:70px;height:24px;margin:8px auto;padding:0;border-radius:6px;background:rgba(255,255,255,0.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,0.06);color:#9A9A9A;font-size:12px;}" +
             ".wx-row{display:flex;align-items:flex-start;gap:8px;padding:6px 12px;}" +
             ".wx-row.mine{flex-direction:row-reverse;}" +
             ".wx-avatar{width:40px;height:40px;border-radius:4px;overflow:hidden;flex:0 0 auto;background:#DEDEDE;display:flex;align-items:center;justify-content:center;color:#8A8A8A;font-size:13px;}" +
@@ -103,9 +103,9 @@
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
             ".wx-sticker{max-width:120px;border-radius:6px;display:block;}" +
-            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#F7F7F7;border-top:1px solid #E5E5E5;}" +
-            ".wx-ibar-btn{width:36px;height:36px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
-            ".wx-ibar-btn .svg-icon{width:25px;height:25px;stroke-width:2;}" +
+            ".wx-inputbar{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:#F7F7F7;border-top:1px solid #E5E5E5;}" +
+            ".wx-ibar-btn{width:38px;height:38px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:none;border:none;color:#1a1a1a;}" +
+            ".wx-ibar-btn .svg-icon{width:32px;height:32px;stroke-width:2;}" +
             ".wx-inputwrap{flex:1;min-width:0;height:36px;border-radius:6px;background:#FFFFFF;display:flex;align-items:center;padding:0 10px;}" +
             ".wx-inputwrap input{width:100%;border:none;background:transparent;outline:none;font-size:15px;color:#1a1a1a;text-align:center;}" +
             ".wx-inputwrap input::placeholder{color:#C7C7C7;font-size:13px;}" +
@@ -359,7 +359,7 @@
                 '<div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div>' +
                 '<button class="wx-send" id="wxSend" type="button" style="display:none">发送</button>' +
                 '<button class="wx-ibar-btn" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
-                '<button class="wx-ibar-btn" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-plus"></use></svg></button>' +
+                '<button class="wx-ibar-btn" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button>' +
             '</div>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
             '<div class="wx-sheet" id="wxSheet">' +
@@ -529,7 +529,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H14";
+                    if (val) val.textContent = "3.9 · H15";
                 }
             }
         } catch (e) {}
