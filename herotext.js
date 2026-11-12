@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H18）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H19）
    ========================================================= */
 (function () {
     "use strict";
@@ -9,6 +9,7 @@
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
     var wx = null;
+    var wxTyping = false;
 
     function load() { try { return localStorage.getItem(KEY) || ""; } catch (e) { return ""; } }
     function save(v) { try { if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch (e) {} }
@@ -239,6 +240,12 @@
         return span;
     }
 
+    function wxSetTyping(on) {
+        wxTyping = !!on;
+        var t = document.getElementById("wxTitle");
+        if (t) t.textContent = on ? "对方正在输入…" : (wxData().name || "Ta");
+    }
+
     function wxRender() {
         var box = document.getElementById("wxMessages");
         var title = document.getElementById("wxTitle");
@@ -246,7 +253,7 @@
         if (!box || !view) return;
         var d = wxData();
         var main = mainData();
-        if (title) title.textContent = d.name || "Ta";
+        if (title) title.textContent = wxTyping ? "对方正在输入…" : (d.name || "Ta");
         view.style.background = d.bgImage ? 'url("' + d.bgImage + '") center/cover no-repeat' : (d.bg || "#F7F7F7");
 
         box.innerHTML = "";
@@ -291,6 +298,9 @@
         var max = Math.max(min, Math.min(10, Number(perm.replyMax) || min));
         var count = min + Math.floor(Math.random() * (max - min + 1));
         var delay = Math.max(0, perm.replyDelay == null ? 3 : Number(perm.replyDelay)) * 1000;
+
+        wxSetTyping(true);
+
         setTimeout(function () {
             var d = wxData();
             var now = Date.now();
@@ -299,6 +309,7 @@
                 d.history.push({ from: "ta", type: "text", text: card.content, time: now + i });
             }
             wxSave();
+            wxSetTyping(false);
             var view = document.getElementById("wechatView");
             if (view && view.classList.contains("show")) wxRender();
         }, delay);
@@ -529,7 +540,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H18";
+                    if (val) val.textContent = "3.9 · H19";
                 }
             }
         } catch (e) {}
