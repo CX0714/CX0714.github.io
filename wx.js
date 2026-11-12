@@ -1,10 +1,10 @@
-/* Philos 微信模块（由 herotext.js 加载） */
+/* Philos 微信模块 v2（由 herotext.js 加载） */
 (function () {
     "use strict";
 
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
-    var wx = null, wxTyping = false, wxPanelOpen = "";
+    var wx = null, wxTyping = false, wxPanelOpen = "", wxQuoteText = null;
 
     var FACES = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕"];
 
@@ -13,6 +13,7 @@
         var st = document.createElement("style");
         st.id = "philos-wx-style";
         st.textContent =
+            "#btnChatCall{display:none !important;}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -29,6 +30,13 @@
             ".wx-bubble::before{content:\"\";position:absolute;top:14px;left:-5px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #FFFFFF;}" +
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
+            ".wx-quote{font-size:12px;line-height:1.4;color:#8A8A8A;background:rgba(0,0,0,.05);border-radius:4px;padding:4px 6px;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".wx-menubar{position:fixed;z-index:600;display:none;gap:2px;padding:4px;border-radius:10px;background:rgba(28,28,30,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 8px 24px rgba(0,0,0,.3);}" +
+            ".wx-menubar button{height:34px;padding:0 12px;border:none;background:none;color:#fff;font-size:14px;border-radius:7px;}" +
+            ".wx-menubar button.danger{color:#FF453A;}" +
+            ".wx-quotebar{display:none;align-items:center;gap:8px;margin:0 8px 6px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.06);font-size:12px;color:#666;}" +
+            ".wx-quotebar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".wx-quotebar button{border:none;background:none;color:#999;font-size:14px;}" +
             ".wx-sticker{max-width:120px;border-radius:6px;display:block;}" +
             ".wx-loc{width:210px;aspect-ratio:16/9;border-radius:6px;overflow:hidden;background:#fff;display:flex;flex-direction:column;box-shadow:0 1px 2px rgba(0,0,0,.08);}" +
             ".wx-loc-top{height:33.333%;display:flex;align-items:center;justify-content:center;background:#FFFFFF;color:#1a1a1a;font-size:12px;}" +
@@ -102,9 +110,21 @@
         top.textContent = distance > 100 ? "不在你周围" : ("距离你 " + distance + " 米");
         var map = document.createElement("div");
         map.className = "wx-loc-map";
-        map.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><path d="M-10 26 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M-10 58 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M52 -10 V90" stroke="#DCE6DC" stroke-width="1"/><path d="M150 -10 V90" stroke="#DCE6DC" stroke-width="1"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
+        map.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
         wrap.appendChild(top); wrap.appendChild(map);
         return wrap;
+    }
+
+    function wxNotify(text) {
+        try {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            var title = wxData().name || "Ta";
+            if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(title, { body: text, icon: "icon-192.png", badge: "icon-192.png", tag: "philos-wx" }); }).catch(function () {});
+            } else {
+                new Notification(title, { body: text, icon: "icon-192.png" });
+            }
+        } catch (e) {}
     }
 
     function wxRender() {
@@ -117,7 +137,7 @@
         view.style.background = d.bgImage ? 'url("' + d.bgImage + '") center/cover no-repeat' : (d.bg || "#F7F7F7");
         box.innerHTML = "";
         var last = 0;
-        d.history.forEach(function (m) {
+        d.history.forEach(function (m, idx) {
             if (!m) return;
             if (m.time && (!last || m.time - last > 300000)) {
                 var t = document.createElement("div"); t.className = "wx-time";
@@ -128,10 +148,16 @@
             if (m.time) last = m.time;
             var row = document.createElement("div");
             row.className = "wx-row" + (m.from === "me" ? " mine" : "");
+            row.setAttribute("data-wi", String(idx));
             row.appendChild(wxAvatar(m.from === "me" ? (d.myAvatar || main.myAvatar) : (d.avatar || main.taAvatar), m.from === "me" ? "我" : "Ta"));
             if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; row.appendChild(img); }
             else if (m.type === "location") row.appendChild(wxLocCard(Number(m.distance) || 0));
-            else { var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; row.appendChild(b); }
+            else {
+                var b = document.createElement("div"); b.className = "wx-bubble";
+                if (m.quote) { var q = document.createElement("div"); q.className = "wx-quote"; q.textContent = m.quote; b.appendChild(q); }
+                var sp = document.createElement("span"); sp.textContent = m.text || ""; b.appendChild(sp);
+                row.appendChild(b);
+            }
             box.appendChild(row);
         });
         box.scrollTop = box.scrollHeight;
@@ -157,19 +183,31 @@
         wxSetTyping(true);
         setTimeout(function () {
             var d = wxData(); var now = Date.now();
-            for (var i = 0; i < count; i++) { var card = pool[Math.floor(Math.random() * pool.length)]; d.history.push({ from: "ta", type: "text", text: card.content, time: now + i }); }
+            var mine = [];
+            d.history.forEach(function (mm) { if (mm && mm.from === "me" && mm.type === "text" && mm.text) mine.push(mm.text); });
+            var quoteText = null;
+            if (mine.length && Math.random() < 0.15) quoteText = mine[Math.floor(Math.random() * mine.length)];
+            var first = "";
+            for (var i = 0; i < count; i++) {
+                var content = pool[Math.floor(Math.random() * pool.length)].content;
+                if (!first) first = content;
+                d.history.push({ from: "ta", type: "text", text: content, time: now + i, quote: i === 0 && quoteText ? quoteText : "" });
+            }
             if (Math.random() < 0.12) d.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: now + count });
             wxSave(); wxSetTyping(false);
-            var v = document.getElementById("wechatView"); if (v && v.classList.contains("show")) wxRender();
+            var v = document.getElementById("wechatView");
+            if (v && v.classList.contains("show")) wxRender();
+            else if (first) wxNotify(first);
         }, delay);
     }
 
     function wxSend() {
         var input = document.getElementById("wxInput"); if (!input) return;
         var text = input.value.trim(); if (!text) return;
-        input.value = ""; wxToggleSend();
-        wxPush({ from: "me", type: "text", text: text });
-        wxScheduleReply();
+        var msg = { from: "me", type: "text", text: text };
+        if (wxQuoteText) msg.quote = wxQuoteText;
+        input.value = ""; wxToggleSend(); setQuote(null);
+        wxPush(msg); wxScheduleReply();
     }
 
     function wxToggleSend() {
@@ -243,13 +281,35 @@
         grid.appendChild(add);
     }
 
+    function setQuote(text) {
+        wxQuoteText = text || null;
+        var bar = document.getElementById("wxQuoteBar");
+        if (!bar) return;
+        if (wxQuoteText) { bar.style.display = "flex"; bar.querySelector("span").textContent = wxQuoteText; }
+        else bar.style.display = "none";
+    }
+
+    function hideMenu() { var m = document.getElementById("wxMenuBar"); if (m) m.style.display = "none"; }
+
+    function openMenu(row, x, y) {
+        var menu = document.getElementById("wxMenuBar");
+        if (!menu) return;
+        menu.style.display = "flex";
+        menu.style.visibility = "hidden";
+        menu.style.left = "0px"; menu.style.top = "0px";
+        var mw = menu.offsetWidth, mh = menu.offsetHeight;
+        menu.style.left = Math.max(8, Math.min(x - mw / 2, window.innerWidth - mw - 8)) + "px";
+        menu.style.top = Math.max(8, y - mh - 10) + "px";
+        menu.style.visibility = "";
+        menu.setAttribute("data-wi", row.getAttribute("data-wi"));
+    }
+
     function openSheet(show) {
         var mask = document.getElementById("wxSheetMask"), sheet = document.getElementById("wxSheet");
         if (!mask || !sheet) return;
         mask.classList.toggle("show", !!show);
         sheet.classList.toggle("show", !!show);
     }
-
     function readFile(input, cb) {
         var f = input.files && input.files[0]; if (!f) return;
         var r = new FileReader(); r.onload = function () { cb(r.result); }; r.readAsDataURL(f); input.value = "";
@@ -264,13 +324,19 @@
             '<div class="wx-messages" id="wxMessages"></div>' +
             '<div class="wx-panel" id="wxPanel-face"><div class="wx-panel-tabs"><button class="wx-ptab active" data-wxtab="emoji" type="button">小黄脸</button><button class="wx-ptab" data-wxtab="stk" type="button">表情包</button></div><div class="wx-emoji-grid" id="wxEmojiGrid"></div><div class="wx-stk-grid" id="wxStkGrid" style="display:none"></div></div>' +
             '<div class="wx-panel" id="wxPanel-plus"><div class="wx-plus-grid"><button class="wx-plus-item" id="wxPickPhoto" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></span><span>照片</span></button><button class="wx-plus-item" id="wxPickLoc" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-pin"></use></svg></span><span>位置</span></button><button class="wx-plus-item" id="wxPickFile" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg></span><span>文件</span></button></div></div>' +
+            '<div class="wx-quotebar" id="wxQuoteBar"><span></span><button type="button" id="wxQuoteClose">✕</button></div>' +
             '<div class="wx-inputbar"><button class="wx-ibar-btn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button><div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div><button class="wx-send" id="wxSend" type="button" style="display:none">发送</button><button class="wx-ibar-btn" id="wxBtnFace" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button><button class="wx-ibar-btn" id="wxBtnPlus" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button></div>' +
             '<input type="file" id="wxPhotoFile" accept="image/*" hidden><input type="file" id="wxStkFile" accept="image/*" hidden>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
             '<div class="wx-sheet" id="wxSheet"><h3>聊天设置</h3><div class="wx-field"><span>备注</span><input type="text" id="wxName" maxlength="16"></div><div class="wx-field"><span>他的头像</span><label class="wx-mini">上传<input type="file" id="wxFileTa" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearTa" type="button">清除</button></div><div class="wx-field"><span>我的头像</span><label class="wx-mini">上传<input type="file" id="wxFileMe" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearMe" type="button">清除</button></div><div class="wx-field"><span>背景颜色</span><input type="color" id="wxBg" style="width:48px;height:32px;border:none;background:none;"></div><div class="wx-field"><span>背景图</span><label class="wx-mini">上传<input type="file" id="wxFileBg" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearBg" type="button">清除</button></div><button class="wide-btn" id="wxSaveBtn" type="button" style="margin-top:8px;">保存并关闭</button></div>';
         document.body.appendChild(view);
 
-        document.getElementById("wxBack").addEventListener("click", function () { view.classList.remove("show"); });
+        var menu = document.createElement("div");
+        menu.className = "wx-menubar"; menu.id = "wxMenuBar";
+        menu.innerHTML = '<button type="button" data-wxact="quote">引用</button><button type="button" class="danger" data-wxact="del">删除</button>';
+        document.body.appendChild(menu);
+
+        document.getElementById("wxBack").addEventListener("click", function () { view.classList.remove("show"); hideMenu(); });
         document.getElementById("wxMore").addEventListener("click", function () {
             var d = wxData();
             document.getElementById("wxName").value = d.name || "";
@@ -298,8 +364,31 @@
         document.getElementById("wxSend").addEventListener("click", wxSend);
         document.getElementById("wxBtnFace").addEventListener("click", function () { switchFaceTab("emoji"); togglePanel("face"); });
         document.getElementById("wxBtnPlus").addEventListener("click", function () { togglePanel("plus"); });
+        document.getElementById("wxQuoteClose").addEventListener("click", function () { setQuote(null); });
         var tabs = document.querySelectorAll("[data-wxtab]");
         for (var i = 0; i < tabs.length; i++) tabs[i].addEventListener("click", function () { switchFaceTab(this.getAttribute("data-wxtab")); });
+
+        document.getElementById("wxMessages").addEventListener("click", function (e) {
+            hideMenu();
+            var row = e.target.closest ? e.target.closest(".wx-row") : null;
+            if (!row) return;
+            var r = row.getBoundingClientRect();
+            openMenu(row, r.left + r.width / 2, r.top);
+        });
+        menu.addEventListener("click", function (e) {
+            var act = e.target.getAttribute ? e.target.getAttribute("data-wxact") : null;
+            if (!act) return;
+            var idx = Number(menu.getAttribute("data-wi"));
+            var d = wxData();
+            if (act === "del") { d.history.splice(idx, 1); wxSave(); wxRender(); }
+            else if (act === "quote") { var mm = d.history[idx]; if (mm) setQuote(mm.text || ""); }
+            hideMenu();
+        });
+        document.addEventListener("click", function (e) {
+            var mb = document.getElementById("wxMenuBar");
+            if (!mb || mb.style.display !== "flex") return;
+            if (!e.target.closest(".wx-menubar") && !e.target.closest(".wx-row")) hideMenu();
+        });
 
         document.getElementById("wxPickLoc").addEventListener("click", function () {
             wxPush({ from: "me", type: "location", distance: 1 + Math.floor(Math.random() * 110) });
@@ -327,6 +416,47 @@
         view.classList.add("show");
         setTimeout(function () { var b = document.getElementById("wxMessages"); if (b) b.scrollTop = b.scrollHeight; }, 60);
     }
+
+    function fixAvatarLabels() {
+        ["headerAvatar", "callAvatar", "peekAvatar"].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            var t = el.querySelector(".avatar-text");
+            if (t && t.textContent === "Me") t.textContent = "Ta";
+        });
+    }
+
+    function markVersion() {
+        try {
+            var page = document.querySelector('[data-page="about"]'); if (!page) return;
+            var items = page.querySelectorAll(".settings-item");
+            for (var i = 0; i < items.length; i++) {
+                if ((items[i].textContent || "").indexOf("版本") >= 0) {
+                    var val = items[i].querySelector(".control-value");
+                    if (val) val.textContent = "3.9 · H27";
+                }
+            }
+        } catch (e) {}
+    }
+
+    function init() {
+        injectStyles();
+        fixAvatarLabels();
+        markVersion();
+        setTimeout(fixAvatarLabels, 800);
+        setTimeout(fixAvatarLabels, 2000);
+        setTimeout(markVersion, 800);
+        setTimeout(markVersion, 2000);
+        if (window.MutationObserver) {
+            var hd = document.getElementById("chatHeader");
+            if (hd) new MutationObserver(fixAvatarLabels).observe(hd, { childList: true, subtree: true });
+            var cs = document.getElementById("callScreen");
+            if (cs) new MutationObserver(fixAvatarLabels).observe(cs, { childList: true, subtree: true });
+        }
+    }
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+    else setTimeout(init, 0);
 
     window.PhilosOpenWeChat = wxOpen;
 })();
