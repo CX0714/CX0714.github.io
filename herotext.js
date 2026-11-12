@@ -1,5 +1,5 @@
 /* =========================================================
-   大组件文字颜色 + 主屏分页 + 微信聊天（H20）
+   大组件文字颜色 + 主屏分页 + 微信聊天（H21）
    ========================================================= */
 (function () {
     "use strict";
@@ -53,11 +53,11 @@
         syncPresets(card, current);
         input.addEventListener("input", function () { save(input.value); apply(); syncPresets(card, input.value); });
         card.addEventListener("click", function (e) {
-            var target = e.target;
-            if (!target || !target.closest) return;
-            var preset = target.closest("[data-hero-text-preset]");
+            var t = e.target;
+            if (!t || !t.closest) return;
+            var preset = t.closest("[data-hero-text-preset]");
             if (preset) { input.value = preset.getAttribute("data-hero-text-preset"); save(input.value); apply(); syncPresets(card, input.value); return; }
-            if (target.closest("[data-hero-text-clear]")) { save(""); input.value = defaultColor(); apply(); syncPresets(card, ""); }
+            if (t.closest("[data-hero-text-clear]")) { save(""); input.value = defaultColor(); apply(); syncPresets(card, ""); }
         });
     }
 
@@ -102,6 +102,9 @@
             ".wx-send{flex:0 0 auto;height:32px;padding:0 10px;border-radius:5px;background:#07C160;color:#fff;font-size:14px;border:none;}" +
             ".wx-panel{display:none;flex:0 0 auto;background:#F7F7F7;border-top:1px solid #E5E5E5;padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);max-height:250px;overflow-y:auto;}" +
             ".wx-panel.show{display:block;}" +
+            ".wx-panel-tabs{display:flex;gap:8px;margin-bottom:8px;}" +
+            ".wx-ptab{height:28px;padding:0 12px;border-radius:14px;background:#fff;border:1px solid #E5E5E5;font-size:13px;color:#555;}" +
+            ".wx-ptab.active{background:#07C160;color:#fff;border-color:#07C160;}" +
             ".wx-emoji-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;}" +
             ".wx-emoji{height:34px;font-size:22px;line-height:1;background:#fff;border:none;border-radius:8px;}" +
             ".wx-emoji.add{font-size:20px;color:#888;}" +
@@ -252,20 +255,7 @@
         top.textContent = distance > 100 ? "不在你周围" : ("距离你 " + distance + " 米");
         var map = document.createElement("div");
         map.className = "wx-loc-map";
-        map.innerHTML =
-            '<svg viewBox="0 0 210 80" preserveAspectRatio="none">' +
-                '<rect width="210" height="80" fill="#E9F1EA"/>' +
-                '<path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/>' +
-                '<path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/>' +
-                '<path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/>' +
-                '<path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/>' +
-                '<path d="M-10 26 H220" stroke="#DCE6DC" stroke-width="1"/>' +
-                '<path d="M-10 58 H220" stroke="#DCE6DC" stroke-width="1"/>' +
-                '<path d="M52 -10 V90" stroke="#DCE6DC" stroke-width="1"/>' +
-                '<path d="M150 -10 V90" stroke="#DCE6DC" stroke-width="1"/>' +
-                '<circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/>' +
-                '<circle cx="105" cy="42" r="5" fill="#07C160"/>' +
-            '</svg>';
+        map.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><path d="M-10 26 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M-10 58 H220" stroke="#DCE6DC" stroke-width="1"/><path d="M52 -10 V90" stroke="#DCE6DC" stroke-width="1"/><path d="M150 -10 V90" stroke="#DCE6DC" stroke-width="1"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
         wrap.appendChild(top);
         wrap.appendChild(map);
         return wrap;
@@ -410,6 +400,15 @@
         if (box) box.scrollTop = box.scrollHeight;
     }
 
+    function switchFaceTab(tab) {
+        var eg = document.getElementById("wxEmojiGrid");
+        var sg = document.getElementById("wxStkGrid");
+        if (eg) eg.style.display = tab === "emoji" ? "grid" : "none";
+        if (sg) sg.style.display = tab === "stk" ? "grid" : "none";
+        var btns = document.querySelectorAll("[data-wxtab]");
+        for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-wxtab") === tab);
+    }
+
     function renderEmojiPanel() {
         var grid = document.getElementById("wxEmojiGrid");
         if (!grid) return;
@@ -476,8 +475,11 @@
                 '<button class="wx-head-btn" id="wxMore" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-more"></use></svg></button>' +
             '</header>' +
             '<div class="wx-messages" id="wxMessages"></div>' +
-            '<div class="wx-panel" id="wxPanel-emoji"><div class="wx-emoji-grid" id="wxEmojiGrid"></div></div>' +
-            '<div class="wx-panel" id="wxPanel-stk"><div class="wx-stk-grid" id="wxStkGrid"></div></div>' +
+            '<div class="wx-panel" id="wxPanel-face">' +
+                '<div class="wx-panel-tabs"><button class="wx-ptab active" data-wxtab="emoji" type="button">小黄脸</button><button class="wx-ptab" data-wxtab="stk" type="button">表情包</button></div>' +
+                '<div class="wx-emoji-grid" id="wxEmojiGrid"></div>' +
+                '<div class="wx-stk-grid" id="wxStkGrid" style="display:none"></div>' +
+            '</div>' +
             '<div class="wx-panel" id="wxPanel-plus">' +
                 '<div class="wx-plus-grid">' +
                     '<button class="wx-plus-item" id="wxPickPhoto" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></span><span>照片</span></button>' +
@@ -489,8 +491,7 @@
                 '<button class="wx-ibar-btn" type="button" aria-label="语音"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button>' +
                 '<div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div>' +
                 '<button class="wx-send" id="wxSend" type="button" style="display:none">发送</button>' +
-                '<button class="wx-ibar-btn" id="wxBtnEmoji" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
-                '<button class="wx-ibar-btn" id="wxBtnStk" type="button" aria-label="表情包"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="3.5" fill="none"/><circle cx="9" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M7.2 15.2c1.6 1.6 7.6 1.6 9.6 0" fill="none"/></svg></button>' +
+                '<button class="wx-ibar-btn" id="wxBtnFace" type="button" aria-label="表情"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button>' +
                 '<button class="wx-ibar-btn" id="wxBtnPlus" type="button" aria-label="更多"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button>' +
             '</div>' +
             '<input type="file" id="wxPhotoFile" accept="image/*" hidden>' +
@@ -536,9 +537,13 @@
         input.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); wxSend(); } });
         document.getElementById("wxSend").addEventListener("click", wxSend);
 
-        document.getElementById("wxBtnEmoji").addEventListener("click", function () { togglePanel("emoji"); });
-        document.getElementById("wxBtnStk").addEventListener("click", function () { togglePanel("stk"); });
+        document.getElementById("wxBtnFace").addEventListener("click", function () { switchFaceTab("emoji"); togglePanel("face"); });
         document.getElementById("wxBtnPlus").addEventListener("click", function () { togglePanel("plus"); });
+
+        var tabs = document.querySelectorAll("[data-wxtab]");
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].addEventListener("click", function () { switchFaceTab(this.getAttribute("data-wxtab")); });
+        }
 
         document.getElementById("wxPickLoc").addEventListener("click", function () {
             var d = 1 + Math.floor(Math.random() * 110);
@@ -697,7 +702,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H20";
+                    if (val) val.textContent = "3.9 · H21";
                 }
             }
         } catch (e) {}
