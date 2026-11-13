@@ -23,6 +23,18 @@
     }
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
+    /* ===== 图标补充（空心爱心） ===== */
+    var SVG_NS = "http://www.w3.org/2000/svg";
+    function injectSprite() {
+        var sprite = document.querySelector("svg.svg-sprite");
+        if (!sprite || document.getElementById("ic-heart-outline")) return;
+        var sym = document.createElementNS(SVG_NS, "symbol");
+        sym.setAttribute("id", "ic-heart-outline");
+        sym.setAttribute("viewBox", "0 0 24 24");
+        sym.innerHTML = '<path d="M12 20.6C12 20.6 4 15.4 4 10.2 4 7.5 6.1 5.4 8.6 5.4c1.4 0 2.7.7 3.4 1.9.7-1.2 2-1.9 3.4-1.9C17.9 5.4 20 7.5 20 10.2c0 5.2-8 10.4-8 10.4z"/>';
+        sprite.appendChild(sym);
+    }
+
     /* ===== IndexedDB ===== */
     var dbPromise = null;
     function db() {
@@ -181,7 +193,7 @@
             ".ck-block-title{font-size:16px;font-weight:600;color:#1b1d21;letter-spacing:0.3px;}" +
             ".ck-block-count{font-size:12px;color:#8b909a;}" +
             ".ck-block-icon{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(91,127,166,0.10);color:#5b7fa6;}" +
-            ".ck-block-icon .svg-icon{width:20px;height:20px;}" +
+            ".ck-block-icon .svg-icon{width:20px;height:20px;aspect-ratio:1/1;}" +
             ".ck-sub{position:absolute;left:0;right:0;bottom:0;z-index:7;background:#EEEEEE;display:none;flex-direction:column;}" +
             ".ck-sub.show{display:flex;}" +
             ".ck-sub-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px 4px;font-size:12.5px;color:#8b909a;}" +
@@ -583,7 +595,7 @@
         });
 
         [
-            { attr: "data-ck-mood", title: "情绪", count: moodStore().moods.length, sym: "ic-palette" },
+            { attr: "data-ck-mood", title: "情绪", count: moodStore().moods.length, sym: "ic-heart-outline" },
             { attr: "data-ck-word", title: "造句", count: words().length, sym: "ic-card" }
         ].forEach(function (item) {
             var block = document.createElement("button");
@@ -1039,6 +1051,7 @@
 
     function tick() {
         if (document.hidden) return;
+        injectSprite();
         enableMultiple();
         ensurePanel();
         ensureIconRows();
@@ -1050,6 +1063,7 @@
 
     function init() {
         injectStyles();
+        injectSprite();
         tick();
         scheduleSentence();
         setInterval(tick, 1500);
