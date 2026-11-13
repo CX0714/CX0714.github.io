@@ -1,4 +1,4 @@
-/* Philos 他的主动行为：拍一拍（间隔可调）/ 主动发消息 / 主动打电话 / 主屏未读红点 / 测试按钮 */
+/* Philos 他的主动行为：拍一拍 / 主动发消息 / 主动打电话（来电可接听）/ 未读红点 / 情绪显示 */
 (function () {
     "use strict";
 
@@ -6,6 +6,7 @@
     var WX_KEY = "philos_wechat";
     var UNREAD_KEY = "philos_unread";
     var PAT_IV_KEY = "philos_pat_interval";
+    var MOOD_KEY = "philos_moods";
     var patTimer = null, msgTimer = null, callTimer = null, unreadTimer = null;
 
     function $(id) { return document.getElementById(id); }
@@ -39,6 +40,23 @@
             ".php-btn.primary{background:#5b7fa6;color:#fff;}" +
             ".app-icon,.app-icon-box,.dock-btn{overflow:visible !important;}" +
             ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
+            /* 来电 */
+            ".call-in{position:fixed;inset:0;z-index:625;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(12,16,22,.55);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);}" +
+            ".call-in.show{display:flex;}" +
+            ".call-in-card{width:82%;max-width:330px;padding:30px 20px 22px;border-radius:32px;text-align:center;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(26px) saturate(120%);backdrop-filter:blur(26px) saturate(120%);border:1px solid rgba(255,255,255,.6);box-shadow:0 26px 60px rgba(20,30,45,.32);}" +
+            "[data-theme=\"dark\"] .call-in-card{background:rgba(30,32,37,.62);border-color:rgba(255,255,255,.12);}" +
+            ".call-in-avatar{width:104px;height:104px;border-radius:50%;margin:0 auto 16px;overflow:hidden;background:rgba(255,255,255,.6);border:3px solid rgba(255,255,255,.85);box-shadow:0 10px 26px rgba(40,60,85,.22);display:flex;align-items:center;justify-content:center;color:#7d8ea2;font-size:30px;font-weight:600;}" +
+            ".call-in-avatar img{width:100%;height:100%;object-fit:cover;display:block;}" +
+            ".call-in-name{font-size:19px;font-weight:600;color:var(--text-primary,#1b1d21);margin-bottom:6px;}" +
+            ".call-in-state{font-size:13px;color:var(--text-secondary,#8b909a);margin-bottom:24px;letter-spacing:0.4px;}" +
+            ".call-in-actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;}" +
+            ".call-in-actions.one{grid-template-columns:1fr;}" +
+            ".call-in-btn{height:52px;border-radius:18px;border:none;font-size:15px;font-weight:600;}" +
+            ".call-in-btn.answer{background:#34c759;color:#fff;}" +
+            ".call-in-btn.hang{background:#ff3b30;color:#fff;}" +
+            /* 情绪 */
+            ".msg-mood{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.2;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;pointer-events:none;opacity:.9;}" +
+            ".msg-mood .mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;}" +
             "html[data-theme=\"light\"] body{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .splash{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .settings-view,html[data-theme=\"light\"] .app-view{background-color:#EEEEEE !important;background-image:none !important;}" +
@@ -46,7 +64,6 @@
         document.head.appendChild(st);
     }
 
-    /* ===== 换图标：频率=心电图，Dock 外观=四角星 ===== */
     var SVG_NS = "http://www.w3.org/2000/svg";
     var XLINK_NS = "http://www.w3.org/1999/xlink";
 
@@ -86,6 +103,18 @@
         return !!(v && v.classList.contains("active"));
     }
 
+    /* 他的头像：优先用已经渲染出来的那张（兼容 IndexedDB 存图） */
+    function taAvatarSrc() {
+        var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
+        if (live) {
+            var src = live.getAttribute("src") || "";
+            if (src) return src;
+        }
+        var raw = getData().taAvatar || "";
+        if (/^(data:image\/|https?:\/\/|blob:)/.test(raw)) return raw;
+        return "";
+    }
+
     function notify(title, body) {
         try {
             if (!("Notification" in window) || Notification.permission !== "granted") return;
@@ -121,7 +150,8 @@
         card.className = "php-card";
         var av = document.createElement("div");
         av.className = "php-avatar";
-        if (d.taAvatar && /^(data:image\/|https?:\/\/)/.test(d.taAvatar)) av.innerHTML = '<img src="' + String(d.taAvatar).replace(/"/g, "&quot;") + '" alt="">';
+        var src = taAvatarSrc();
+        if (src) av.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
         else av.textContent = d.taName || "Ta";
         var body = document.createElement("div");
         body.className = "php-text";
@@ -155,7 +185,7 @@
     function textPool(d) { return (d.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; }); }
     function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
-    /* ===== 拍一拍间隔（存在独立键里，免得被设置页的深合并丢掉） ===== */
+    /* ===== 拍一拍间隔 ===== */
     function patInterval() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(PAT_IV_KEY) || "null"); } catch (e) { v = null; }
@@ -174,7 +204,7 @@
         var chance = perm.patChance == null ? 30 : Number(perm.patChance);
         var cards = patPool(d);
         if (!cards.length) {
-            if (force) alert("字卡库里还没有「状态」分类的字卡。");
+            if (force) alert("字卡库里还没有「拍一拍」分类的字卡。");
             return;
         }
         if (!force && !(chance > 0 && Math.random() * 100 < chance)) return;
@@ -238,6 +268,111 @@
         if (chat) chat.click();
     }
 
+    /* ===== 他打来的电话：来电弹窗（接听 / 挂断） ===== */
+    var incoming = { active: false, connected: false, seconds: 0, timer: null };
+
+    function fmtDur(sec) {
+        var m = Math.floor(sec / 60), s = sec % 60;
+        return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+    }
+
+    function buildIncoming() {
+        if ($("philosCallIn")) return;
+        var wrap = document.createElement("div");
+        wrap.className = "call-in";
+        wrap.id = "philosCallIn";
+        wrap.innerHTML =
+            '<div class="call-in-card">' +
+                '<div class="call-in-avatar" id="cinAvatar">Ta</div>' +
+                '<div class="call-in-name" id="cinName">他</div>' +
+                '<div class="call-in-state" id="cinState">来电中…</div>' +
+                '<div class="call-in-actions" id="cinActions">' +
+                    '<button class="call-in-btn answer" id="cinAnswer" type="button">接通</button>' +
+                    '<button class="call-in-btn hang" id="cinHang" type="button">挂断</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(wrap);
+        $("cinAnswer").addEventListener("click", answerIncoming);
+        $("cinHang").addEventListener("click", hangIncoming);
+    }
+
+    function recordCall(text) {
+        if (window.philosPushMessage) {
+            window.philosPushMessage({ type: "call", text: text, time: Date.now() });
+            return;
+        }
+        var d = getData();
+        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        d.chatHistory.push({ type: "call", text: text, time: Date.now() });
+        setData(d);
+    }
+
+    function startIncomingCall(force) {
+        if (incoming.active) return;
+        injectStyles();
+        buildIncoming();
+        incoming.active = true;
+        incoming.connected = false;
+        incoming.seconds = 0;
+
+        var d = getData();
+        var av = $("cinAvatar");
+        var src = taAvatarSrc();
+        if (av) {
+            if (src) av.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
+            else av.textContent = d.taName || "Ta";
+        }
+        var name = $("cinName");
+        if (name) name.textContent = d.taName || "他";
+        var state = $("cinState");
+        if (state) state.textContent = "来电中…";
+        var actions = $("cinActions");
+        if (actions) {
+            actions.className = "call-in-actions";
+            actions.innerHTML = '<button class="call-in-btn answer" id="cinAnswer" type="button">接通</button><button class="call-in-btn hang" id="cinHang" type="button">挂断</button>';
+            $("cinAnswer").addEventListener("click", answerIncoming);
+            $("cinHang").addEventListener("click", hangIncoming);
+        }
+        $("philosCallIn").classList.add("show");
+        notify(d.taName || "他", "来电话了");
+    }
+
+    function answerIncoming() {
+        if (!incoming.active) return;
+        incoming.connected = true;
+        incoming.seconds = 0;
+        var state = $("cinState");
+        if (state) state.textContent = "通话中 00:00";
+        var actions = $("cinActions");
+        if (actions) {
+            actions.className = "call-in-actions one";
+            actions.innerHTML = '<button class="call-in-btn hang" id="cinHang" type="button">挂断</button>';
+            $("cinHang").addEventListener("click", hangIncoming);
+        }
+        if (incoming.timer) clearInterval(incoming.timer);
+        incoming.timer = setInterval(function () {
+            incoming.seconds++;
+            var s = $("cinState");
+            if (s) s.textContent = "通话中 " + fmtDur(incoming.seconds);
+        }, 1000);
+    }
+
+    function closeIncoming() {
+        var wrap = $("philosCallIn");
+        if (wrap) wrap.classList.remove("show");
+        if (incoming.timer) clearInterval(incoming.timer);
+        incoming.timer = null;
+        incoming.active = false;
+        incoming.connected = false;
+    }
+
+    function hangIncoming() {
+        if (!incoming.active) return;
+        if (incoming.connected) recordCall("语音通话 时长 " + fmtDur(incoming.seconds) + " · 已挂断");
+        else recordCall("未接来电");
+        closeIncoming();
+    }
+
     function fireProactiveMessage() {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
@@ -259,24 +394,16 @@
             setWx(w);
             var wxView = document.getElementById("wechatView");
             var wxOpen = !!(wxView && wxView.classList.contains("show"));
-            if (wxOpen) {
-                if (window.PhilosRefreshWeChat) window.PhilosRefreshWeChat();
-            } else {
-                notify(w.name || "Ta", first);
-            }
+            if (wxOpen) { if (window.PhilosRefreshWeChat) window.PhilosRefreshWeChat(); }
+            else notify(w.name || "Ta", first);
         } else {
             var texts = [];
-            for (var j = 0; j < count; j++) {
-                texts.push(pick(pool).content);
-            }
+            for (var j = 0; j < count; j++) texts.push(pick(pool).content);
             var firstText = texts[0] || "";
 
             if (inChat()) {
                 texts.forEach(function (txt, idx) {
-                    setTimeout(function () {
-                        pushChatMessage(txt);
-                        refreshChatView();
-                    }, idx * 1400);
+                    setTimeout(function () { pushChatMessage(txt); refreshChatView(); }, idx * 1400);
                 });
             } else {
                 var dd = getData();
@@ -300,21 +427,12 @@
         msgTimer = setTimeout(fireProactiveMessage, delayMs(perm, "activeMin", "activeMax", 1));
     }
 
-    function doCall() {
-        var chat = $("appChat");
-        if (chat) chat.click();
-        setTimeout(function () {
-            var call = $("btnChatCall");
-            if (call) call.click();
-        }, 400);
-    }
-
     function fireProactiveCall() {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
         if (!perm.callEnabled) { scheduleCall(); return; }
-        if ($("callScreen") && !$("callScreen").hidden) { scheduleCall(); return; }
-        doCall();
+        if (incoming.active) { scheduleCall(); return; }
+        startIncomingCall(false);
         scheduleCall();
     }
 
@@ -324,6 +442,62 @@
         var perm = (d.settings && d.settings.permission) || {};
         if (!perm.callEnabled) { callTimer = setTimeout(scheduleCall, 30000); return; }
         callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 1));
+    }
+
+    /* ===== 情绪：他气泡下面那行小字 ===== */
+    function moodStore() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(MOOD_KEY) || "null"); } catch (e) { v = null; }
+        if (!v || typeof v !== "object") v = {};
+        if (!Array.isArray(v.moods)) v.moods = [];
+        if (!v.state || typeof v.state !== "object") v.state = { text: "", until: 0 };
+        if (!v.range || typeof v.range !== "object") v.range = { min: 20, max: 120 };
+        return v;
+    }
+    function saveMoodStore(v) { try { localStorage.setItem(MOOD_KEY, JSON.stringify(v)); } catch (e) {} }
+
+    function currentMood() {
+        var s = moodStore();
+        var moods = s.moods.filter(function (m) { return typeof m === "string" && m; });
+        if (!moods.length) return "";
+        var now = Date.now();
+        if (!s.state.text || !s.state.until || now >= s.state.until || moods.indexOf(s.state.text) < 0) {
+            var min = Math.max(1, Number(s.range.min) || 20);
+            var max = Math.max(min, Number(s.range.max) || 120);
+            var span = (min + Math.random() * (max - min)) * 60000;
+            var next = pick(moods);
+            if (moods.length > 1 && next === s.state.text) next = moods[(moods.indexOf(next) + 1) % moods.length];
+            s.state = { text: next, until: now + span };
+            saveMoodStore(s);
+        }
+        return s.state.text;
+    }
+
+    function decorateMoods() {
+        var box = $("chatMessages");
+        if (!box) return;
+        var text = currentMood();
+        var rows = box.querySelectorAll(".msg-row.ta");
+        for (var i = 0; i < rows.length; i++) {
+            var wrap = rows[i].querySelector(".msg-wrap");
+            if (!wrap) continue;
+            var exists = wrap.querySelector(".msg-mood");
+            if (!text) { if (exists && exists.parentNode) exists.parentNode.removeChild(exists); continue; }
+            if (!exists) {
+                var mood = document.createElement("div");
+                mood.className = "msg-mood";
+                var dot = document.createElement("span");
+                dot.className = "mood-dot";
+                var label = document.createElement("span");
+                label.textContent = text;
+                mood.appendChild(dot);
+                mood.appendChild(label);
+                wrap.appendChild(mood);
+            } else {
+                var t = exists.querySelector("span:last-child");
+                if (t && t.textContent !== text) t.textContent = text;
+            }
+        }
     }
 
     /* ===== 频率页：拍一拍间隔 + 测试 ===== */
@@ -381,7 +555,7 @@
                 if (!btn) return;
                 var act = btn.getAttribute("data-pat-test");
                 if (act === "pat") { doPat(true); return; }
-                if (act === "call") { doCall(); return; }
+                if (act === "call") { startIncomingCall(true); return; }
                 var d = getData();
                 var pool = textPool(d);
                 if (!pool.length) { alert("字卡库里还没有文字或 emoji 字卡。"); return; }
@@ -394,7 +568,7 @@
         }
     }
 
-    /* ===== 主屏未读红点（电话由 phone.js 自己管） ===== */
+    /* ===== 未读红点 ===== */
     function getUnread() {
         var s = null;
         try { s = JSON.parse(localStorage.getItem(UNREAD_KEY) || "null"); } catch (e) { s = null; }
@@ -457,11 +631,9 @@
         var chatOpen = !!(chatView && chatView.classList.contains("active"));
         var wxOpen = !!(wxView && wxView.classList.contains("show"));
         var changed = false;
-
         if (chatOpen) { st.chat = now; changed = true; }
         if (wxOpen) { st.wx = now; changed = true; }
         if (changed) saveUnread(st);
-
         paintBadge("appChat", countChatUnread(st.chat));
         paintBadge("btnWechat", countWxUnread(st.wx));
     }
@@ -478,18 +650,20 @@
         refreshUnread();
         ensureFreqCards();
         swapIcons();
+        decorateMoods();
     }
 
     function startWatch() {
         refreshUnread();
         ensureFreqCards();
         swapIcons();
+        decorateMoods();
         if (unreadTimer) clearInterval(unreadTimer);
-        unreadTimer = setInterval(tick, 2000);
+        unreadTimer = setInterval(tick, 1500);
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
-            if (t.closest("#appChat")) markRead("chat");
+            if (t.closest("#appChat")) { markRead("chat"); setTimeout(decorateMoods, 200); }
             else if (t.closest("#btnWechat")) markRead("wx");
             else if (t.closest("#btnFreq")) setTimeout(ensureFreqCards, 120);
         }, true);
@@ -504,7 +678,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H49";
+                    if (val) val.textContent = "3.9 · H50";
                 }
             }
         } catch (e) {}
