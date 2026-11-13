@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v55";
+const CACHE_NAME = "philos-v56";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -144,7 +144,7 @@ function rmHydrateWalk(obj, map) {
 function rmHydrateImages() {
     var refs = [];
     rmCollectRefs(appData, refs);
-    if (!refs.length) return;
+    if (!refs.length) { rmRefreshAll(); return; }
     var unique = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
 
     Promise.all(unique.map(function (id) {
@@ -164,8 +164,7 @@ function rmHydrateImages() {
                 rmConfirmed[id] = true;
                 rmImgMap.set(table[id], id);
             });
-            if (!Object.keys(map).length) return;
-            rmHydrateWalk(appData, map);
+            if (Object.keys(map).length) rmHydrateWalk(appData, map);
             rmRefreshAll();
             setTimeout(function () { try { rmPrewarmImages(); } catch (e) {} }, 200);
         }
@@ -190,10 +189,9 @@ function rmHydrateImages() {
             });
             finish();
         }).catch(function () { finish(); });
-    }).catch(function () {});
+    }).catch(function () { rmRefreshAll(); });
 }
 
-/* 把内存里所有 data:image 都先写进 IndexedDB，然后再保存一次，把 JSON 缩小 */
 function rmPrewarmImages() {
     var urls = [];
     rmCollectImages(appData, urls);
@@ -206,7 +204,7 @@ function rmPrewarmImages() {
         if (confirmed > 0) { try { saveData(); } catch (e) {} }
         else if (!rmDbOk && !rmWarnedNoDb) {
             rmWarnedNoDb = true;
-            setTimeout(function () { alert("这个浏览器现在不允许存图片（可能是无痕模式或存储被系统清掉了）。图片会暂时存不下。"); }, 60);
+            setTimeout(function () { alert("这个浏览器现在不允许存图片（可能是无痕模式或存储被系统清掉了）。"); }, 60);
         }
     }, 1500);
 }
@@ -236,7 +234,6 @@ function rmWarnStorage() {
     setTimeout(function () { alert("网页存储空间不够了，这次改动可能没保存成功。建议先删掉一些旧图片。"); }, 60);
 }
 
-/* 关键：只有确认已经写进 IndexedDB 的图片才换成 idb:// 地址，避免出现打不开的死地址 */
 function rmSaveAppData() {
     try {
         var json = JSON.stringify(appData, function (k, v) {
@@ -568,7 +565,6 @@ function rmShowPat(text) {
     document.body.appendChild(wrap);
 }
 
-/* 通话记录搬到电话 app（philos_calls），iMessage 里不再显示 */
 function rmMoveCalls() {
     if (!Array.isArray(appData.chatHistory)) return false;
     var keep = [];
@@ -687,6 +683,17 @@ window.philosPushMessage = function (msg) {
 };
 
 window.philosPrewarmImages = function () { try { rmPrewarmImages(); } catch (e) {} };
+
+/* 软刷新：重新从存储读数据并重绘，不重启页面 */
+window.philosReload = function () {
+    try {
+        loadData();
+        var refs = [];
+        rmCollectRefs(appData, refs);
+        if (refs.length) rmHydrateImages();
+        else rmRefreshAll();
+    } catch (e) {}
+};
 
 setInterval(function () { try { rmMoveCalls(); } catch (e) {} }, 4000);
 
@@ -961,7 +968,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v55";
+                if (val) val.textContent = "3.9 · v56";
             }
         }
     } catch (e) {}
@@ -992,18 +999,10 @@ function rmInit() {
 
     rmOpenDb().then(function () {
         rmFlushQueue();
-        setTimeout(function () {
-            try { rmHydrateImages(); } catch (e) {}
-        }, 0);
-        setTimeout(function () {
-            try { rmPrewarmImages(); } catch (e) {}
-        }, 800);
-        setTimeout(function () {
-            try { rmHydrateImages(); } catch (e) {}
-        }, 2000);
-        setTimeout(function () {
-            try { rmPrewarmImages(); } catch (e) {}
-        }, 2600);
+        setTimeout(function () { try { rmHydrateImages(); } catch (e) {} }, 0);
+        setTimeout(function () { try { rmPrewarmImages(); } catch (e) {} }, 800);
+        setTimeout(function () { try { rmHydrateImages(); } catch (e) {} }, 2000);
+        setTimeout(function () { try { rmPrewarmImages(); } catch (e) {} }, 2600);
     });
 }
 
