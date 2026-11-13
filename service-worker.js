@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v51";
+const CACHE_NAME = "philos-v52";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -16,6 +16,7 @@ var RM_MODES = [
 
 var RM_MOOD_KEY = "philos_moods";
 var RM_SETTINGS_KEY = "philos_patch_settings";
+var RM_CALLS_KEY = "philos_calls";
 var rmWarnedStorage = false;
 
 var rmDb = null;
@@ -381,6 +382,30 @@ function rmBuildMessage(p, pool) {
     return null;
 }
 
+function rmQuoteLabel(msg) {
+    if (!msg) return "";
+    var who = appData.myName && appData.myName !== "your账户名" ? appData.myName : "我";
+    var text = "";
+    if (msg.type === "image" || msg.type === "sticker") text = "[图片]";
+    else text = String(msg.text || msg.quote || "");
+    if (text.length > 20) text = text.slice(0, 20) + "…";
+    return who + "：" + text;
+}
+
+function rmPickQuote() {
+    var mine = [];
+    var history = Array.isArray(appData.chatHistory) ? appData.chatHistory : [];
+    for (var i = 0; i < history.length; i++) {
+        var m = history[i];
+        if (!m || m.from !== "me") continue;
+        if (m.type === "status" || m.type === "call") continue;
+        if (!m.text && !m.quote) continue;
+        mine.push(m);
+    }
+    if (!mine.length) return "";
+    return rmQuoteLabel(mine[Math.floor(Math.random() * mine.length)]);
+}
+
 function rmSetTyping(on) {
     var el = $("headerName");
     if (!el) return;
@@ -462,6 +487,36 @@ function rmShowPat(text) {
     document.body.appendChild(wrap);
 }
 
+/* 通话记录搬到电话 app（philos_calls），iMessage 里不再显示 */
+function rmMoveCalls() {
+    if (!Array.isArray(appData.chatHistory)) return false;
+    var keep = [];
+    var moved = [];
+    for (var i = 0; i < appData.chatHistory.length; i++) {
+        var m = appData.chatHistory[i];
+        if (m && m.type === "call") moved.push(m);
+        else keep.push(m);
+    }
+    if (!moved.length) return false;
+
+    appData.chatHistory = keep;
+
+    try {
+        var list = null;
+        try { list = JSON.parse(localStorage.getItem(RM_CALLS_KEY) || "[]"); } catch (e) { list = null; }
+        if (!Array.isArray(list)) list = [];
+        for (var j = 0; j < moved.length; j++) {
+            list.push({ text: moved[j].text || "语音通话", time: Number(moved[j].time) || Date.now() });
+        }
+        list.sort(function (a, b) { return (Number(b.time) || 0) - (Number(a.time) || 0); });
+        if (list.length > 200) list = list.slice(0, 200);
+        localStorage.setItem(RM_CALLS_KEY, JSON.stringify(list));
+    } catch (e) {}
+
+    saveData();
+    return true;
+}
+
 scheduleReply = function () {
     var p = rmSettings();
     if (!p) return;
@@ -472,6 +527,8 @@ scheduleReply = function () {
     var max = clamp(Number(p.replyMax) || min, min, 10);
     var count = min + Math.floor(Math.random() * (max - min + 1));
     var delay = Math.max(0, Number(p.replyDelay) || 0) * 1000;
+
+    var wantQuote = Math.random() < 0.15 ? rmPickQuote() : "";
 
     rmReplyRound++;
     var round = rmReplyRound;
@@ -488,6 +545,8 @@ scheduleReply = function () {
             list.push(one);
         }
         if (!list.length) { rmSetTyping(false); return; }
+
+        if (wantQuote) list[0].quote = wantQuote;
 
         var patText = "";
         var patPool = appData.cards.filter(function (c) { return c.kind === "status" && c.content; });
@@ -532,6 +591,8 @@ scheduleReply = function () {
 };
 
 window.philosRefreshChat = rmRefreshChat;
+window.philosMoveCalls = rmMoveCalls;
+setInterval(function () { try { rmMoveCalls(); } catch (e) {} }, 4000);
 
 function rmLetterDate() {
     var d = new Date();
@@ -788,6 +849,7 @@ function rmDecorateChat() {
 
 var rmBaseRenderChat = renderChat;
 renderChat = function () {
+    try { rmMoveCalls(); } catch (e) {}
     rmBaseRenderChat.apply(null, arguments);
     rmDecorateChat();
     rmAutoScrollChat();
@@ -803,7 +865,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v51";
+                if (val) val.textContent = "3.9 · v52";
             }
         }
     } catch (e) {}
@@ -812,28 +874,12 @@ function rmMarkVersion() {
 function rmInit() {
     rmOpenDb();
     rmInjectStyles();
-    rmFixZoom();
-    rmTuneIntervals();
-    rmTuneBubble();
     rmSettings();
     rmLoadPatch();
     rmEnsureMoods();
     rmLoadMoodStore();
     rmApplyMoodStyle();
-    rmTrimPresets();
-    rmSyncBubblePreset();
-    rmBuildHomePages();
-    setTimeout(rmBuildHomePages, 400);
-    setTimeout(rmBuildHomePages, 1200);
-    rmSetupMoodTab();
-    rmSetupMoodSettings();
-    rmSetupPatSettings();
-    rmSetupThemeToggle();
-    rmSetupMultiSticker();
-    rmBuildUI();
-    rmBind();
     rmRender();
-    rmSetupCustomCss();
     rmMarkVersion();
 
     var input = $("chatInput");
