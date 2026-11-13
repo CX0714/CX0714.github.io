@@ -1,4 +1,4 @@
-/* Philos 微信模块 v5（由 herotext.js 加载） */
+/* Philos 微信模块 v6（由 herotext.js 加载） */
 (function () {
     "use strict";
 
@@ -154,7 +154,6 @@
             row.className = "wx-row" + (m.from === "me" ? " mine" : "");
             row.setAttribute("data-wi", String(idx));
             row.appendChild(wxAvatar(m.from === "me" ? (d.myAvatar || main.myAvatar) : (d.avatar || main.taAvatar), m.from === "me" ? "我" : "Ta"));
-
             var col = document.createElement("div");
             col.className = "wx-col";
             if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; col.appendChild(img); }
@@ -442,7 +441,7 @@
     function tuneRanges() {
         var d = document.querySelector('[data-key="permission.replyDelay"]');
         if (d) { d.setAttribute("max", "300"); d.max = "300"; }
-        ["permission.activeMin", "permission.callMin"].forEach(function (k) {
+        ["permission.activeMin", "permission.activeMax", "permission.callMin", "permission.callMax"].forEach(function (k) {
             var el = document.querySelector('[data-key="' + k + '"]');
             if (el) { el.setAttribute("min", "0"); el.min = "0"; }
         });
@@ -464,7 +463,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H30";
+                    if (val) val.textContent = "3.9 · H36";
                 }
             }
         } catch (e) {}
