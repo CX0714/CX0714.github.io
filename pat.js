@@ -1,12 +1,15 @@
-/* Philos 他主动拍一拍（仅 iMessage） */
+/* Philos 他的主动行为：拍一拍 / 主动发消息 / 主动打电话 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
-    var timer = null;
+    var WX_KEY = "philos_wechat";
+    var patTimer = null, msgTimer = null, callTimer = null;
 
     function getData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
     function setData(d) { try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {} }
+    function getWx() { try { return JSON.parse(localStorage.getItem(WX_KEY) || "{}"); } catch (e) { return {}; } }
+    function setWx(d) { try { localStorage.setItem(WX_KEY, JSON.stringify(d)); } catch (e) {} }
 
     function injectStyles() {
         if (document.getElementById("philos-pat-style")) return;
@@ -31,6 +34,19 @@
         return !!(v && v.classList.contains("active"));
     }
 
+    function notify(title, body) {
+        try {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+            var d = getData();
+            if (d.settings && d.settings.permission && d.settings.permission.notify === false) return;
+            if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                navigator.serviceWorker.ready.then(function (reg) { reg.showNotification(title, { body: body, icon: "icon-192.png", badge: "icon-192.png", tag: "philos-proactive" }); }).catch(function () {});
+            } else {
+                new Notification(title, { body: body, icon: "icon-192.png" });
+            }
+        } catch (e) {}
+    }
+
     function appendToChat(text) {
         var box = document.getElementById("chatMessages");
         if (!box) return;
@@ -45,27 +61,19 @@
         injectStyles();
         var old = document.getElementById("phpMask");
         if (old && old.parentNode) old.parentNode.removeChild(old);
-
         var d = getData();
         var mask = document.createElement("div");
         mask.className = "php-mask show";
         mask.id = "phpMask";
-
         var card = document.createElement("div");
         card.className = "php-card";
-
         var av = document.createElement("div");
         av.className = "php-avatar";
-        if (d.taAvatar && /^(data:image\/|https?:\/\/)/.test(d.taAvatar)) {
-            av.innerHTML = '<img src="' + String(d.taAvatar).replace(/"/g, "&quot;") + '" alt="">';
-        } else {
-            av.textContent = d.taName || "Ta";
-        }
-
+        if (d.taAvatar && /^(data:image\/|https?:\/\/)/.test(d.taAvatar)) av.innerHTML = '<img src="' + String(d.taAvatar).replace(/"/g, "&quot;") + '" alt="">';
+        else av.textContent = d.taName || "Ta";
         var body = document.createElement("div");
         body.className = "php-text";
         body.textContent = text;
-
         var actions = document.createElement("div");
         actions.className = "php-actions";
         var later = document.createElement("button");
@@ -73,7 +81,6 @@
         later.className = "php-btn";
         later.textContent = "等下哦";
         later.addEventListener("click", function () { mask.classList.remove("show"); });
-
         var go = document.createElement("button");
         go.type = "button";
         go.className = "php-btn primary";
@@ -83,7 +90,6 @@
             var chat = document.getElementById("appChat");
             if (chat) chat.click();
         });
-
         actions.appendChild(later);
         actions.appendChild(go);
         card.appendChild(av);
@@ -93,31 +99,116 @@
         document.body.appendChild(mask);
     }
 
+    function patPool(d) { return (d.cards || []).filter(function (c) { return c.kind === "status" && c.content; }); }
+    function textPool(d) { return (d.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; }); }
+
     function firePat() {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
         var chance = perm.patChance == null ? 30 : Number(perm.patChance);
-        var cards = (d.cards || []).filter(function (c) { return c.kind === "status" && c.content; });
-        if (!cards.length || chance <= 0) { schedule(); return; }
-        if (Math.random() * 100 >= chance) { schedule(); return; }
-
-        var pick = cards[Math.floor(Math.random() * cards.length)];
-        var text = pick.content;
-
-        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-        d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
-        setData(d);
-
-        if (inChat()) appendToChat("—— " + text + " ——");
-        else showPopup(text);
-
-        schedule();
+        var cards = patPool(d);
+        if (cards.length && chance > 0 && Math.random() * 100 < chance) {
+            var text = cards[Math.floor(Math.random() * cards.length)].content;
+            d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+            d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
+            setData(d);
+            if (inChat()) appendToChat("—— " + text + " ——");
+            else showPopup(text);
+        }
+        schedulePat();
     }
 
-    function schedule() {
-        if (timer) clearTimeout(timer);
-        var minutes = 25 + Math.random() * 65;
-        timer = setTimeout(firePat, minutes * 60000);
+    function schedulePat() {
+        if (patTimer) clearTimeout(patTimer);
+        patTimer = setTimeout(firePat, (25 + Math.random() * 65) * 60000);
+    }
+
+    function randBetween(min, max) {
+        if (max < min) max = min;
+        return min + Math.random() * (max - min);
+    }
+
+    function delayMs(perm, minKey, maxKey, fallbackMin) {
+        var a = Math.max(0, Number(perm[minKey]) || 0);
+        var b = Math.max(0, Number(perm[maxKey]) || 0);
+        if (a === 0 && b === 0) return (fallbackMin || 1) * 60000;
+        return randBetween(a, b) * 60000;
+    }
+
+    function fireProactiveMessage() {
+        var d = getData();
+        var perm = (d.settings && d.settings.permission) || {};
+        var pool = textPool(d);
+        if (!perm.activeEnabled || !pool.length) { scheduleMessage(); return; }
+
+        var useWx = Math.random() < 0.5;
+        var count = 1 + Math.floor(Math.random() * 3);
+
+        if (useWx) {
+            var w = getWx();
+            w.history = Array.isArray(w.history) ? w.history : [];
+            var first = "";
+            for (var i = 0; i < count; i++) {
+                var c = pool[Math.floor(Math.random() * pool.length)].content;
+                if (!first) first = c;
+                w.history.push({ from: "ta", type: "text", text: c, time: Date.now() + i * 1500 });
+            }
+            setWx(w);
+            if (!document.getElementById("wechatView") || !document.getElementById("wechatView").classList.contains("show")) {
+                notify(w.name || "Ta", first);
+            }
+        } else {
+            var dd = getData();
+            dd.chatHistory = Array.isArray(dd.chatHistory) ? dd.chatHistory : [];
+            var firstText = "";
+            for (var j = 0; j < count; j++) {
+                var t = pool[Math.floor(Math.random() * pool.length)].content;
+                if (!firstText) firstText = t;
+                dd.chatHistory.push({ from: "ta", type: "text", text: t, time: Date.now() + j * 1500, status: "" });
+            }
+            setData(dd);
+            if (inChat()) {
+                for (var k = 0; k < count; k++) {
+                    (function (txt, delay) {
+                        setTimeout(function () { appendToChat(txt); }, delay);
+                    })(dd.chatHistory[dd.chatHistory.length - count + k].text, k * 1400);
+                }
+            } else {
+                notify(dd.taName || "Ta", firstText);
+            }
+        }
+
+        scheduleMessage();
+    }
+
+    function scheduleMessage() {
+        if (msgTimer) clearTimeout(msgTimer);
+        var d = getData();
+        var perm = (d.settings && d.settings.permission) || {};
+        if (!perm.activeEnabled) { msgTimer = setTimeout(scheduleMessage, 30000); return; }
+        msgTimer = setTimeout(fireProactiveMessage, delayMs(perm, "activeMin", "activeMax", 1));
+    }
+
+    function fireProactiveCall() {
+        var d = getData();
+        var perm = (d.settings && d.settings.permission) || {};
+        if (!perm.callEnabled) { scheduleCall(); return; }
+        if (document.getElementById("callScreen") && !document.getElementById("callScreen").hidden) { scheduleCall(); return; }
+        var chat = document.getElementById("appChat");
+        if (chat) chat.click();
+        setTimeout(function () {
+            var call = document.getElementById("btnChatCall");
+            if (call) call.click();
+        }, 400);
+        scheduleCall();
+    }
+
+    function scheduleCall() {
+        if (callTimer) clearTimeout(callTimer);
+        var d = getData();
+        var perm = (d.settings && d.settings.permission) || {};
+        if (!perm.callEnabled) { callTimer = setTimeout(scheduleCall, 30000); return; }
+        callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 1));
     }
 
     function markVersion() {
@@ -127,7 +218,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H37";
+                    if (val) val.textContent = "3.9 · H38";
                 }
             }
         } catch (e) {}
@@ -136,7 +227,9 @@
     function init() {
         injectStyles();
         markVersion();
-        schedule();
+        schedulePat();
+        scheduleMessage();
+        scheduleCall();
         setTimeout(markVersion, 1500);
     }
 
