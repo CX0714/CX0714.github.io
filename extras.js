@@ -1,4 +1,4 @@
-/* Philos 附加功能：字卡库分组编辑 + 批量添加图片（表情包 / 字卡贴纸 / 图库） */
+/* Philos 附加功能：字卡库分组编辑 + 批量添加图片（图片写 IndexedDB，只存地址，不重启页面） */
 (function () {
     "use strict";
 
@@ -17,6 +17,58 @@
         return d;
     }
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    /* ===== IndexedDB 小工具（和补丁共用同一个库） ===== */
+    var dbPromise = null;
+    function db() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise(function (resolve) {
+            try {
+                var req = indexedDB.open("philos_images", 1);
+                req.onupgradeneeded = function () { try { req.result.createObjectStore("images"); } catch (e) {} };
+                req.onsuccess = function () { resolve(req.result); };
+                req.onerror = function () { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+        return dbPromise;
+    }
+    function hash(str) {
+        var h1 = 5381, h2 = 52711;
+        for (var i = 0; i < str.length; i++) {
+            var c = str.charCodeAt(i);
+            h1 = (h1 * 33 ^ c) >>> 0;
+            h2 = (h2 * 31 + c) >>> 0;
+        }
+        return h1.toString(36) + h2.toString(36) + str.length.toString(36);
+    }
+    function putImg(id, url) {
+        return db().then(function (d) {
+            if (!d) return false;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = d.transaction("images", "readwrite");
+                    tx.objectStore("images").put(url, id);
+                    tx.oncomplete = function () { resolve(true); };
+                    tx.onerror = function () { resolve(false); };
+                    tx.onabort = function () { resolve(false); };
+                } catch (e) { resolve(false); }
+            });
+        });
+    }
+    function storeAll(list) {
+        return Promise.all(list.map(function (url) {
+            var id = "i" + hash(url);
+            return putImg(id, url).then(function (ok) { return ok ? "idb://" + id : url; });
+        }));
+    }
+
+    function softRefresh() {
+        if (window.philosReload) {
+            setTimeout(function () { window.philosReload(); }, 80);
+            return;
+        }
+        setTimeout(function () { location.reload(); }, 200);
+    }
 
     function injectStyles() {
         if (document.getElementById("philos-extras-style")) return;
@@ -112,7 +164,7 @@
 
         try { localStorage.setItem(MAIN_KEY, JSON.stringify(data)); } catch (e) { alert("保存失败：存储空间可能满了。"); return; }
         closeEditor();
-        setTimeout(function () { location.reload(); }, 260);
+        softRefresh();
     }
 
     function deleteGroup() {
@@ -127,10 +179,9 @@
         });
         try { localStorage.setItem(MAIN_KEY, JSON.stringify(data)); } catch (e) { alert("删除失败。"); return; }
         closeEditor();
-        setTimeout(function () { location.reload(); }, 260);
+        softRefresh();
     }
 
-    /* 点一下已选中的分组 = 编辑；长按任意分组 = 编辑 */
     var longPressTimer = null, longPressFired = false, pressStart = 0;
 
     document.addEventListener("touchstart", function (e) {
@@ -205,7 +256,7 @@
         return t === "ta" ? "ta" : "me";
     }
 
-    var mode = "", cat = "未分类", bigMode = false, galTab = "me";
+    var mode = "", cat = "未分类", galTab = "me";
 
     function handleBatch(input) {
         var files = Array.prototype.slice.call(input.files || []);
@@ -217,8 +268,7 @@
 
         function next() {
             if (idx >= files.length) { apply(results); return; }
-            var f = files[idx++];
-            compress(f, limit, function (src) {
+            compress(files[idx++], limit, function (src) {
                 if (src) results.push(src);
                 next();
             });
@@ -229,45 +279,55 @@
     function apply(results) {
         if (!results.length) return;
 
-        if (mode === "gallery") {
-            var g = getGal();
-            var list = galTab === "ta" ? g.ta : g.me;
-            results.slice().reverse().forEach(function (src) { list.unshift(src); });
-            try { localStorage.setItem(GAL_KEY, JSON.stringify(g)); } catch (e) { alert("存储空间不足，这批图片没有保存。"); return; }
-            setTimeout(function () { location.reload(); }, 260);
-            return;
-        }
+        storeAll(results).then(function (stored) {
+            var failed = 0;
+            for (var i = 0; i < stored.length; i++) {
+                if (stored[i].indexOf("data:image/") === 0) failed++;
+            }
 
-        var data = getMain();
-        var sync = $("stickerSync") && $("stickerSync").checked;
+            if (mode === "gallery") {
+                var g = getGal();
+                var list = galTab === "ta" ? g.ta : g.me;
+                stored.slice().reverse().forEach(function (src) { list.unshift(src); });
+                try { localStorage.setItem(GAL_KEY, JSON.stringify(g)); }
+                catch (e) { alert("存储空间不足，这批图片没有保存。"); return; }
+                if (window.PhilosGalleryRefresh) window.PhilosGalleryRefresh();
+                softRefresh();
+                return;
+            }
 
-        if (mode === "stickers") {
-            data.stickers = Array.isArray(data.stickers) ? data.stickers : [];
-            results.forEach(function (src) {
-                data.stickers.push(src);
-                if (sync) {
-                    data.cards = Array.isArray(data.cards) ? data.cards : [];
-                    data.cards.unshift({ id: uid(), kind: "sticker", content: src, category: "未分类", createdAt: Date.now() });
-                }
-            });
-        } else {
-            data.cards = Array.isArray(data.cards) ? data.cards : [];
-            var c = cat || "未分类";
-            results.forEach(function (src) {
-                data.cards.unshift({ id: uid(), kind: "sticker", content: src, category: c, createdAt: Date.now() });
-            });
-            if (!data.cardCategories || typeof data.cardCategories !== "object") data.cardCategories = {};
-            if (!Array.isArray(data.cardCategories.sticker)) data.cardCategories.sticker = [];
-            if (c !== "未分类" && data.cardCategories.sticker.indexOf(c) < 0) data.cardCategories.sticker.push(c);
-        }
+            var data = getMain();
+            var sync = $("stickerSync") && $("stickerSync").checked;
 
-        try {
-            localStorage.setItem(MAIN_KEY, JSON.stringify(data));
-        } catch (e) {
-            alert("存储空间不足，这批图片没有保存。");
-            return;
-        }
-        setTimeout(function () { location.reload(); }, 260);
+            if (mode === "stickers") {
+                data.stickers = Array.isArray(data.stickers) ? data.stickers : [];
+                stored.forEach(function (src) {
+                    data.stickers.push(src);
+                    if (sync) {
+                        data.cards = Array.isArray(data.cards) ? data.cards : [];
+                        data.cards.unshift({ id: uid(), kind: "sticker", content: src, category: "未分类", createdAt: Date.now() });
+                    }
+                });
+            } else {
+                data.cards = Array.isArray(data.cards) ? data.cards : [];
+                var c = cat || "未分类";
+                stored.forEach(function (src) {
+                    data.cards.unshift({ id: uid(), kind: "sticker", content: src, category: c, createdAt: Date.now() });
+                });
+                if (!data.cardCategories || typeof data.cardCategories !== "object") data.cardCategories = {};
+                if (!Array.isArray(data.cardCategories.sticker)) data.cardCategories.sticker = [];
+                if (c !== "未分类" && data.cardCategories.sticker.indexOf(c) < 0) data.cardCategories.sticker.push(c);
+            }
+
+            try {
+                localStorage.setItem(MAIN_KEY, JSON.stringify(data));
+            } catch (e) {
+                alert("存储空间不足，这批图片没有保存。");
+                return;
+            }
+            if (failed > 0) alert("有 " + failed + " 张图片没能存进大仓库，可能占用较多空间。");
+            softRefresh();
+        });
     }
 
     document.addEventListener("change", function (e) {
