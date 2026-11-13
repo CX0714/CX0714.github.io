@@ -1,4 +1,4 @@
-/* Philos 附加功能：存储用量 / 新图标背景 / 字卡库二级界面（含情绪）/ 批量加图 / 分组编辑 */
+/* Philos 附加功能：存储用量 / 图标背景 / 字卡库二级界面（情绪·造句）/ 频率·造句 / 批量加图 / 分组编辑 */
 (function () {
     "use strict";
 
@@ -6,6 +6,8 @@
     var GAL_KEY = "philos_gallery";
     var ICON_KEY = "philos_icon_extra";
     var MOOD_KEY = "philos_moods";
+    var WORD_KEY = "philos_words";
+    var SENT_KEY = "philos_sentence";
     var KINDS = ["text", "emoji", "sticker", "status"];
     var KIND_LABEL = { text: "文字", emoji: "emoji", sticker: "表情包", status: "拍一拍" };
 
@@ -132,7 +134,6 @@
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
         return (bytes / 1024 / 1024).toFixed(2) + " MB";
     }
-
     function compress(file, max, cb) {
         var url = URL.createObjectURL(file);
         var img = new Image();
@@ -201,7 +202,6 @@
 
     /* ================= 存储用量面板 ================= */
     function dataPage() { return document.querySelector('[data-page="data"]'); }
-
     function buildPanel() {
         var card = document.createElement("div");
         card.className = "group-card control-card";
@@ -262,7 +262,7 @@
         setTimeout(updatePanel, 120);
     }
 
-    /* ================= 新增图标的图标背景 ================= */
+    /* ================= 图标背景（新增 5 个） ================= */
     var ICON_DEFS = [
         { key: "phone", label: "电话", el: "btnPhone", sym: "ic-phone" },
         { key: "wechat", label: "微信", el: "btnWechat", sym: "ic-chat" },
@@ -383,7 +383,7 @@
         if (prev) { prev.classList.remove("has-image"); prev.style.backgroundImage = ""; }
     }, true);
 
-    /* ================= 情绪（独立存储 philos_moods） ================= */
+    /* ================= 情绪 ================= */
     function moodStore() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(MOOD_KEY) || "null"); } catch (e) { v = null; }
@@ -395,88 +395,149 @@
     }
     function saveMoodStore(v) { try { localStorage.setItem(MOOD_KEY, JSON.stringify(v)); } catch (e) { alert("保存失败。"); } }
 
-    function renderMoodList() {
-        var list = $("moList");
-        if (!list) return;
-        var s = moodStore();
-        list.innerHTML = "";
-        if (!s.moods.length) {
-            var empty = document.createElement("div");
-            empty.className = "mo-tip";
-            empty.textContent = "还没有情绪，下面加一条试试（比如「心情不错」）。";
-            list.appendChild(empty);
-            return;
+    /* ================= 造句：词库 + 设置 ================= */
+    function words() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(WORD_KEY) || "null"); } catch (e) { v = null; }
+        if (!Array.isArray(v)) v = [];
+        return v.filter(function (w) { return typeof w === "string" && w.trim(); });
+    }
+    function saveWords(list) { try { localStorage.setItem(WORD_KEY, JSON.stringify(list)); } catch (e) { alert("保存失败。"); } }
+
+    function sentCfg() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(SENT_KEY) || "null"); } catch (e) { v = null; }
+        if (!v || typeof v !== "object") v = {};
+        if (typeof v.on !== "boolean") v.on = false;
+        if (typeof v.min !== "number") v.min = 3;
+        if (typeof v.max !== "number") v.max = 5;
+        if (typeof v.ivMin !== "number") v.ivMin = 30;
+        if (typeof v.ivMax !== "number") v.ivMax = 90;
+        if (v.min < 2) v.min = 2;
+        if (v.max < v.min) v.max = v.min;
+        return v;
+    }
+    function saveSentCfg(v) { try { localStorage.setItem(SENT_KEY, JSON.stringify(v)); } catch (e) {} }
+
+    function shufflePick(list, n) {
+        var copy = list.slice();
+        var out = [];
+        while (copy.length && out.length < n) {
+            out.push(copy.splice(Math.floor(Math.random() * copy.length), 1)[0]);
         }
-        s.moods.forEach(function (text, idx) {
-            var row = document.createElement("div");
-            row.className = "mo-item";
-            var label = document.createElement("span");
-            label.textContent = text;
-            var del = document.createElement("button");
-            del.type = "button";
-            del.className = "mo-del";
-            del.textContent = "删除";
-            del.addEventListener("click", function () {
-                var cur = moodStore();
-                cur.moods.splice(idx, 1);
-                cur.state = { text: "", until: 0 };
-                saveMoodStore(cur);
-                renderMoodList();
-                syncOverviewCounts();
-            });
-            row.appendChild(label);
-            row.appendChild(del);
-            list.appendChild(row);
-        });
+        return out;
     }
 
-    function openMoodPanel() {
-        injectStyles();
-        var mask = $("moMask");
-        if (!mask) {
-            mask = document.createElement("div");
-            mask.className = "xc-mask";
-            mask.id = "moMask";
-            document.body.appendChild(mask);
-            mask.addEventListener("click", function () {
-                mask.classList.remove("show");
-                var p = $("moPanel");
-                if (p) p.classList.remove("show");
-            });
+    function buildSentence(force) {
+        var cfg = sentCfg();
+        var list = words();
+        if (!list.length) { if (force) alert("「造句」里还没有词。"); return ""; }
+        var min = Math.max(2, cfg.min);
+        var max = Math.max(min, cfg.max);
+        if (list.length < min) {
+            if (force) alert("词不够：至少要有 " + min + " 个词。");
+            return "";
         }
-        var panel = $("moPanel");
-        if (!panel) {
-            panel = document.createElement("div");
-            panel.className = "mo-panel";
-            panel.id = "moPanel";
-            panel.innerHTML =
-                '<div class="xc-title">情绪</div>' +
-                '<div class="mo-tip">这些会显示在他 iMessage 气泡下方，像心情状态一样轮换。</div>' +
-                '<div class="mo-list" id="moList"></div>' +
-                '<input class="xc-input" id="moInput" type="text" maxlength="20" placeholder="输入一条情绪" autocomplete="off">' +
-                '<div class="xc-row"><button class="xc-btn ghost" id="moClose" type="button">关闭</button><button class="xc-btn primary" id="moAdd" type="button">添加</button></div>';
-            document.body.appendChild(panel);
-            $("moClose").addEventListener("click", function () {
-                panel.classList.remove("show");
-                var m = $("moMask");
-                if (m) m.classList.remove("show");
-            });
-            $("moAdd").addEventListener("click", function () {
-                var input = $("moInput");
-                var text = input ? input.value.trim() : "";
-                if (!text) return;
-                var s = moodStore();
-                if (s.moods.indexOf(text) < 0) s.moods.push(text);
-                s.state = { text: "", until: 0 };
-                saveMoodStore(s);
-                if (input) input.value = "";
-                renderMoodList();
-                syncOverviewCounts();
-            });
+        var n = min + Math.floor(Math.random() * (max - min + 1));
+        if (n > list.length) n = list.length;
+        return shufflePick(list, n).join("");
+    }
+
+    function sendSentence(force) {
+        var cfg = sentCfg();
+        if (!cfg.on && !force) return false;
+        var text = buildSentence(force);
+        if (!text) return false;
+        if (window.philosPushMessage) {
+            window.philosPushMessage({ from: "ta", type: "text", text: text, status: "" });
+        } else {
+            var d = getMain();
+            d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+            d.chatHistory.push({ from: "ta", type: "text", text: text, time: Date.now(), status: "" });
+            try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {}
+            if (window.philosRefreshChat) window.philosRefreshChat();
         }
-        renderMoodList();
-        mask.classList.add("show");
-        panel.classList.add("show");
+        return true;
+    }
+
+    var sentTimer = null;
+    function scheduleSentence() {
+        if (sentTimer) clearTimeout(sentTimer);
+        var cfg = sentCfg();
+        if (!cfg.on) return;
+        var a = Math.max(1, cfg.ivMin);
+        var b = Math.max(a, cfg.ivMax);
+        var mins = a + Math.random() * (b - a);
+        sentTimer = setTimeout(function () {
+            sendSentence(false);
+            scheduleSentence();
+        }, mins * 60000);
+    }
+
+    /* ================= 频率页：造句卡 ================= */
+    function ensureSentenceCard() {
+        var body = $("freqBody");
+        if (!body || body.querySelector("[data-philos-sentcard]")) return;
+        var cfg = sentCfg();
+
+        var card = document.createElement("div");
+        card.className = "group-card control-card";
+        card.setAttribute("data-philos-sentcard", "1");
+        card.innerHTML =
+            '<div class="card-title">造句</div>' +
+            '<div class="control-row"><span class="control-label">他自己造句</span><label class="switch"><input type="checkbox" data-sent="on"><span class="switch-track"></span></label></div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">最少用几个词</span><span class="control-value" data-sent-val="min">' + cfg.min + '个</span></div><input class="slider" type="range" data-sent="min" min="2" max="10" step="1"></div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">最多用几个词</span><span class="control-value" data-sent-val="max">' + cfg.max + '个</span></div><input class="slider" type="range" data-sent="max" min="2" max="12" step="1"></div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">最短间隔</span><span class="control-value" data-sent-val="ivMin">' + cfg.ivMin + 'min</span></div><input class="slider" type="range" data-sent="ivMin" min="1" max="240" step="1"></div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">最长间隔</span><span class="control-value" data-sent-val="ivMax">' + cfg.ivMax + 'min</span></div><input class="slider" type="range" data-sent="ivMax" min="1" max="480" step="1"></div>' +
+            '<div class="control-block"><button class="wide-btn" data-sent-act="test" type="button">让他造一句试试</button></div>';
+
+        var onEl = card.querySelector('[data-sent="on"]');
+        if (onEl) onEl.checked = !!cfg.on;
+        ["min", "max", "ivMin", "ivMax"].forEach(function (k) {
+            var el = card.querySelector('[data-sent="' + k + '"]');
+            if (el) el.value = cfg[k];
+        });
+
+        card.addEventListener("input", function (e) {
+            var key = e.target.getAttribute && e.target.getAttribute("data-sent");
+            if (!key) return;
+            var cur = sentCfg();
+            if (key === "on") cur.on = !!e.target.checked;
+            else cur[key] = Number(e.target.value) || cur[key];
+            if (cur.max < cur.min) cur.max = cur.min;
+            if (cur.ivMax < cur.ivMin) cur.ivMax = cur.ivMin;
+            saveSentCfg(cur);
+
+            var unit = key.indexOf("iv") === 0 ? "min" : "个";
+            var label = card.querySelector('[data-sent-val="' + key + '"]');
+            if (label) label.textContent = cur[key] + unit;
+
+            ["min", "max", "ivMin", "ivMax"].forEach(function (k) {
+                var el = card.querySelector('[data-sent="' + k + '"]');
+                if (el && Number(el.value) !== cur[k]) el.value = cur[k];
+                var lb = card.querySelector('[data-sent-val="' + k + '"]');
+                if (lb) lb.textContent = cur[k] + (k.indexOf("iv") === 0 ? "min" : "个");
+            });
+            scheduleSentence();
+        });
+
+        card.addEventListener("change", function (e) {
+            if (e.target.getAttribute && e.target.getAttribute("data-sent") === "on") {
+                var cur = sentCfg();
+                cur.on = !!e.target.checked;
+                saveSentCfg(cur);
+                scheduleSentence();
+            }
+        });
+
+        card.addEventListener("click", function (e) {
+            var btn = e.target.closest ? e.target.closest("[data-sent-act]") : null;
+            if (!btn) return;
+            if (!sendSentence(true)) return;
+        });
+
+        body.appendChild(card);
     }
 
     /* ================= 字卡库二级界面 ================= */
@@ -485,9 +546,7 @@
     function kindCounts() {
         var data = getMain();
         var out = { text: 0, emoji: 0, sticker: 0, status: 0 };
-        (data.cards || []).forEach(function (c) {
-            if (c && out[c.kind] != null) out[c.kind]++;
-        });
+        (data.cards || []).forEach(function (c) { if (c && out[c.kind] != null) out[c.kind]++; });
         return out;
     }
 
@@ -503,7 +562,6 @@
         }
 
         var counts = kindCounts();
-        var moods = moodStore().moods.length;
         var icons = { text: "ic-mail", emoji: "ic-chat", sticker: "ic-image", status: "ic-pin" };
 
         layer.innerHTML = '<div class="ck-grid"></div>';
@@ -521,15 +579,20 @@
             grid.appendChild(block);
         });
 
-        var moodBlock = document.createElement("button");
-        moodBlock.type = "button";
-        moodBlock.className = "ck-block";
-        moodBlock.setAttribute("data-ck-mood", "1");
-        moodBlock.innerHTML =
-            '<span class="ck-block-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-palette"></use></svg></span>' +
-            '<span class="ck-block-title">情绪</span>' +
-            '<span class="ck-block-count">' + moods + ' 条</span>';
-        grid.appendChild(moodBlock);
+        [
+            { attr: "data-ck-mood", title: "情绪", count: moodStore().moods.length, sym: "ic-palette" },
+            { attr: "data-ck-word", title: "造句", count: words().length, sym: "ic-card" }
+        ].forEach(function (item) {
+            var block = document.createElement("button");
+            block.type = "button";
+            block.className = "ck-block";
+            block.setAttribute(item.attr, "1");
+            block.innerHTML =
+                '<span class="ck-block-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + item.sym + '"></use></svg></span>' +
+                '<span class="ck-block-title">' + item.title + '</span>' +
+                '<span class="ck-block-count">' + item.count + ' 条</span>';
+            grid.appendChild(block);
+        });
 
         var nav = view.querySelector(".app-nav");
         var navH = nav ? nav.getBoundingClientRect().height : 0;
@@ -551,14 +614,12 @@
         var layer = view.querySelector("[data-card-overview]");
         if (layer) layer.classList.add("show");
     }
-
     function hideOverview() {
         var view = $("cardsView");
         if (!view) return;
         var layer = view.querySelector("[data-card-overview]");
         if (layer) layer.classList.remove("show");
     }
-
     function enterKind(kind) {
         ckState = "list";
         hideOverview();
@@ -566,15 +627,124 @@
         if (btn) btn.click();
     }
 
+    /* ================= 通用列表面板（情绪 / 造句） ================= */
+    function openListPanel(kind) {
+        injectStyles();
+        var isMood = kind === "mood";
+        var panelId = isMood ? "moPanel" : "wdPanel";
+        var maskId = isMood ? "moMask" : "wdMask";
+        var listId = isMood ? "moList" : "wdList";
+        var inputId = isMood ? "moInput" : "wdInput";
+
+        var mask = $(maskId);
+        if (!mask) {
+            mask = document.createElement("div");
+            mask.className = "xc-mask";
+            mask.id = maskId;
+            document.body.appendChild(mask);
+            mask.addEventListener("click", function () {
+                mask.classList.remove("show");
+                var p = $(panelId);
+                if (p) p.classList.remove("show");
+            });
+        }
+
+        var panel = $(panelId);
+        if (!panel) {
+            panel = document.createElement("div");
+            panel.className = "mo-panel";
+            panel.id = panelId;
+            panel.innerHTML =
+                '<div class="xc-title">' + (isMood ? "情绪" : "造句") + '</div>' +
+                '<div class="mo-tip">' + (isMood
+                    ? "这些会显示在他 iMessage 气泡下方，像心情状态一样轮换。"
+                    : "这里放词。他每次会按「频率 → 造句」里设的个数，随机取几个词拼成一句话。") + '</div>' +
+                '<div class="mo-list" id="' + listId + '"></div>' +
+                '<input class="xc-input" id="' + inputId + '" type="text" maxlength="20" placeholder="' + (isMood ? "输入一条情绪" : "输入一个词或短语") + '" autocomplete="off">' +
+                '<div class="xc-row"><button class="xc-btn ghost" data-lp-close="1" type="button">关闭</button><button class="xc-btn primary" data-lp-add="1" type="button">添加</button></div>';
+            document.body.appendChild(panel);
+
+            panel.addEventListener("click", function (e) {
+                var t = e.target;
+                if (t.closest("[data-lp-close]")) {
+                    panel.classList.remove("show");
+                    var m = $(maskId);
+                    if (m) m.classList.remove("show");
+                }
+                if (t.closest("[data-lp-add]")) {
+                    var input = $(inputId);
+                    var text = input ? input.value.trim() : "";
+                    if (!text) return;
+                    if (isMood) {
+                        var s = moodStore();
+                        if (s.moods.indexOf(text) < 0) s.moods.push(text);
+                        s.state = { text: "", until: 0 };
+                        saveMoodStore(s);
+                    } else {
+                        var list = words();
+                        if (list.indexOf(text) < 0) list.push(text);
+                        saveWords(list);
+                    }
+                    if (input) input.value = "";
+                    renderListPanel(kind);
+                    syncOverviewCounts();
+                }
+            });
+        }
+
+        renderListPanel(kind);
+        mask.classList.add("show");
+        panel.classList.add("show");
+    }
+
+    function renderListPanel(kind) {
+        var isMood = kind === "mood";
+        var list = $(isMood ? "moList" : "wdList");
+        if (!list) return;
+        var arr = isMood ? moodStore().moods : words();
+        list.innerHTML = "";
+        if (!arr.length) {
+            var empty = document.createElement("div");
+            empty.className = "mo-tip";
+            empty.textContent = isMood ? "还没有情绪，下面加一条试试。" : "还没有词，下面加一个试试。";
+            list.appendChild(empty);
+            return;
+        }
+        arr.forEach(function (text, idx) {
+            var row = document.createElement("div");
+            row.className = "mo-item";
+            var label = document.createElement("span");
+            label.textContent = text;
+            var del = document.createElement("button");
+            del.type = "button";
+            del.className = "mo-del";
+            del.textContent = "删除";
+            del.addEventListener("click", function () {
+                if (isMood) {
+                    var s = moodStore();
+                    s.moods.splice(idx, 1);
+                    s.state = { text: "", until: 0 };
+                    saveMoodStore(s);
+                } else {
+                    var w = words();
+                    w.splice(idx, 1);
+                    saveWords(w);
+                }
+                renderListPanel(kind);
+                syncOverviewCounts();
+            });
+            row.appendChild(label);
+            row.appendChild(del);
+            list.appendChild(row);
+        });
+    }
+
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
 
-        if (t.closest("[data-ck-mood]")) {
-            e.stopPropagation();
-            openMoodPanel();
-            return;
-        }
+        if (t.closest("[data-ck-mood]")) { e.stopPropagation(); openListPanel("mood"); return; }
+        if (t.closest("[data-ck-word]")) { e.stopPropagation(); openListPanel("word"); return; }
 
         var block = t.closest("[data-ck-kind]");
         if (block) {
@@ -770,7 +940,6 @@
         var results = [];
         var idx = 0;
         var limit = mode === "gallery" ? 900 : 480;
-
         function next() {
             if (idx >= files.length) { apply(results); return; }
             compress(files[idx++], limit, function (src) {
@@ -794,10 +963,8 @@
                 softRefresh();
                 return;
             }
-
             var data = getMain();
             var sync = $("stickerSync") && $("stickerSync").checked;
-
             if (mode === "stickers") {
                 data.stickers = Array.isArray(data.stickers) ? data.stickers : [];
                 stored.forEach(function (src) {
@@ -817,7 +984,6 @@
                 if (!Array.isArray(data.cardCategories.sticker)) data.cardCategories.sticker = [];
                 if (c !== "未分类" && data.cardCategories.sticker.indexOf(c) < 0) data.cardCategories.sticker.push(c);
             }
-
             try { localStorage.setItem(MAIN_KEY, JSON.stringify(data)); }
             catch (e) { alert("存储空间不足，这批图片没有保存。"); return; }
             softRefresh();
@@ -847,11 +1013,13 @@
         applyIcons();
         syncCardsView();
         decorateGalleryMsgs();
+        ensureSentenceCard();
     }
 
     function init() {
         injectStyles();
         tick();
+        scheduleSentence();
         setInterval(tick, 1500);
         window.addEventListener("focus", tick);
     }
