@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v50";
+const CACHE_NAME = "philos-v51";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -24,6 +24,7 @@ var rmDbPromise = null;
 var rmImgMap = new Map();
 var rmStoredIds = {};
 var rmImgSeq = 0;
+var rmReplyRound = 0;
 
 function rmOpenDb() {
     if (rmDbPromise) return rmDbPromise;
@@ -413,6 +414,16 @@ function rmAutoScrollChat() {
     setTimeout(rmScrollChatBottom, 240);
 }
 
+function rmRefreshChat() {
+    renderChat();
+    rmAutoScrollChat();
+}
+
+function rmInChat() {
+    var v = $("chatView");
+    return !!(v && v.classList.contains("active"));
+}
+
 function rmApplyPatBlur() {
     var b = appData.settings && appData.settings.bubble;
     var v = b && typeof b.patBlur === "number" ? b.patBlur : 70;
@@ -462,37 +473,65 @@ scheduleReply = function () {
     var count = min + Math.floor(Math.random() * (max - min + 1));
     var delay = Math.max(0, Number(p.replyDelay) || 0) * 1000;
 
-    rmSetTyping(true);
+    rmReplyRound++;
+    var round = rmReplyRound;
     if (replyTimer) clearTimeout(replyTimer);
-    replyTimer = setTimeout(function () {
-        var now = Date.now();
-        var added = 0;
-        var notice = "";
-        for (var i = 0; i < count; i++) {
-            var msg = rmBuildMessage(p, pool);
-            if (!msg) break;
-            msg.time = now + i;
-            appData.chatHistory.push(msg);
-            if (!notice) notice = msg.type === "sticker" ? "给你发了一个表情包" : (msg.text || "");
-            added++;
-        }
-        rmSetTyping(false);
-        if (!added) return;
+    rmSetTyping(true);
 
+    replyTimer = setTimeout(function () {
+        if (round !== rmReplyRound) return;
+
+        var list = [];
+        for (var i = 0; i < count; i++) {
+            var one = rmBuildMessage(p, pool);
+            if (!one) break;
+            list.push(one);
+        }
+        if (!list.length) { rmSetTyping(false); return; }
+
+        var patText = "";
         var patPool = appData.cards.filter(function (c) { return c.kind === "status" && c.content; });
         var chance = p.patChance == null ? 30 : Number(p.patChance);
         if (patPool.length && Math.random() * 100 < chance) {
-            var pat = patPool[Math.floor(Math.random() * patPool.length)];
-            appData.chatHistory.push({ type: "status", text: "—— " + pat.content + " ——", time: now + added });
-            if (!($("chatView") && $("chatView").classList.contains("active"))) rmShowPat(pat.content);
+            patText = patPool[Math.floor(Math.random() * patPool.length)].content;
         }
 
-        saveData();
-        var inChat = $("chatView") && $("chatView").classList.contains("active");
-        if (inChat) { renderChat(); rmAutoScrollChat(); }
-        else if (notice) rmNotify(notice);
+        var notice = "";
+        var step = 0;
+
+        function deliver() {
+            if (round !== rmReplyRound) return;
+            var msg = list[step];
+            msg.time = Date.now();
+            appData.chatHistory.push(msg);
+            if (!notice) notice = msg.type === "sticker" ? "给你发了一个表情包" : (msg.text || "");
+            saveData();
+
+            if (rmInChat()) {
+                rmRefreshChat();
+            } else if (step === 0 && notice) {
+                rmNotify(notice);
+            }
+
+            step++;
+            if (step >= list.length) {
+                if (patText) {
+                    appData.chatHistory.push({ type: "status", text: "—— " + patText + " ——", time: Date.now() });
+                    saveData();
+                    if (rmInChat()) rmRefreshChat();
+                    else rmShowPat(patText);
+                }
+                rmSetTyping(false);
+                return;
+            }
+            replyTimer = setTimeout(deliver, 900 + Math.floor(Math.random() * 700));
+        }
+
+        deliver();
     }, delay);
 };
+
+window.philosRefreshChat = rmRefreshChat;
 
 function rmLetterDate() {
     var d = new Date();
@@ -764,7 +803,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v50";
+                if (val) val.textContent = "3.9 · v51";
             }
         }
     } catch (e) {}
