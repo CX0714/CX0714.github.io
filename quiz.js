@@ -1,4 +1,4 @@
-/* Philos 出题 app v3（居中弹窗） */
+/* Philos 出题 app v4（居中弹窗）+ iMessage 表情包删除修正 */
 (function () {
     "use strict";
 
@@ -49,7 +49,10 @@
             ".qz-hist-opt{font-size:13px;line-height:1.7;color:var(--text-secondary,#8b909a);}" +
             ".qz-hist-opt.chosen{color:#4a6b8c;background:rgba(91,127,166,0.13);border-radius:6px;padding:1px 7px;}" +
             "[data-theme=\"dark\"] .qz-hist-opt.chosen{color:#c9d8e6;}" +
-            ".qz-empty{font-size:13px;color:var(--text-secondary,#8b909a);text-align:center;padding:18px 0;}";
+            ".qz-empty{font-size:13px;color:var(--text-secondary,#8b909a);text-align:center;padding:18px 0;}" +
+            ".sticker-del{display:none !important;}" +
+            ".sticker-cell{position:relative !important;}" +
+            ".philos-im-del{position:absolute !important;top:3px !important;left:3px !important;width:20px !important;height:20px !important;border-radius:50% !important;background:rgba(0,0,0,.55) !important;color:#fff !important;font-size:13px !important;line-height:20px !important;text-align:center !important;z-index:9 !important;pointer-events:auto !important;}";
         document.head.appendChild(st);
     }
 
@@ -219,6 +222,36 @@
         }, delay);
     }
 
+    function decorateIMStickers() {
+        injectStyles();
+        var grid = document.getElementById("stickerGrid");
+        if (!grid) return;
+        var cells = grid.querySelectorAll(".sticker-cell");
+        for (var i = 0; i < cells.length; i++) {
+            if (cells[i].querySelector(".philos-im-del")) continue;
+            (function (cell) {
+                var btn = document.createElement("span");
+                btn.className = "philos-im-del";
+                btn.textContent = "×";
+                btn.addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    var idx = Number(cell.getAttribute("data-sticker"));
+                    if (!confirm("删除这个表情包？")) return;
+                    try {
+                        var data = JSON.parse(localStorage.getItem(MAIN_KEY) || "{}");
+                        if (Array.isArray(data.stickers) && data.stickers[idx] != null) {
+                            data.stickers.splice(idx, 1);
+                            localStorage.setItem(MAIN_KEY, JSON.stringify(data));
+                        }
+                    } catch (err) {}
+                    location.reload();
+                });
+                cell.appendChild(btn);
+            })(cells[i]);
+        }
+    }
+
     function markVersion() {
         try {
             var about = document.querySelector('[data-page="about"]'); if (!about) return;
@@ -226,7 +259,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H34";
+                    if (val) val.textContent = "3.9 · H35";
                 }
             }
         } catch (e) {}
@@ -241,6 +274,18 @@
         open();
     }, true);
 
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", markVersion);
-    else setTimeout(markVersion, 0);
+    function boot() {
+        injectStyles();
+        decorateIMStickers();
+        markVersion();
+        setTimeout(function () { decorateIMStickers(); markVersion(); }, 1200);
+        setTimeout(function () { decorateIMStickers(); markVersion(); }, 2600);
+        if (window.MutationObserver) {
+            var sg = document.getElementById("stickerGrid");
+            if (sg) new MutationObserver(decorateIMStickers).observe(sg, { childList: true, subtree: true });
+        }
+    }
+
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+    else setTimeout(boot, 0);
 })();
