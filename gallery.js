@@ -1,4 +1,4 @@
-/* Philos 图库 app v4：照片存 IndexedDB（只记地址）、地址失效按哈希找回、空列表可救援 */
+/* Philos 图库 app v5：照片存 IndexedDB（只记地址）、地址失效按哈希找回、空列表可救援、弹窗记录拆成两消息 */
 (function () {
     "use strict";
 
@@ -7,7 +7,7 @@
     var ASK_KEY = "philos_gallery_ask";
     var WANT_KEY = "philos_gallery_want";
 
-    var view = null, gridEl = null, sheetEl = null, tab = "me", pickTarget = null;
+    var view = null, gridEl = null, sheetEl = null, tab = "me";
     var wantOpen = false, imgCache = {}, recovering = false;
 
     function $(id) { return document.getElementById(id); }
@@ -24,7 +24,6 @@
     }
     function saveGal(d) { try { localStorage.setItem(GAL_KEY, JSON.stringify(d)); } catch (e) { alert("存储空间已满，图片没有保存。"); } }
 
-    /* ===== IndexedDB ===== */
     var dbPromise = null;
     function db() {
         if (dbPromise) return dbPromise;
@@ -108,8 +107,7 @@
                 if (!found) {
                     for (var key in all) {
                         var val = all[key];
-                        if (typeof val !== "string") continue;
-                        if (id.indexOf(hash(val)) >= 0) { found = val; break; }
+                        if (typeof val === "string" && id.indexOf(hash(val)) >= 0) { found = val; break; }
                     }
                 }
                 if (found) { imgCache[src] = found; cb(found); }
@@ -160,27 +158,6 @@
         document.head.appendChild(st);
     }
 
-    function compressImage(file, cb) {
-        var url = URL.createObjectURL(file);
-        var img = new Image();
-        img.onload = function () {
-            var max = 900;
-            var scale = Math.min(1, max / Math.max(img.width, img.height));
-            var w = Math.max(1, Math.round(img.width * scale));
-            var h = Math.max(1, Math.round(img.height * scale));
-            var c = document.createElement("canvas");
-            c.width = w; c.height = h;
-            c.getContext("2d").drawImage(img, 0, 0, w, h);
-            var out = "";
-            try { out = c.toDataURL("image/webp", 0.75); } catch (e) {}
-            if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
-            URL.revokeObjectURL(url);
-            cb(out);
-        };
-        img.onerror = function () { URL.revokeObjectURL(url); cb(""); };
-        img.src = url;
-    }
-
     function renderTabs() {
         var btns = view.querySelectorAll("[data-galtab]");
         for (var i = 0; i < btns.length; i++) btns[i].classList.toggle("active", btns[i].getAttribute("data-galtab") === tab);
@@ -220,9 +197,7 @@
             keys.forEach(function (key) {
                 var val = all[key];
                 if (typeof val !== "string") return;
-                gridEl.appendChild(cellFor(val, function () {
-                    openRecoverSheet(val);
-                }));
+                gridEl.appendChild(cellFor(val, function () { openRecoverSheet(val); }));
             });
         });
     }
@@ -238,7 +213,6 @@
             empty.className = "gal-empty";
             empty.textContent = tab === "ta" ? "还没有他的照片" : "还没有我的照片";
             gridEl.appendChild(empty);
-
             var box = document.createElement("div");
             box.className = "gal-rescue";
             var btn = document.createElement("button");
@@ -264,7 +238,6 @@
         sheetEl.classList.remove("show");
         var mask = $("galMask");
         if (mask) mask.classList.remove("show");
-        pickTarget = null;
     }
 
     function sheetBody(prevUrl, actions) {
@@ -309,7 +282,6 @@
 
     function openSheet(src, idx) {
         resolveSrc(src, function (url) {
-            if (!url) { alert("这张图在大仓库里找不到了，可以删掉它。"); }
             var actions = [];
             if (tab === "me") actions.push({ label: "设为我的头像", run: function () { if (url) setAvatar("me", url); } });
             else actions.push({ label: "设为他的头像", run: function () { if (url) setAvatar("ta", url); } });
@@ -385,10 +357,7 @@
         yes.type = "button";
         yes.className = "php-btn primary";
         yes.textContent = "换吧";
-        yes.addEventListener("click", function () {
-            mask.classList.remove("show");
-            setAvatar("ta", url);
-        });
+        yes.addEventListener("click", function () { mask.classList.remove("show"); setAvatar("ta", url); });
         actions.appendChild(no);
         actions.appendChild(yes);
         card.appendChild(av);
@@ -405,65 +374,21 @@
         return list[Math.floor(Math.random() * list.length)].content;
     }
 
-    function roundRect(g, x, y, w, h, r) {
-        g.beginPath();
-        g.moveTo(x + r, y);
-        g.lineTo(x + w - r, y);
-        g.quadraticCurveTo(x + w, y, x + w, y + r);
-        g.lineTo(x + w, y + h - r);
-        g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        g.lineTo(x + r, y + h);
-        g.quadraticCurveTo(x, y + h, x, y + h - r);
-        g.lineTo(x, y + r);
-        g.quadraticCurveTo(x, y, x + r, y);
-        g.closePath();
-    }
-
-    function composeCard(imgSrc, caption, cb) {
-        var img = new Image();
-        img.onload = function () {
-            var W = 640, H = Math.round(W * 4 / 3);
-            var c = document.createElement("canvas");
-            c.width = W; c.height = H;
-            var g = c.getContext("2d");
-            g.fillStyle = "#ffffff";
-            roundRect(g, 0, 0, W, H, 34);
-            g.fill();
-            g.save();
-            roundRect(g, 0, 0, W, H, 34);
-            g.clip();
-            var iw = img.width || 1, ih = img.height || 1;
-            var scale = Math.max(W / iw, H / ih);
-            var dw = iw * scale, dh = ih * scale;
-            g.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
-            var capH = Math.round(H * 0.19);
-            g.fillStyle = "rgba(255,255,255,0.62)";
-            g.fillRect(0, H - capH, W, capH);
-            g.fillStyle = "#1b1d21";
-            g.textAlign = "center";
-            g.textBaseline = "middle";
-            g.font = "600 46px -apple-system, BlinkMacSystemFont, PingFang SC, sans-serif";
-            g.fillText(caption, W / 2, H - capH / 2 + 4, W - 60);
-            g.restore();
-            var out = "";
-            try { out = c.toDataURL("image/webp", 0.82); } catch (e) {}
-            if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
-            cb(out);
-        };
-        img.onerror = function () { cb(""); };
-        img.src = imgSrc;
-    }
-
-    function pushCardToChat(cardSrc) {
-        if (!cardSrc) return;
-        storeOne(cardSrc, function (ref) {
+    /* 关掉弹窗后：先发那张图，再发一条「我想要」+emoji 的普通消息 */
+    function pushWantMessages(photoUrl, caption) {
+        if (!photoUrl) return;
+        storeOne(photoUrl, function (ref) {
             if (window.philosPushMessage) {
-                window.philosPushMessage({ from: "ta", type: "sticker", text: ref, status: "" });
+                window.philosPushMessage({ from: "ta", type: "image", text: ref, status: "", gallery: true });
+                setTimeout(function () {
+                    window.philosPushMessage({ from: "ta", type: "text", text: caption, status: "" });
+                }, 900);
                 return;
             }
             var d = mainData();
             d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-            d.chatHistory.push({ from: "ta", type: "sticker", text: ref, time: Date.now(), status: "" });
+            d.chatHistory.push({ from: "ta", type: "image", text: ref, time: Date.now(), status: "", gallery: true });
+            d.chatHistory.push({ from: "ta", type: "text", text: caption, time: Date.now() + 900, status: "" });
             saveMain(d);
             if (window.philosRefreshChat) window.philosRefreshChat();
         });
@@ -496,7 +421,7 @@
             done = true;
             mask.parentNode.removeChild(mask);
             wantOpen = false;
-            composeCard(url, caption, function (out) { pushCardToChat(out); });
+            pushWantMessages(url, caption);
         });
     }
 
