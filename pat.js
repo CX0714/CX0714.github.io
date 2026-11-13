@@ -1,4 +1,4 @@
-/* Philos 他的主动行为：拍一拍（间隔可调）/ 主动发消息 / 主动打电话 / 主屏未读红点 / 图标替换 */
+/* Philos 他的主动行为：拍一拍（间隔可调）/ 主动发消息 / 主动打电话 / 主屏未读红点 / 测试按钮 */
 (function () {
     "use strict";
 
@@ -153,6 +153,7 @@
 
     function patPool(d) { return (d.cards || []).filter(function (c) { return c.kind === "status" && c.content; }); }
     function textPool(d) { return (d.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; }); }
+    function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
     /* ===== 拍一拍间隔（存在独立键里，免得被设置页的深合并丢掉） ===== */
     function patInterval() {
@@ -167,25 +168,29 @@
     }
     function savePatInterval(v) { try { localStorage.setItem(PAT_IV_KEY, JSON.stringify(v)); } catch (e) {} }
 
-    function firePat() {
+    function doPat(force) {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
         var chance = perm.patChance == null ? 30 : Number(perm.patChance);
         var cards = patPool(d);
-        if (cards.length && chance > 0 && Math.random() * 100 < chance) {
-            var text = cards[Math.floor(Math.random() * cards.length)].content;
-            if (inChat() && window.philosPushMessage) {
-                window.philosPushMessage({ type: "status", text: "—— " + text + " ——" });
-            } else {
-                d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-                d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
-                setData(d);
-                if (inChat()) appendToChat("—— " + text + " ——");
-                else showPopup(text);
-            }
+        if (!cards.length) {
+            if (force) alert("字卡库里还没有「状态」分类的字卡。");
+            return;
         }
-        schedulePat();
+        if (!force && !(chance > 0 && Math.random() * 100 < chance)) return;
+        var text = pick(cards).content;
+        if (inChat() && window.philosPushMessage) {
+            window.philosPushMessage({ type: "status", text: "—— " + text + " ——" });
+        } else {
+            d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+            d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
+            setData(d);
+            if (inChat()) appendToChat("—— " + text + " ——");
+            else showPopup(text);
+        }
     }
+
+    function firePat() { doPat(false); schedulePat(); }
 
     function schedulePat() {
         if (patTimer) clearTimeout(patTimer);
@@ -217,6 +222,16 @@
         setData(d);
     }
 
+    function pushWxMessage(text) {
+        var w = getWx();
+        w.history = Array.isArray(w.history) ? w.history : [];
+        w.history.push({ from: "ta", type: "text", text: text, time: Date.now() });
+        setWx(w);
+        var v = document.getElementById("wechatView");
+        if (v && v.classList.contains("show") && window.PhilosRefreshWeChat) window.PhilosRefreshWeChat();
+        else notify(w.name || "Ta", text);
+    }
+
     function refreshChatView() {
         if (window.philosRefreshChat) { window.philosRefreshChat(); return; }
         var chat = $("appChat");
@@ -237,7 +252,7 @@
             w.history = Array.isArray(w.history) ? w.history : [];
             var first = "";
             for (var i = 0; i < count; i++) {
-                var c = pool[Math.floor(Math.random() * pool.length)].content;
+                var c = pick(pool).content;
                 if (!first) first = c;
                 w.history.push({ from: "ta", type: "text", text: c, time: Date.now() + i * 1500 });
             }
@@ -252,7 +267,7 @@
         } else {
             var texts = [];
             for (var j = 0; j < count; j++) {
-                texts.push(pool[Math.floor(Math.random() * pool.length)].content);
+                texts.push(pick(pool).content);
             }
             var firstText = texts[0] || "";
 
@@ -285,17 +300,21 @@
         msgTimer = setTimeout(fireProactiveMessage, delayMs(perm, "activeMin", "activeMax", 1));
     }
 
-    function fireProactiveCall() {
-        var d = getData();
-        var perm = (d.settings && d.settings.permission) || {};
-        if (!perm.callEnabled) { scheduleCall(); return; }
-        if ($("callScreen") && !$("callScreen").hidden) { scheduleCall(); return; }
+    function doCall() {
         var chat = $("appChat");
         if (chat) chat.click();
         setTimeout(function () {
             var call = $("btnChatCall");
             if (call) call.click();
         }, 400);
+    }
+
+    function fireProactiveCall() {
+        var d = getData();
+        var perm = (d.settings && d.settings.permission) || {};
+        if (!perm.callEnabled) { scheduleCall(); return; }
+        if ($("callScreen") && !$("callScreen").hidden) { scheduleCall(); return; }
+        doCall();
         scheduleCall();
     }
 
@@ -307,43 +326,72 @@
         callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 1));
     }
 
-    /* ===== 频率页：加一张「拍一拍」卡 ===== */
-    function ensureFreqPat() {
+    /* ===== 频率页：拍一拍间隔 + 测试 ===== */
+    function ensureFreqCards() {
         var view = document.getElementById("freqView");
         if (!view || !view.classList.contains("show")) return;
         var body = document.getElementById("freqBody");
-        if (!body || body.querySelector("[data-philos-patcard]")) return;
+        if (!body) return;
 
-        var iv = patInterval();
-        var card = document.createElement("div");
-        card.className = "group-card control-card";
-        card.setAttribute("data-philos-patcard", "1");
-        card.innerHTML =
-            '<div class="card-title">拍一拍</div>' +
-            '<div class="control-block"><div class="control-head"><span class="control-label">最短间隔</span><span class="control-value" data-pat-val="min">' + iv.min + 'min</span></div><input class="slider" type="range" data-pat-key="min" min="1" max="240" step="1"></div>' +
-            '<div class="control-block"><div class="control-head"><span class="control-label">最长间隔</span><span class="control-value" data-pat-val="max">' + iv.max + 'min</span></div><input class="slider" type="range" data-pat-key="max" min="1" max="480" step="1"></div>';
+        if (!body.querySelector("[data-philos-patcard]")) {
+            var iv = patInterval();
+            var card = document.createElement("div");
+            card.className = "group-card control-card";
+            card.setAttribute("data-philos-patcard", "1");
+            card.innerHTML =
+                '<div class="card-title">拍一拍</div>' +
+                '<div class="control-block"><div class="control-head"><span class="control-label">最短间隔</span><span class="control-value" data-pat-val="min">' + iv.min + 'min</span></div><input class="slider" type="range" data-pat-key="min" min="1" max="240" step="1"></div>' +
+                '<div class="control-block"><div class="control-head"><span class="control-label">最长间隔</span><span class="control-value" data-pat-val="max">' + iv.max + 'min</span></div><input class="slider" type="range" data-pat-key="max" min="1" max="480" step="1"></div>';
 
-        var minEl = card.querySelector('[data-pat-key="min"]');
-        var maxEl = card.querySelector('[data-pat-key="max"]');
-        if (minEl) minEl.value = iv.min;
-        if (maxEl) maxEl.value = iv.max;
+            var minEl = card.querySelector('[data-pat-key="min"]');
+            var maxEl = card.querySelector('[data-pat-key="max"]');
+            if (minEl) minEl.value = iv.min;
+            if (maxEl) maxEl.value = iv.max;
 
-        function onInput() {
-            var cur = patInterval();
-            cur.min = Math.max(1, Number(minEl.value) || 1);
-            cur.max = Math.max(cur.min, Number(maxEl.value) || cur.min);
-            if (Number(maxEl.value) !== cur.max) maxEl.value = cur.max;
-            savePatInterval(cur);
-            var lmin = card.querySelector('[data-pat-val="min"]');
-            var lmax = card.querySelector('[data-pat-val="max"]');
-            if (lmin) lmin.textContent = cur.min + "min";
-            if (lmax) lmax.textContent = cur.max + "min";
-            schedulePat();
+            function onInput() {
+                var cur = patInterval();
+                cur.min = Math.max(1, Number(minEl.value) || 1);
+                cur.max = Math.max(cur.min, Number(maxEl.value) || cur.min);
+                if (Number(maxEl.value) !== cur.max) maxEl.value = cur.max;
+                savePatInterval(cur);
+                var lmin = card.querySelector('[data-pat-val="min"]');
+                var lmax = card.querySelector('[data-pat-val="max"]');
+                if (lmin) lmin.textContent = cur.min + "min";
+                if (lmax) lmax.textContent = cur.max + "min";
+                schedulePat();
+            }
+            if (minEl) minEl.addEventListener("input", onInput);
+            if (maxEl) maxEl.addEventListener("input", onInput);
+
+            body.appendChild(card);
         }
-        if (minEl) minEl.addEventListener("input", onInput);
-        if (maxEl) maxEl.addEventListener("input", onInput);
 
-        body.appendChild(card);
+        if (!body.querySelector("[data-philos-testcard]")) {
+            var test = document.createElement("div");
+            test.className = "group-card";
+            test.setAttribute("data-philos-testcard", "1");
+            test.innerHTML =
+                '<button class="settings-item" data-pat-test="pat" type="button"><span>让他拍一拍</span></button>' +
+                '<button class="settings-item" data-pat-test="chat" type="button"><span>让他发一条 iMessage</span></button>' +
+                '<button class="settings-item" data-pat-test="wx" type="button"><span>让他发一条微信</span></button>' +
+                '<button class="settings-item" data-pat-test="call" type="button"><span>让他打来电话</span></button>';
+
+            test.addEventListener("click", function (e) {
+                var btn = e.target.closest ? e.target.closest("[data-pat-test]") : null;
+                if (!btn) return;
+                var act = btn.getAttribute("data-pat-test");
+                if (act === "pat") { doPat(true); return; }
+                if (act === "call") { doCall(); return; }
+                var d = getData();
+                var pool = textPool(d);
+                if (!pool.length) { alert("字卡库里还没有文字或 emoji 字卡。"); return; }
+                var text = pick(pool).content;
+                if (act === "wx") pushWxMessage(text);
+                else { pushChatMessage(text); if (!inChat()) notify(d.taName || "Ta", text); }
+            });
+
+            body.appendChild(test);
+        }
     }
 
     /* ===== 主屏未读红点（电话由 phone.js 自己管） ===== */
@@ -428,13 +476,13 @@
     function tick() {
         if (document.hidden) return;
         refreshUnread();
-        ensureFreqPat();
+        ensureFreqCards();
         swapIcons();
     }
 
     function startWatch() {
         refreshUnread();
-        ensureFreqPat();
+        ensureFreqCards();
         swapIcons();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(tick, 2000);
@@ -443,7 +491,7 @@
             if (!t || !t.closest) return;
             if (t.closest("#appChat")) markRead("chat");
             else if (t.closest("#btnWechat")) markRead("wx");
-            else if (t.closest("#btnFreq")) setTimeout(ensureFreqPat, 120);
+            else if (t.closest("#btnFreq")) setTimeout(ensureFreqCards, 120);
         }, true);
         document.addEventListener("visibilitychange", function () { if (!document.hidden) tick(); });
         window.addEventListener("focus", tick);
@@ -456,7 +504,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H48";
+                    if (val) val.textContent = "3.9 · H49";
                 }
             }
         } catch (e) {}
@@ -466,6 +514,7 @@
         injectStyles();
         markVersion();
         loadModule("phone.js");
+        loadModule("extras.js");
         swapIcons();
         schedulePat();
         scheduleMessage();
