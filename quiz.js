@@ -1,4 +1,4 @@
-/* Philos 出题 app v4（居中弹窗）+ iMessage 表情包删除修正 */
+/* Philos 出题 app v5：居中弹窗 + 下一题（保存上一题） */
 (function () {
     "use strict";
 
@@ -83,6 +83,17 @@
         }
     }
 
+    function collectOptions() {
+        var rows = optWrap.querySelectorAll(".qz-opt");
+        var out = [];
+        for (var i = 0; i < rows.length; i++) {
+            var input = rows[i].querySelector("input");
+            var v = input ? input.value.trim() : "";
+            if (v) out.push(v);
+        }
+        return out;
+    }
+
     function renderHistory() {
         if (!histBox) return;
         var list = loadHist();
@@ -130,6 +141,7 @@
                 '<button type="button" class="qz-add" id="qzAdd">+ 添加选项</button>' +
                 '<div class="qz-actions">' +
                     '<button type="button" class="qz-btn primary" id="qzAsk">让他来答</button>' +
+                    '<button type="button" class="qz-btn ghost" id="qzNext">下一题</button>' +
                     '<button type="button" class="qz-btn ghost" id="qzHistBtn">查看历史题目</button>' +
                 '</div>' +
                 '<div class="qz-hist" id="qzHist"></div>' +
@@ -150,6 +162,7 @@
             relabel();
         });
         askBtn.addEventListener("click", ask);
+        document.getElementById("qzNext").addEventListener("click", nextQuestion);
         histBtn.addEventListener("click", function () {
             showingHistory = !showingHistory;
             histBox.classList.toggle("show", showingHistory);
@@ -170,6 +183,25 @@
         showingHistory = false;
         if (histBox) histBox.classList.remove("show");
         if (histBtn) histBtn.textContent = "查看历史题目";
+    }
+
+    function nextQuestion() {
+        if (asking) return;
+        var q = qInput.value.trim();
+        if (q) {
+            var hist = loadHist();
+            var exists = false;
+            for (var i = 0; i < hist.length; i++) {
+                if (hist[i] && hist[i].q === q) { exists = true; break; }
+            }
+            if (!exists) {
+                hist.unshift({ q: q, opts: collectOptions(), pick: -1, time: Date.now() });
+                saveHist(hist);
+            }
+        }
+        reset();
+        renderHistory();
+        setTimeout(function () { if (qInput) qInput.focus(); }, 60);
     }
 
     function open() {
@@ -259,7 +291,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H35";
+                    if (val) val.textContent = "3.9 · H46";
                 }
             }
         } catch (e) {}
