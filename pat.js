@@ -44,13 +44,13 @@
             "html[data-theme=\"light\"] .splash{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .settings-view,html[data-theme=\"light\"] .app-view{background-color:#EEEEEE !important;background-image:none !important;}" +
             "html[data-theme=\"light\"] .settings-shell,html[data-theme=\"light\"] .set-page,html[data-theme=\"light\"] .app-scroll{background-color:transparent !important;background-image:none !important;}" +
-            /* 背景分层：图片单独一层放到底下（负 z-index），不动任何子元素定位 */
+            /* 背景分层：颜色在最底、图片在其上（和原来一样图片盖色），都不动子元素定位 */
             ".desktop-view{overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
-            ".desktop-view::before{content:\"\";position:absolute;inset:-6%;background-image:var(--home-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(var(--home-blur,20px));z-index:-1;pointer-events:none;}" +
-            ".desktop-view::after{content:\"\";position:absolute;inset:0;background-color:var(--home-bg-color,transparent);z-index:-1;pointer-events:none;}" +
+            ".desktop-view::before{content:\"\";position:absolute;inset:0;background-color:var(--home-bg-color,transparent);z-index:-1;pointer-events:none;}" +
+            ".desktop-view::after{content:\"\";position:absolute;inset:-6%;background-image:var(--home-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(var(--home-blur,20px));z-index:-1;pointer-events:none;}" +
             ".chat-view{overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
-            ".chat-view::before{content:\"\";position:absolute;inset:-6%;background-image:var(--chat-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(20px);z-index:-1;pointer-events:none;}" +
-            ".chat-view::after{content:\"\";position:absolute;inset:0;background-color:var(--chat-bg-color,transparent);z-index:-1;pointer-events:none;}";
+            ".chat-view::before{content:\"\";position:absolute;inset:0;background-color:var(--chat-bg-color,transparent);z-index:-1;pointer-events:none;}" +
+            ".chat-view::after{content:\"\";position:absolute;inset:-6%;background-image:var(--chat-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(20px);z-index:-1;pointer-events:none;}";
         document.head.appendChild(st);
     }
 
@@ -357,7 +357,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H43";
+                    if (val) val.textContent = "3.9 · H44";
                 }
             }
         } catch (e) {}
