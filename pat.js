@@ -1,4 +1,4 @@
-/* Philos 他的主动行为：拍一拍（间隔可调）/ 主动发消息 / 主动打电话 / 主屏未读红点 */
+/* Philos 他的主动行为：拍一拍（间隔可调）/ 主动发消息 / 主动打电话 / 主屏未读红点 / 图标替换 */
 (function () {
     "use strict";
 
@@ -44,6 +44,41 @@
             "html[data-theme=\"light\"] .settings-view,html[data-theme=\"light\"] .app-view{background-color:#EEEEEE !important;background-image:none !important;}" +
             "html[data-theme=\"light\"] .settings-shell,html[data-theme=\"light\"] .set-page,html[data-theme=\"light\"] .app-scroll{background-color:transparent !important;background-image:none !important;}";
         document.head.appendChild(st);
+    }
+
+    /* ===== 换图标：频率=心电图，Dock 外观=四角星 ===== */
+    var SVG_NS = "http://www.w3.org/2000/svg";
+    var XLINK_NS = "http://www.w3.org/1999/xlink";
+
+    function addSymbol(sprite, id, inner) {
+        if (document.getElementById(id)) return;
+        var sym = document.createElementNS(SVG_NS, "symbol");
+        sym.setAttribute("id", id);
+        sym.setAttribute("viewBox", "0 0 24 24");
+        sym.innerHTML = inner;
+        sprite.appendChild(sym);
+    }
+
+    function injectSprite() {
+        var sprite = document.querySelector("svg.svg-sprite");
+        if (!sprite) return;
+        addSymbol(sprite, "ic-ecg", '<path d="M2.2 12.4h4.1l2.2-6.6 3.1 13.4 2.4-9.2 1.8 4.7h5.9"/>');
+        addSymbol(sprite, "ic-spark4", '<path d="M12 2.6c.75 5.4 4 8.65 9.4 9.4-5.4.75-8.65 4-9.4 9.4-.75-5.4-4-8.65-9.4-9.4 5.4-.75 8.65-4 9.4-9.4z" fill="currentColor" stroke="none"/>');
+    }
+
+    function setUse(sel, id) {
+        var use = document.querySelector(sel);
+        if (!use) return;
+        if (use.getAttribute("href") !== id) {
+            use.setAttribute("href", id);
+            try { use.setAttributeNS(XLINK_NS, "xlink:href", id); } catch (e) {}
+        }
+    }
+
+    function swapIcons() {
+        injectSprite();
+        setUse("#btnFreq use", "#ic-ecg");
+        setUse("#dockAppearance use", "#ic-spark4");
     }
 
     function inChat() {
@@ -394,11 +429,13 @@
         if (document.hidden) return;
         refreshUnread();
         ensureFreqPat();
+        swapIcons();
     }
 
     function startWatch() {
         refreshUnread();
         ensureFreqPat();
+        swapIcons();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(tick, 2000);
         document.addEventListener("click", function (e) {
@@ -419,7 +456,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H45";
+                    if (val) val.textContent = "3.9 · H48";
                 }
             }
         } catch (e) {}
@@ -429,10 +466,13 @@
         injectStyles();
         markVersion();
         loadModule("phone.js");
+        swapIcons();
         schedulePat();
         scheduleMessage();
         scheduleCall();
         startWatch();
+        setTimeout(swapIcons, 600);
+        setTimeout(swapIcons, 1800);
         setTimeout(markVersion, 1500);
     }
 
