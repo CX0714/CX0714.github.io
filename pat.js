@@ -36,21 +36,21 @@
             ".php-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}" +
             ".php-btn{height:44px;border-radius:14px;font-size:14px;font-weight:500;border:none;color:var(--text-primary,#1b1d21);background:rgba(140,155,175,.20);}" +
             ".php-btn.primary{background:#5b7fa6;color:#fff;}" +
-            ".philos-dot{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
+            /* 红点不能被图标裁掉 */
+            ".app-icon,.app-icon-box,.dock-btn{overflow:visible !important;}" +
+            ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
             /* 浅色底统一 #EEEEEE */
             "html[data-theme=\"light\"] body{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .splash{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .settings-view,html[data-theme=\"light\"] .app-view{background-color:#EEEEEE !important;background-image:none !important;}" +
             "html[data-theme=\"light\"] .settings-shell,html[data-theme=\"light\"] .set-page,html[data-theme=\"light\"] .app-scroll{background-color:transparent !important;background-image:none !important;}" +
-            /* 背景分层：把图片单独抽成一层，磨砂度才有东西可模糊 */
-            ".desktop-view{position:relative;overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
-            ".desktop-view::before{content:\"\";position:absolute;inset:-8%;background-image:var(--home-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(var(--home-blur,20px));pointer-events:none;z-index:0;}" +
-            ".desktop-view::after{content:\"\";position:absolute;inset:0;background-color:var(--home-bg-color,transparent);pointer-events:none;z-index:0;}" +
-            ".desktop-content{position:relative;z-index:1;}" +
-            ".chat-view{position:relative;overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
-            ".chat-view::before{content:\"\";position:absolute;inset:-8%;background-image:var(--chat-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(20px);pointer-events:none;z-index:0;}" +
-            ".chat-view::after{content:\"\";position:absolute;inset:0;background-color:var(--chat-bg-color,transparent);pointer-events:none;z-index:0;}" +
-            ".chat-header,.chat-messages,.chat-input-wrapper{position:relative;z-index:1;}";
+            /* 背景分层：图片单独一层放到底下（负 z-index），不动任何子元素定位 */
+            ".desktop-view{overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
+            ".desktop-view::before{content:\"\";position:absolute;inset:-6%;background-image:var(--home-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(var(--home-blur,20px));z-index:-1;pointer-events:none;}" +
+            ".desktop-view::after{content:\"\";position:absolute;inset:0;background-color:var(--home-bg-color,transparent);z-index:-1;pointer-events:none;}" +
+            ".chat-view{overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
+            ".chat-view::before{content:\"\";position:absolute;inset:-6%;background-image:var(--chat-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(20px);z-index:-1;pointer-events:none;}" +
+            ".chat-view::after{content:\"\";position:absolute;inset:0;background-color:var(--chat-bg-color,transparent);z-index:-1;pointer-events:none;}";
         document.head.appendChild(st);
     }
 
@@ -192,7 +192,8 @@
                 w.history.push({ from: "ta", type: "text", text: c, time: Date.now() + i * 1500 });
             }
             setWx(w);
-            var wxOpen = document.getElementById("wechatView") && document.getElementById("wechatView").classList.contains("show");
+            var wxView = document.getElementById("wechatView");
+            var wxOpen = !!(wxView && wxView.classList.contains("show"));
             if (wxOpen) {
                 if (window.PhilosRefreshWeChat) window.PhilosRefreshWeChat();
             } else {
@@ -338,7 +339,7 @@
     function startUnreadWatch() {
         refreshUnread();
         if (unreadTimer) clearInterval(unreadTimer);
-        unreadTimer = setInterval(refreshUnread, 2000);
+        unreadTimer = setInterval(function () { if (!document.hidden) refreshUnread(); }, 3000);
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
@@ -356,7 +357,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H41";
+                    if (val) val.textContent = "3.9 · H43";
                 }
             }
         } catch (e) {}
