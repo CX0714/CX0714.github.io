@@ -1,4 +1,4 @@
-/* Philos 他的主动行为：拍一拍 / 主动发消息 / 主动打电话（来电可接听）/ 未读红点 / 情绪显示 */
+/* Philos 他的主动行为：拍一拍 / 主动发消息 / 来电（可接听）/ 未读红点 / 情绪显示 */
 (function () {
     "use strict";
 
@@ -40,7 +40,6 @@
             ".php-btn.primary{background:#5b7fa6;color:#fff;}" +
             ".app-icon,.app-icon-box,.dock-btn{overflow:visible !important;}" +
             ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
-            /* 来电 */
             ".call-in{position:fixed;inset:0;z-index:625;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(12,16,22,.55);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);}" +
             ".call-in.show{display:flex;}" +
             ".call-in-card{width:82%;max-width:330px;padding:30px 20px 22px;border-radius:32px;text-align:center;background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(26px) saturate(120%);backdrop-filter:blur(26px) saturate(120%);border:1px solid rgba(255,255,255,.6);box-shadow:0 26px 60px rgba(20,30,45,.32);}" +
@@ -54,7 +53,6 @@
             ".call-in-btn{height:52px;border-radius:18px;border:none;font-size:15px;font-weight:600;}" +
             ".call-in-btn.answer{background:#34c759;color:#fff;}" +
             ".call-in-btn.hang{background:#ff3b30;color:#fff;}" +
-            /* 情绪 */
             ".msg-mood{display:flex;align-items:center;gap:5px;font-size:11px;line-height:1.2;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;pointer-events:none;opacity:.9;}" +
             ".msg-mood .mood-dot{width:6px;height:6px;border-radius:50%;background:#34c759;flex:0 0 auto;}" +
             "html[data-theme=\"light\"] body{background:#EEEEEE !important;}" +
@@ -66,7 +64,6 @@
 
     var SVG_NS = "http://www.w3.org/2000/svg";
     var XLINK_NS = "http://www.w3.org/1999/xlink";
-
     function addSymbol(sprite, id, inner) {
         if (document.getElementById(id)) return;
         var sym = document.createElementNS(SVG_NS, "symbol");
@@ -75,14 +72,12 @@
         sym.innerHTML = inner;
         sprite.appendChild(sym);
     }
-
     function injectSprite() {
         var sprite = document.querySelector("svg.svg-sprite");
         if (!sprite) return;
         addSymbol(sprite, "ic-ecg", '<path d="M2.2 12.4h4.1l2.2-6.6 3.1 13.4 2.4-9.2 1.8 4.7h5.9"/>');
         addSymbol(sprite, "ic-spark4", '<path d="M12 2.6c.75 5.4 4 8.65 9.4 9.4-5.4.75-8.65 4-9.4 9.4-.75-5.4-4-8.65-9.4-9.4 5.4-.75 8.65-4 9.4-9.4z" fill="currentColor" stroke="none"/>');
     }
-
     function setUse(sel, id) {
         var use = document.querySelector(sel);
         if (!use) return;
@@ -91,7 +86,6 @@
             try { use.setAttributeNS(XLINK_NS, "xlink:href", id); } catch (e) {}
         }
     }
-
     function swapIcons() {
         injectSprite();
         setUse("#btnFreq use", "#ic-ecg");
@@ -103,7 +97,6 @@
         return !!(v && v.classList.contains("active"));
     }
 
-    /* 他的头像：优先用已经渲染出来的那张（兼容 IndexedDB 存图） */
     function taAvatarSrc() {
         var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
         if (live) {
@@ -128,14 +121,28 @@
         } catch (e) {}
     }
 
-    function appendToChat(text) {
-        var box = $("chatMessages");
-        if (!box) return;
-        var el = document.createElement("div");
-        el.className = "msg-status";
-        el.textContent = text;
-        box.appendChild(el);
-        box.scrollTop = box.scrollHeight;
+    /* 关键：所有「他发来的内容」都走这个入口，写进主程序内存 + 保存 + 渲染 */
+    function pushHisMessage(msg) {
+        if (!msg) return;
+        if (!msg.time) msg.time = Date.now();
+        if (window.philosPushMessage) {
+            window.philosPushMessage(msg);
+            return;
+        }
+        var d = getData();
+        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        d.chatHistory.push(msg);
+        setData(d);
+        if (window.philosRefreshChat) window.philosRefreshChat();
+    }
+
+    function pushText(text) {
+        if (!text) return;
+        pushHisMessage({ from: "ta", type: "text", text: text, status: "" });
+    }
+    function pushStatus(text) {
+        if (!text) return;
+        pushHisMessage({ type: "status", text: "—— " + text + " ——" });
     }
 
     function showPopup(text) {
@@ -185,7 +192,6 @@
     function textPool(d) { return (d.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; }); }
     function pick(list) { return list[Math.floor(Math.random() * list.length)]; }
 
-    /* ===== 拍一拍间隔 ===== */
     function patInterval() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(PAT_IV_KEY) || "null"); } catch (e) { v = null; }
@@ -209,15 +215,8 @@
         }
         if (!force && !(chance > 0 && Math.random() * 100 < chance)) return;
         var text = pick(cards).content;
-        if (inChat() && window.philosPushMessage) {
-            window.philosPushMessage({ type: "status", text: "—— " + text + " ——" });
-        } else {
-            d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-            d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
-            setData(d);
-            if (inChat()) appendToChat("—— " + text + " ——");
-            else showPopup(text);
-        }
+        pushStatus(text);
+        if (!inChat()) showPopup(text);
     }
 
     function firePat() { doPat(false); schedulePat(); }
@@ -233,23 +232,11 @@
         if (max < min) max = min;
         return min + Math.random() * (max - min);
     }
-
     function delayMs(perm, minKey, maxKey, fallbackMin) {
         var a = Math.max(0, Number(perm[minKey]) || 0);
         var b = Math.max(0, Number(perm[maxKey]) || 0);
         if (a === 0 && b === 0) return (fallbackMin || 1) * 60000;
         return randBetween(a, b) * 60000;
-    }
-
-    function pushChatMessage(text) {
-        if (window.philosPushMessage) {
-            window.philosPushMessage({ from: "ta", type: "text", text: text, status: "" });
-            return;
-        }
-        var d = getData();
-        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-        d.chatHistory.push({ from: "ta", type: "text", text: text, time: Date.now(), status: "" });
-        setData(d);
     }
 
     function pushWxMessage(text) {
@@ -262,13 +249,7 @@
         else notify(w.name || "Ta", text);
     }
 
-    function refreshChatView() {
-        if (window.philosRefreshChat) { window.philosRefreshChat(); return; }
-        var chat = $("appChat");
-        if (chat) chat.click();
-    }
-
-    /* ===== 他打来的电话：来电弹窗（接听 / 挂断） ===== */
+    /* ===== 来电 ===== */
     var incoming = { active: false, connected: false, seconds: 0, timer: null };
 
     function fmtDur(sec) {
@@ -297,14 +278,7 @@
     }
 
     function recordCall(text) {
-        if (window.philosPushMessage) {
-            window.philosPushMessage({ type: "call", text: text, time: Date.now() });
-            return;
-        }
-        var d = getData();
-        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-        d.chatHistory.push({ type: "call", text: text, time: Date.now() });
-        setData(d);
+        pushHisMessage({ type: "call", text: text, time: Date.now() });
     }
 
     function startIncomingCall(force) {
@@ -373,6 +347,7 @@
         closeIncoming();
     }
 
+    /* ===== 主动发消息 ===== */
     function fireProactiveMessage() {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
@@ -399,21 +374,10 @@
         } else {
             var texts = [];
             for (var j = 0; j < count; j++) texts.push(pick(pool).content);
-            var firstText = texts[0] || "";
-
-            if (inChat()) {
-                texts.forEach(function (txt, idx) {
-                    setTimeout(function () { pushChatMessage(txt); refreshChatView(); }, idx * 1400);
-                });
-            } else {
-                var dd = getData();
-                dd.chatHistory = Array.isArray(dd.chatHistory) ? dd.chatHistory : [];
-                for (var k = 0; k < count; k++) {
-                    dd.chatHistory.push({ from: "ta", type: "text", text: texts[k], time: Date.now() + k * 1500, status: "" });
-                }
-                setData(dd);
-                notify(dd.taName || "Ta", firstText);
-            }
+            texts.forEach(function (txt, idx) {
+                setTimeout(function () { pushText(txt); }, idx * 1200);
+            });
+            if (!inChat()) notify(d.taName || "Ta", texts[0] || "给你发消息了");
         }
 
         scheduleMessage();
@@ -441,10 +405,10 @@
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
         if (!perm.callEnabled) { callTimer = setTimeout(scheduleCall, 30000); return; }
-        callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 1));
+        callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 60000));
     }
 
-    /* ===== 情绪：他气泡下面那行小字 ===== */
+    /* ===== 情绪显示 ===== */
     function moodStore() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(MOOD_KEY) || "null"); } catch (e) { v = null; }
@@ -561,7 +525,7 @@
                 if (!pool.length) { alert("字卡库里还没有文字或 emoji 字卡。"); return; }
                 var text = pick(pool).content;
                 if (act === "wx") pushWxMessage(text);
-                else { pushChatMessage(text); if (!inChat()) notify(d.taName || "Ta", text); }
+                else { pushText(text); if (!inChat()) notify(d.taName || "Ta", text); }
             });
 
             body.appendChild(test);
@@ -592,7 +556,6 @@
         }
         return n;
     }
-
     function countWxUnread(after) {
         var w = getWx();
         var list = Array.isArray(w.history) ? w.history : [];
@@ -604,7 +567,6 @@
         }
         return n;
     }
-
     function paintBadge(id, n) {
         var el = $(id);
         if (!el) return;
@@ -622,7 +584,6 @@
         }
         dot.textContent = n > 99 ? "99+" : String(n);
     }
-
     function refreshUnread() {
         var st = getUnread();
         var now = Date.now();
@@ -637,7 +598,6 @@
         paintBadge("appChat", countChatUnread(st.chat));
         paintBadge("btnWechat", countWxUnread(st.wx));
     }
-
     function markRead(which) {
         var st = getUnread();
         st[which] = Date.now();
@@ -678,7 +638,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H50";
+                    if (val) val.textContent = "3.9 · H52";
                 }
             }
         } catch (e) {}
