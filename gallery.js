@@ -1,4 +1,4 @@
-/* Philos 图库 app v2：我的 / 他的 两栏、上传、设为头像或背景、他申请换头像、他的「我想要」弹窗 */
+/* Philos 图库 app v3：照片存 IndexedDB（只记地址）、不重启页面、他的「我想要」弹窗 */
 (function () {
     "use strict";
 
@@ -8,7 +8,7 @@
     var WANT_KEY = "philos_gallery_want";
 
     var view = null, gridEl = null, sheetEl = null, tab = "me", pickTarget = null;
-    var wantOpen = false;
+    var wantOpen = false, imgCache = {};
 
     function $(id) { return document.getElementById(id); }
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
@@ -23,6 +23,74 @@
         return d;
     }
     function saveGal(d) { try { localStorage.setItem(GAL_KEY, JSON.stringify(d)); } catch (e) { alert("存储空间已满，图片没有保存。"); } }
+
+    /* ===== IndexedDB ===== */
+    var dbPromise = null;
+    function db() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise(function (resolve) {
+            try {
+                var req = indexedDB.open("philos_images", 1);
+                req.onupgradeneeded = function () { try { req.result.createObjectStore("images"); } catch (e) {} };
+                req.onsuccess = function () { resolve(req.result); };
+                req.onerror = function () { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+        return dbPromise;
+    }
+    function hash(str) {
+        var h1 = 5381, h2 = 52711;
+        for (var i = 0; i < str.length; i++) {
+            var c = str.charCodeAt(i);
+            h1 = (h1 * 33 ^ c) >>> 0;
+            h2 = (h2 * 31 + c) >>> 0;
+        }
+        return h1.toString(36) + h2.toString(36) + str.length.toString(36);
+    }
+    function putImg(id, url) {
+        return db().then(function (d) {
+            if (!d) return false;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = d.transaction("images", "readwrite");
+                    tx.objectStore("images").put(url, id);
+                    tx.oncomplete = function () { resolve(true); };
+                    tx.onerror = function () { resolve(false); };
+                    tx.onabort = function () { resolve(false); };
+                } catch (e) { resolve(false); }
+            });
+        });
+    }
+    function getImg(id) {
+        return db().then(function (d) {
+            if (!d) return null;
+            return new Promise(function (resolve) {
+                try {
+                    var req = d.transaction("images").objectStore("images").get(id);
+                    req.onsuccess = function () { resolve(req.result || null); };
+                    req.onerror = function () { resolve(null); };
+                } catch (e) { resolve(null); }
+            });
+        });
+    }
+    function storeOne(url, cb) {
+        var id = "i" + hash(url);
+        putImg(id, url).then(function (ok) { cb(ok ? "idb://" + id : url); });
+    }
+    function resolveSrc(src, cb) {
+        if (!src) { cb(""); return; }
+        if (src.indexOf("idb://") !== 0) { cb(src); return; }
+        if (imgCache[src]) { cb(imgCache[src]); return; }
+        getImg(src.slice(6)).then(function (url) {
+            if (url) { imgCache[src] = url; cb(url); }
+            else cb("");
+        });
+    }
+
+    function softRefresh() {
+        if (window.philosReload) { setTimeout(function () { window.philosReload(); }, 80); return; }
+        setTimeout(function () { location.reload(); }, 200);
+    }
 
     function injectStyles() {
         if (document.getElementById("philos-gal-style")) return;
@@ -69,7 +137,7 @@
             c.width = w; c.height = h;
             c.getContext("2d").drawImage(img, 0, 0, w, h);
             var out = "";
-            try { out = c.toDataURL("image/webp", 0.8); } catch (e) {}
+            try { out = c.toDataURL("image/webp", 0.75); } catch (e) {}
             if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
             URL.revokeObjectURL(url);
             cb(out);
@@ -100,9 +168,9 @@
             cell.type = "button";
             cell.className = "gal-cell";
             var img = document.createElement("img");
-            img.src = src;
             img.alt = "";
             cell.appendChild(img);
+            resolveSrc(src, function (url) { if (url) img.src = url; });
             cell.addEventListener("click", function () { openSheet(src, idx); });
             gridEl.appendChild(cell);
         });
@@ -117,62 +185,55 @@
     }
 
     function openSheet(src, idx) {
-        pickTarget = { src: src, idx: idx, list: tab };
-        var body = $("galSheetBody");
-        if (!body) return;
-        body.innerHTML = "";
-        var prev = document.createElement("div");
-        prev.className = "gal-preview";
-        prev.style.backgroundImage = 'url("' + src.replace(/"/g, "&quot;") + '")';
-        body.appendChild(prev);
+        resolveSrc(src, function (url) {
+            if (!url) return;
+            pickTarget = { src: url, ref: src, idx: idx, list: tab };
+            var body = $("galSheetBody");
+            if (!body) return;
+            body.innerHTML = "";
+            var prev = document.createElement("div");
+            prev.className = "gal-preview";
+            prev.style.backgroundImage = 'url("' + url.replace(/"/g, "&quot;") + '")';
+            body.appendChild(prev);
 
-        var actions = [];
-        if (tab === "me") {
-            actions.push({ label: "设为我的头像", run: function () { setAvatar("me", src); } });
-            actions.push({ label: "设为聊天背景", run: function () { setBg("chatBg", src); } });
-            actions.push({ label: "设为主界面背景", run: function () { setBg("homeBg", src); } });
-        } else {
-            actions.push({ label: "设为他的头像", run: function () { setAvatar("ta", src); } });
-            actions.push({ label: "设为聊天背景", run: function () { setBg("chatBg", src); } });
-            actions.push({ label: "设为主界面背景", run: function () { setBg("homeBg", src); } });
-        }
-        actions.push({ label: "删除这张", danger: true, run: function () { removePhoto(idx); } });
+            var actions = [];
+            if (tab === "me") actions.push({ label: "设为我的头像", run: function () { setAvatar("me", url); } });
+            else actions.push({ label: "设为他的头像", run: function () { setAvatar("ta", url); } });
+            actions.push({ label: "设为聊天背景", run: function () { setBg("chatBg", url); } });
+            actions.push({ label: "设为主界面背景", run: function () { setBg("homeBg", url); } });
+            actions.push({ label: "删除这张", danger: true, run: function () { removePhoto(idx); } });
 
-        actions.forEach(function (act) {
-            var btn = document.createElement("button");
-            btn.type = "button";
-            btn.className = "gal-item" + (act.danger ? " danger" : "");
-            btn.textContent = act.label;
-            btn.addEventListener("click", function () { closeSheet(); act.run(); });
-            body.appendChild(btn);
+            actions.forEach(function (act) {
+                var btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = "gal-item" + (act.danger ? " danger" : "");
+                btn.textContent = act.label;
+                btn.addEventListener("click", function () { closeSheet(); act.run(); });
+                body.appendChild(btn);
+            });
+
+            sheetEl.classList.add("show");
+            var mask = $("galMask");
+            if (mask) mask.classList.add("show");
         });
-
-        sheetEl.classList.add("show");
-        var mask = $("galMask");
-        if (mask) mask.classList.add("show");
     }
 
-    function refreshAfterChange() {
-        if (window.philosRefreshChat) window.philosRefreshChat();
-        setTimeout(function () { location.reload(); }, 700);
-    }
-
-    function setAvatar(who, src) {
+    function setAvatar(who, url) {
         var d = mainData();
-        if (who === "me") d.myAvatar = src;
-        else d.taAvatar = src;
+        if (who === "me") d.myAvatar = url;
+        else d.taAvatar = url;
         saveMain(d);
-        refreshAfterChange();
+        softRefresh();
     }
 
-    function setBg(which, src) {
+    function setBg(which, url) {
         var d = mainData();
         if (!d.settings) d.settings = {};
         if (!d.settings.appearance) d.settings.appearance = {};
         if (!d.settings.appearance[which]) d.settings.appearance[which] = { color: "#e9edf2", image: "", opacity: 100, blur: 20 };
-        d.settings.appearance[which].image = src;
+        d.settings.appearance[which].image = url;
         saveMain(d);
-        refreshAfterChange();
+        softRefresh();
     }
 
     function removePhoto(idx) {
@@ -183,7 +244,6 @@
         renderGrid();
     }
 
-    /* ===== 他申请换头像 ===== */
     function pickRandom(list) { return list[Math.floor(Math.random() * list.length)]; }
 
     function maybeAskAvatar() {
@@ -195,10 +255,10 @@
         if (now - last < 3 * 3600 * 1000) return;
         if (Math.random() > 0.35) return;
         try { localStorage.setItem(ASK_KEY, String(now)); } catch (e) {}
-        showAsk(pickRandom(d.ta), mainData().taName || "他");
+        resolveSrc(pickRandom(d.ta), function (url) { if (url) showAsk(url, mainData().taName || "他"); });
     }
 
-    function showAsk(src, name) {
+    function showAsk(url, name) {
         var old = $("galAsk");
         if (old && old.parentNode) old.parentNode.removeChild(old);
         var mask = document.createElement("div");
@@ -208,7 +268,7 @@
         card.className = "php-card";
         var av = document.createElement("div");
         av.className = "php-avatar";
-        av.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
+        av.innerHTML = '<img src="' + url.replace(/"/g, "&quot;") + '" alt="">';
         var text = document.createElement("div");
         text.className = "php-text";
         text.textContent = name + "：我想换个头像，可以吗？";
@@ -225,7 +285,7 @@
         yes.textContent = "换吧";
         yes.addEventListener("click", function () {
             mask.classList.remove("show");
-            setAvatar("ta", src);
+            setAvatar("ta", url);
         });
         actions.appendChild(no);
         actions.appendChild(yes);
@@ -236,7 +296,6 @@
         document.body.appendChild(mask);
     }
 
-    /* ===== 他的「我想要」弹窗 + 存进 iMessage ===== */
     function pickEmoji() {
         var d = mainData();
         var list = (d.cards || []).filter(function (c) { return c && c.kind === "emoji" && c.content; });
@@ -289,7 +348,7 @@
             g.restore();
 
             var out = "";
-            try { out = c.toDataURL("image/webp", 0.86); } catch (e) {}
+            try { out = c.toDataURL("image/webp", 0.82); } catch (e) {}
             if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
             cb(out);
         };
@@ -299,18 +358,20 @@
 
     function pushCardToChat(cardSrc) {
         if (!cardSrc) return;
-        if (window.philosPushMessage) {
-            window.philosPushMessage({ from: "ta", type: "sticker", text: cardSrc, status: "" });
-            return;
-        }
-        var d = mainData();
-        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-        d.chatHistory.push({ from: "ta", type: "sticker", text: cardSrc, time: Date.now(), status: "" });
-        saveMain(d);
-        if (window.philosRefreshChat) window.philosRefreshChat();
+        storeOne(cardSrc, function (ref) {
+            if (window.philosPushMessage) {
+                window.philosPushMessage({ from: "ta", type: "sticker", text: ref, status: "" });
+                return;
+            }
+            var d = mainData();
+            d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+            d.chatHistory.push({ from: "ta", type: "sticker", text: ref, time: Date.now(), status: "" });
+            saveMain(d);
+            if (window.philosRefreshChat) window.philosRefreshChat();
+        });
     }
 
-    function showWant(src, caption) {
+    function showWant(url, caption) {
         if (wantOpen) return;
         wantOpen = true;
         injectStyles();
@@ -324,7 +385,7 @@
         var card = document.createElement("div");
         card.className = "want-card";
         var img = document.createElement("img");
-        img.src = src;
+        img.src = url;
         img.alt = "";
         var cap = document.createElement("div");
         cap.className = "want-cap";
@@ -340,7 +401,7 @@
             done = true;
             mask.parentNode.removeChild(mask);
             wantOpen = false;
-            composeCard(src, caption, function (out) { pushCardToChat(out); });
+            composeCard(url, caption, function (out) { pushCardToChat(out); });
         });
     }
 
@@ -354,7 +415,8 @@
         if (Math.random() > 0.45) return;
         try { localStorage.setItem(WANT_KEY, String(now)); } catch (e) {}
         var emoji = pickEmoji();
-        showWant(pickRandom(d.ta), "我想要" + (emoji ? emoji : ""));
+        var caption = "我想要" + (emoji ? emoji : "");
+        resolveSrc(pickRandom(d.ta), function (url) { if (url) showWant(url, caption); });
     }
 
     function build() {
@@ -374,7 +436,7 @@
                 '<button class="gal-seg-btn" data-galtab="ta" type="button">他的</button>' +
             '</div>' +
             '<div class="gal-grid" id="galGrid"></div>' +
-            '<input type="file" id="galFile" accept="image/*" hidden>' +
+            '<input type="file" id="galFile" accept="image/*" multiple hidden>' +
             '<div class="gal-sheet-mask" id="galMask"></div>' +
             '<div class="gal-sheet" id="galSheet"><div id="galSheetBody"></div></div>';
         document.body.appendChild(view);
@@ -385,21 +447,6 @@
         $("galBack").addEventListener("click", function () { view.classList.remove("show"); });
         $("galAdd").addEventListener("click", function () { var f = $("galFile"); if (f) f.click(); });
         $("galMask").addEventListener("click", closeSheet);
-        $("galFile").addEventListener("change", function (e) {
-            var f = e.target.files && e.target.files[0];
-            var input = e.target;
-            if (f) {
-                compressImage(f, function (src) {
-                    if (!src) return;
-                    var d = galData();
-                    if (tab === "ta") d.ta.unshift(src);
-                    else d.me.unshift(src);
-                    saveGal(d);
-                    renderGrid();
-                });
-            }
-            input.value = "";
-        });
 
         view.addEventListener("click", function (e) {
             var btn = e.target.closest ? e.target.closest("[data-galtab]") : null;
@@ -418,6 +465,11 @@
         setTimeout(maybeWantPopup, 800);
         setTimeout(maybeAskAvatar, 2600);
     }
+
+    window.PhilosGalleryRefresh = function () {
+        if (!view) return;
+        renderGrid();
+    };
 
     document.addEventListener("click", function (e) {
         var t = e.target;
