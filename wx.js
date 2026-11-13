@@ -1,10 +1,11 @@
-/* Philos 微信模块 v6（由 herotext.js 加载） */
+/* Philos 微信模块 v7（由 herotext.js 加载）：回复逐条显示 */
 (function () {
     "use strict";
 
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
     var wx = null, wxTyping = false, wxPanelOpen = "", wxQuoteText = null;
+    var wxRound = 0, wxReplyTimer = null;
 
     var FACES = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕"];
 
@@ -191,24 +192,56 @@
         var max = Math.max(min, Math.min(10, Number(perm.replyMax) || min));
         var count = min + Math.floor(Math.random() * (max - min + 1));
         var delay = Math.max(0, perm.replyDelay == null ? 3 : Number(perm.replyDelay)) * 1000;
+
+        wxRound++;
+        var round = wxRound;
+        if (wxReplyTimer) clearTimeout(wxReplyTimer);
         wxSetTyping(true);
-        setTimeout(function () {
-            var d = wxData(); var now = Date.now();
+
+        wxReplyTimer = setTimeout(function () {
+            if (round !== wxRound) return;
+
             var mine = [];
-            d.history.forEach(function (mm) { if (mm && mm.from === "me" && mm.type === "text" && mm.text) mine.push(mm); });
+            wxData().history.forEach(function (mm) { if (mm && mm.from === "me" && mm.type === "text" && mm.text) mine.push(mm); });
             var quoteText = null;
             if (mine.length && Math.random() < 0.15) quoteText = quoteLabel(mine[Math.floor(Math.random() * mine.length)]);
+
+            var viewOpen = function () {
+                var v = document.getElementById("wechatView");
+                return !!(v && v.classList.contains("show"));
+            };
+
             var first = "";
-            for (var i = 0; i < count; i++) {
+            var step = 0;
+
+            function deliver() {
+                if (round !== wxRound) return;
+                var d = wxData();
                 var content = pool[Math.floor(Math.random() * pool.length)].content;
                 if (!first) first = content;
-                d.history.push({ from: "ta", type: "text", text: content, time: now + i, quote: i === 0 && quoteText ? quoteText : "" });
+                var msg = { from: "ta", type: "text", text: content, time: Date.now() };
+                if (step === 0 && quoteText) msg.quote = quoteText;
+                d.history.push(msg);
+                wxSave();
+
+                if (viewOpen()) wxRender();
+                else if (step === 0 && first) wxNotify(first);
+
+                step++;
+                if (step >= count) {
+                    if (Math.random() < 0.12) {
+                        var d2 = wxData();
+                        d2.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: Date.now() });
+                        wxSave();
+                        if (viewOpen()) wxRender();
+                    }
+                    wxSetTyping(false);
+                    return;
+                }
+                wxReplyTimer = setTimeout(deliver, 900 + Math.floor(Math.random() * 800));
             }
-            if (Math.random() < 0.12) d.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: now + count });
-            wxSave(); wxSetTyping(false);
-            var v = document.getElementById("wechatView");
-            if (v && v.classList.contains("show")) wxRender();
-            else if (first) wxNotify(first);
+
+            deliver();
         }, delay);
     }
 
@@ -463,7 +496,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H36";
+                    if (val) val.textContent = "3.9 · H39";
                 }
             }
         } catch (e) {}
