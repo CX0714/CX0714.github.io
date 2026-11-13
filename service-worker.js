@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v54";
+const CACHE_NAME = "philos-v55";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -18,13 +18,14 @@ var RM_MOOD_KEY = "philos_moods";
 var RM_SETTINGS_KEY = "philos_patch_settings";
 var RM_CALLS_KEY = "philos_calls";
 var rmWarnedStorage = false;
+var rmWarnedNoDb = false;
 
 var rmDb = null;
 var rmDbOk = false;
-var rmIdbFail = false;
 var rmDbPromise = null;
+var rmConfirmed = {};
+var rmIdbQueue = [];
 var rmImgMap = new Map();
-var rmStoredIds = {};
 var rmImgSeq = 0;
 var rmReplyRound = 0;
 
@@ -44,25 +45,21 @@ function rmOpenDb() {
 }
 
 function rmIdbPut(id, value) {
-    if (!rmDbOk || rmIdbFail) return;
-    if (rmStoredIds[id]) return;
-    rmStoredIds[id] = true;
+    if (!id || !value) return;
+    if (rmConfirmed[id]) return;
+    if (!rmDbOk) { rmIdbQueue.push({ id: id, value: value }); return; }
     try {
         var tx = rmDb.transaction("images", "readwrite");
         var req = tx.objectStore("images").put(value, id);
-        if (req) {
-            req.onerror = function () {
-                rmStoredIds[id] = false;
-                if (!rmIdbFail) {
-                    rmIdbFail = true;
-                    setTimeout(function () { alert("图片存不下了，新图片会改用普通存储（可能顶掉旧数据）。建议少加一点图。"); }, 60);
-                }
-            };
-        }
-    } catch (e) {
-        rmStoredIds[id] = false;
-        rmIdbFail = true;
-    }
+        if (req) req.onsuccess = function () { rmConfirmed[id] = true; };
+    } catch (e) {}
+}
+
+function rmFlushQueue() {
+    if (!rmDbOk) return;
+    var q = rmIdbQueue;
+    rmIdbQueue = [];
+    for (var i = 0; i < q.length; i++) rmIdbPut(q[i].id, q[i].value);
 }
 
 function rmIdbGet(id) {
@@ -103,15 +100,7 @@ function rmHash(str) {
     return h1.toString(36) + h2.toString(36) + str.length.toString(36);
 }
 
-function rmImgId(url) {
-    var id = rmImgMap.get(url);
-    if (!id) {
-        id = "i" + rmHash(url);
-        rmImgMap.set(url, id);
-    }
-    rmIdbPut(id, url);
-    return id;
-}
+function rmIdFor(url) { return "i" + rmHash(url); }
 
 function rmCollectRefs(obj, out) {
     if (!obj || typeof obj !== "object") return;
@@ -126,6 +115,19 @@ function rmCollectRefs(obj, out) {
     }
 }
 
+function rmCollectImages(obj, out) {
+    if (!obj || typeof obj !== "object") return;
+    for (var k in obj) {
+        if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+        var v = obj[k];
+        if (typeof v === "string") {
+            if (v.indexOf("data:image/") === 0) out.push(v);
+        } else if (v && typeof v === "object") {
+            rmCollectImages(v, out);
+        }
+    }
+}
+
 function rmHydrateWalk(obj, map) {
     if (!obj || typeof obj !== "object") return;
     for (var k in obj) {
@@ -134,7 +136,7 @@ function rmHydrateWalk(obj, map) {
         if (typeof v === "string") {
             if (map[v]) obj[k] = map[v];
         } else if (v && typeof v === "object") {
-            rmHydrateWalk(obj, map);
+            rmHydrateWalk(v, map);
         }
     }
 }
@@ -151,24 +153,21 @@ function rmHydrateImages() {
         var table = {};
         var missing = [];
         list.forEach(function (item) {
-            if (item.url) table[item.id] = item.url;
+            if (item.url && typeof item.url === "string") table[item.id] = item.url;
             else missing.push(item.id);
         });
 
         function finish() {
             var map = {};
-            var recovered = 0;
             Object.keys(table).forEach(function (id) {
                 map["idb://" + id] = table[id];
+                rmConfirmed[id] = true;
                 rmImgMap.set(table[id], id);
-                rmStoredIds[id] = true;
             });
             if (!Object.keys(map).length) return;
-            rmCollectRefs(appData, refs);
             rmHydrateWalk(appData, map);
-            rmRecoveredCount = recovered;
             rmRefreshAll();
-            setTimeout(function () { try { saveData(); } catch (e) {} }, 500);
+            setTimeout(function () { try { rmPrewarmImages(); } catch (e) {} }, 200);
         }
 
         if (!missing.length) { finish(); return; }
@@ -187,14 +186,30 @@ function rmHydrateImages() {
                         if (id.indexOf(h) >= 0) { found = byHash[h]; break; }
                     }
                 }
-                if (found && typeof found === "string") { table[id] = found; recovered++; }
+                if (found && typeof found === "string") table[id] = found;
             });
             finish();
         }).catch(function () { finish(); });
     }).catch(function () {});
 }
 
-var rmRecoveredCount = 0;
+/* 把内存里所有 data:image 都先写进 IndexedDB，然后再保存一次，把 JSON 缩小 */
+function rmPrewarmImages() {
+    var urls = [];
+    rmCollectImages(appData, urls);
+    var uniq = urls.filter(function (v, i) { return urls.indexOf(v) === i; });
+    for (var i = 0; i < uniq.length; i++) rmIdbPut(rmIdFor(uniq[i]), uniq[i]);
+
+    setTimeout(function () {
+        var confirmed = 0;
+        for (var k in rmConfirmed) { if (rmConfirmed[k]) confirmed++; }
+        if (confirmed > 0) { try { saveData(); } catch (e) {} }
+        else if (!rmDbOk && !rmWarnedNoDb) {
+            rmWarnedNoDb = true;
+            setTimeout(function () { alert("这个浏览器现在不允许存图片（可能是无痕模式或存储被系统清掉了）。图片会暂时存不下。"); }, 60);
+        }
+    }, 1500);
+}
 
 function rmRefreshAll() {
     try {
@@ -218,22 +233,21 @@ function rmRefreshAll() {
 function rmWarnStorage() {
     if (rmWarnedStorage) return;
     rmWarnedStorage = true;
-    setTimeout(function () { alert("存储空间不足，刚添加的图片可能没有保存。"); }, 60);
+    setTimeout(function () { alert("网页存储空间不够了，这次改动可能没保存成功。建议先删掉一些旧图片。"); }, 60);
 }
 
+/* 关键：只有确认已经写进 IndexedDB 的图片才换成 idb:// 地址，避免出现打不开的死地址 */
 function rmSaveAppData() {
     try {
-        var json;
-        if (rmDbOk && !rmIdbFail) {
-            json = JSON.stringify(appData, function (k, v) {
-                if (typeof v === "string" && v.indexOf("data:image/") === 0) {
-                    return "idb://" + rmImgId(v);
-                }
+        var json = JSON.stringify(appData, function (k, v) {
+            if (typeof v === "string" && v.indexOf("data:image/") === 0) {
+                var id = rmIdFor(v);
+                if (rmConfirmed[id]) return "idb://" + id;
+                rmIdbPut(id, v);
                 return v;
-            });
-        } else {
-            json = JSON.stringify(appData);
-        }
+            }
+            return v;
+        });
         localStorage.setItem(STORAGE_KEY, json);
     } catch (e) { rmWarnStorage(); }
 }
@@ -660,7 +674,6 @@ scheduleReply = function () {
 window.philosRefreshChat = rmRefreshChat;
 window.philosMoveCalls = rmMoveCalls;
 
-/* 外部模块（pat.js / gallery.js）安全地往聊天里塞一条记录 */
 window.philosPushMessage = function (msg) {
     try {
         if (!msg || typeof msg !== "object") return;
@@ -672,6 +685,8 @@ window.philosPushMessage = function (msg) {
         rmAutoScrollChat();
     } catch (e) {}
 };
+
+window.philosPrewarmImages = function () { try { rmPrewarmImages(); } catch (e) {} };
 
 setInterval(function () { try { rmMoveCalls(); } catch (e) {} }, 4000);
 
@@ -946,7 +961,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v54";
+                if (val) val.textContent = "3.9 · v55";
             }
         }
     } catch (e) {}
@@ -976,12 +991,19 @@ function rmInit() {
     }
 
     rmOpenDb().then(function () {
+        rmFlushQueue();
         setTimeout(function () {
             try { rmHydrateImages(); } catch (e) {}
         }, 0);
         setTimeout(function () {
+            try { rmPrewarmImages(); } catch (e) {}
+        }, 800);
+        setTimeout(function () {
             try { rmHydrateImages(); } catch (e) {}
-        }, 1200);
+        }, 2000);
+        setTimeout(function () {
+            try { rmPrewarmImages(); } catch (e) {}
+        }, 2600);
     });
 }
 
