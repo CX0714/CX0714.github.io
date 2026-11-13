@@ -135,6 +135,19 @@
         return randBetween(a, b) * 60000;
     }
 
+    function pushChatMessage(text) {
+        var d = getData();
+        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        d.chatHistory.push({ from: "ta", type: "text", text: text, time: Date.now(), status: "" });
+        setData(d);
+    }
+
+    function refreshChatView() {
+        if (window.philosRefreshChat) { window.philosRefreshChat(); return; }
+        var chat = document.getElementById("appChat");
+        if (chat) chat.click();
+    }
+
     function fireProactiveMessage() {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
@@ -158,22 +171,26 @@
                 notify(w.name || "Ta", first);
             }
         } else {
-            var dd = getData();
-            dd.chatHistory = Array.isArray(dd.chatHistory) ? dd.chatHistory : [];
-            var firstText = "";
+            var texts = [];
             for (var j = 0; j < count; j++) {
-                var t = pool[Math.floor(Math.random() * pool.length)].content;
-                if (!firstText) firstText = t;
-                dd.chatHistory.push({ from: "ta", type: "text", text: t, time: Date.now() + j * 1500, status: "" });
+                texts.push(pool[Math.floor(Math.random() * pool.length)].content);
             }
-            setData(dd);
+            var firstText = texts[0] || "";
+
             if (inChat()) {
-                for (var k = 0; k < count; k++) {
-                    (function (txt, delay) {
-                        setTimeout(function () { appendToChat(txt); }, delay);
-                    })(dd.chatHistory[dd.chatHistory.length - count + k].text, k * 1400);
-                }
+                texts.forEach(function (txt, idx) {
+                    setTimeout(function () {
+                        pushChatMessage(txt);
+                        refreshChatView();
+                    }, idx * 1400);
+                });
             } else {
+                var dd = getData();
+                dd.chatHistory = Array.isArray(dd.chatHistory) ? dd.chatHistory : [];
+                for (var k = 0; k < count; k++) {
+                    dd.chatHistory.push({ from: "ta", type: "text", text: texts[k], time: Date.now() + k * 1500, status: "" });
+                }
+                setData(dd);
                 notify(dd.taName || "Ta", firstText);
             }
         }
@@ -218,7 +235,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H38";
+                    if (val) val.textContent = "3.9 · H39";
                 }
             }
         } catch (e) {}
