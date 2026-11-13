@@ -1,10 +1,11 @@
-/* Philos 他的主动行为：拍一拍 / 主动发消息 / 主动打电话 */
+/* Philos 他的主动行为：拍一拍 / 主动发消息 / 主动打电话 / 主屏未读红点 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
     var WX_KEY = "philos_wechat";
-    var patTimer = null, msgTimer = null, callTimer = null;
+    var UNREAD_KEY = "philos_unread";
+    var patTimer = null, msgTimer = null, callTimer = null, unreadTimer = null;
 
     function getData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
     function setData(d) { try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {} }
@@ -25,7 +26,8 @@
             ".php-text{font-size:15px;line-height:1.6;color:var(--text-primary,#1b1d21);margin-bottom:20px;word-break:break-word;}" +
             ".php-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}" +
             ".php-btn{height:44px;border-radius:14px;font-size:14px;font-weight:500;border:none;color:var(--text-primary,#1b1d21);background:rgba(140,155,175,.20);}" +
-            ".php-btn.primary{background:#5b7fa6;color:#fff;}";
+            ".php-btn.primary{background:#5b7fa6;color:#fff;}" +
+            ".philos-dot{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;letter-spacing:0;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}";
         document.head.appendChild(st);
     }
 
@@ -228,6 +230,113 @@
         callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 1));
     }
 
+    /* ===== 主屏未读红点 ===== */
+    function getUnread() {
+        var s = null;
+        try { s = JSON.parse(localStorage.getItem(UNREAD_KEY) || "null"); } catch (e) { s = null; }
+        if (!s || typeof s !== "object") s = {};
+        if (typeof s.chat !== "number") s.chat = 0;
+        if (typeof s.wx !== "number") s.wx = 0;
+        if (typeof s.call !== "number") s.call = 0;
+        return s;
+    }
+    function saveUnread(s) { try { localStorage.setItem(UNREAD_KEY, JSON.stringify(s)); } catch (e) {} }
+
+    function countChatUnread(after) {
+        var d = getData();
+        var list = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        var n = 0;
+        for (var i = 0; i < list.length; i++) {
+            var m = list[i];
+            if (!m || m.from !== "ta") continue;
+            if (m.type === "status" || m.type === "call") continue;
+            if ((Number(m.time) || 0) > after) n++;
+        }
+        return n;
+    }
+
+    function countWxUnread(after) {
+        var w = getWx();
+        var list = Array.isArray(w.history) ? w.history : [];
+        var n = 0;
+        for (var i = 0; i < list.length; i++) {
+            var m = list[i];
+            if (!m || m.from !== "ta") continue;
+            if ((Number(m.time) || 0) > after) n++;
+        }
+        return n;
+    }
+
+    function countCallUnread(after) {
+        var d = getData();
+        var list = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        var n = 0;
+        for (var i = 0; i < list.length; i++) {
+            var m = list[i];
+            if (!m || m.type !== "call") continue;
+            if ((Number(m.time) || 0) > after) n++;
+        }
+        return n;
+    }
+
+    function paintBadge(id, n) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        var box = el.querySelector(".app-icon-box") || el;
+        var dot = box.querySelector(".philos-dot");
+        if (!n) {
+            if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
+            return;
+        }
+        if (!dot) {
+            dot = document.createElement("span");
+            dot.className = "philos-dot";
+            try { if (getComputedStyle(box).position === "static") box.style.position = "relative"; } catch (e) { box.style.position = "relative"; }
+            box.appendChild(dot);
+        }
+        dot.textContent = n > 99 ? "99+" : String(n);
+    }
+
+    function refreshUnread() {
+        var st = getUnread();
+        var now = Date.now();
+        var chatView = document.getElementById("chatView");
+        var wxView = document.getElementById("wechatView");
+        var chatOpen = !!(chatView && chatView.classList.contains("active"));
+        var wxOpen = !!(wxView && wxView.classList.contains("show"));
+        var changed = false;
+
+        if (chatOpen) { st.chat = now; changed = true; }
+        if (wxOpen) { st.wx = now; changed = true; }
+        if (changed) saveUnread(st);
+
+        paintBadge("appChat", countChatUnread(st.chat));
+        paintBadge("btnWechat", countWxUnread(st.wx));
+        paintBadge("btnPhone", countCallUnread(st.call));
+    }
+
+    function markRead(which) {
+        var st = getUnread();
+        st[which] = Date.now();
+        saveUnread(st);
+        setTimeout(refreshUnread, 60);
+    }
+
+    function startUnreadWatch() {
+        refreshUnread();
+        if (unreadTimer) clearInterval(unreadTimer);
+        unreadTimer = setInterval(refreshUnread, 2000);
+        document.addEventListener("click", function (e) {
+            var t = e.target;
+            if (!t || !t.closest) return;
+            if (t.closest("#appChat")) markRead("chat");
+            else if (t.closest("#btnWechat")) markRead("wx");
+            else if (t.closest("#btnPhone")) markRead("call");
+        }, true);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshUnread(); });
+        window.addEventListener("focus", refreshUnread);
+    }
+
     function markVersion() {
         try {
             var page = document.querySelector('[data-page="about"]'); if (!page) return;
@@ -235,7 +344,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H39";
+                    if (val) val.textContent = "3.9 · H40";
                 }
             }
         } catch (e) {}
@@ -247,6 +356,7 @@
         schedulePat();
         scheduleMessage();
         scheduleCall();
+        startUnreadWatch();
         setTimeout(markVersion, 1500);
     }
 
