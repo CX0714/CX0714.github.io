@@ -1,9 +1,10 @@
-/* Philos 微信模块 v8（由 herotext.js 加载）：逐条回复 + 外部写入即时同步 + 加载图库 */
+/* Philos 微信模块 v9：按百分比回文字/emoji/表情包/组合/造句 + 来电界面美化 */
 (function () {
     "use strict";
 
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
+    var WORDS_KEY = "philos_words";
     var wx = null, wxTyping = false, wxPanelOpen = "", wxQuoteText = null;
     var wxRound = 0, wxReplyTimer = null, wxRaw = "";
 
@@ -78,7 +79,14 @@
             ".wx-field{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:14px;color:#333;}" +
             ".wx-field input[type=text]{flex:1;height:38px;border:1px solid #E5E5E5;border-radius:10px;padding:0 12px;font-size:15px;}" +
             ".wx-mini{height:32px;padding:0 10px;border-radius:8px;border:1px solid #E5E5E5;background:#fff;font-size:13px;color:#333;}" +
-            ".wx-mini.danger{color:#FF3B30;border-color:#FFD6D2;}";
+            ".wx-mini.danger{color:#FF3B30;border-color:#FFD6D2;}" +
+            /* 来电界面：头像名字下移、圆形按键 */
+            ".call-in-body{margin-top:16vh !important;gap:0 !important;}" +
+            ".call-in-actions{display:flex !important;grid-template-columns:none !important;align-items:flex-start;justify-content:center;gap:58px !important;width:100%;max-width:330px;margin:0 auto;}" +
+            ".call-in-act{display:flex;flex-direction:column;align-items:center;gap:10px;}" +
+            ".call-in-btn.round{width:76px !important;height:76px !important;border-radius:50% !important;padding:0 !important;display:flex;align-items:center;justify-content:center;font-size:0 !important;line-height:0;}" +
+            ".call-in-btn.round .svg-icon{width:30px;height:30px;stroke-width:1.7;}" +
+            ".call-in-act-label{font-size:13px;color:rgba(255,255,255,0.86);letter-spacing:0.4px;}";
         document.head.appendChild(st);
     }
 
@@ -116,7 +124,7 @@
     function wxAvatar(src, fallback) {
         var span = document.createElement("span");
         span.className = "wx-avatar";
-        if (src && /^(data:image\/|https?:\/\/)/.test(src)) { var img = document.createElement("img"); img.src = src; span.appendChild(img); }
+        if (src && /^(data:image\/|https?:\/\/|blob:|idb:\/\/|\.\/|\.\.\/)/.test(src)) { var img = document.createElement("img"); img.src = src; span.appendChild(img); }
         else span.textContent = fallback || "";
         return span;
     }
@@ -197,11 +205,110 @@
         return who + "：" + ((m && m.text) || "");
     }
 
+    /* ===== 回复用的池子与权重 ===== */
+    function wxPools(main) {
+        var pools = { text: [], emoji: [], sticker: [] };
+        (main.cards || []).forEach(function (c) {
+            if (!c || typeof c.content !== "string" || !c.content) return;
+            if (c.kind === "text") pools.text.push(c.content);
+            else if (c.kind === "emoji") pools.emoji.push(c.content);
+            else if (c.kind === "sticker" && /^(data:image\/|https?:\/\/|blob:)/.test(c.content)) pools.sticker.push(c.content);
+        });
+        return pools;
+    }
+    function wxWeights(main) {
+        var perm = (main.settings && main.settings.permission) || {};
+        var m = perm.replyModes || {};
+        function w(key, dft) { var c = m[key]; return c && typeof c.weight === "number" ? Math.max(0, c.weight) : dft; }
+        return { text: w("text", 40), emoji: w("emoji", 10), sticker: w("sticker", 10), textEmoji: w("textEmoji", 20), combo: w("combo", 20), sentence: w("sentence", 10) };
+    }
+    function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function wordList() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(WORDS_KEY) || "null"); } catch (e) { v = null; }
+        var out = [];
+        if (Array.isArray(v)) {
+            for (var i = 0; i < v.length; i++) if (typeof v[i] === "string" && v[i].trim()) out.push(v[i].trim());
+        } else if (v && Array.isArray(v.items)) {
+            for (var j = 0; j < v.items.length; j++) {
+                var it = v.items[j];
+                if (it && typeof it.text === "string" && it.text.trim()) out.push(it.text.trim());
+            }
+        }
+        return out;
+    }
+
+    function pickMode(weights, pools) {
+        var perm = (mainData().settings && mainData().settings.permission) || {};
+        var avail = {
+            text: pools.text.length > 0,
+            emoji: pools.emoji.length > 0,
+            sticker: pools.sticker.length > 0,
+            textEmoji: pools.text.length > 0,
+            combo: pools.text.length >= 2,
+            sentence: wordList().length >= 2
+        };
+        var list = [], total = 0;
+        for (var k in weights) {
+            if (!weights[k] || weights[k] <= 0) continue;
+            if (!avail[k]) continue;
+            list.push({ key: k, w: weights[k] });
+            total += weights[k];
+        }
+        if (!total) {
+            if (pools.text.length) return "text";
+            if (pools.emoji.length) return "emoji";
+            if (pools.sticker.length) return "sticker";
+            return "";
+        }
+        var r = Math.random() * total;
+        for (var i = 0; i < list.length; i++) {
+            r -= list[i].w;
+            if (r <= 0) return list[i].key;
+        }
+        return list[list.length - 1].key;
+    }
+
+    function buildWxMessage(mode, pools, main) {
+        var perm = (main.settings && main.settings.permission) || {};
+        if (mode === "text") return { from: "ta", type: "text", text: pick(pools.text) };
+        if (mode === "emoji") return { from: "ta", type: "text", text: pick(pools.emoji) };
+        if (mode === "sticker") return { from: "ta", type: "image", text: pick(pools.sticker) };
+        if (mode === "textEmoji") {
+            var t = pick(pools.text);
+            var n = 1 + Math.floor(Math.random() * 2);
+            if (pools.emoji.length) { for (var i = 0; i < n; i++) t += pick(pools.emoji); }
+            return { from: "ta", type: "text", text: t };
+        }
+        if (mode === "combo") {
+            var max = Math.max(2, Math.min(6, Number(perm.comboMax) || 3));
+            var cnt = 2 + Math.floor(Math.random() * (max - 1));
+            var rest = pools.text.slice(), out = [];
+            while (rest.length && out.length < cnt) out.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+            return { from: "ta", type: "text", text: out.join("，") };
+        }
+        if (mode === "sentence") {
+            var words = wordList();
+            if (words.length < 2) return { from: "ta", type: "text", text: pick(pools.text) };
+            var min = Math.max(2, Number(perm.sentMin) || 3);
+            var maxW = Math.max(min, Number(perm.sentMax) || min);
+            var n2 = min + Math.floor(Math.random() * (maxW - min + 1));
+            if (n2 > words.length) n2 = words.length;
+            var r2 = words.slice(), picked = [];
+            while (r2.length && picked.length < n2) picked.push(r2.splice(Math.floor(Math.random() * r2.length), 1)[0]);
+            return { from: "ta", type: "text", text: picked.join("") };
+        }
+        return null;
+    }
+
     function wxScheduleReply() {
         var main = mainData();
         var perm = (main.settings && main.settings.permission) || {};
-        var pool = (main.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; });
-        if (!pool.length) return;
+        var pools = wxPools(main);
+        if (!pools.text.length && !pools.emoji.length && !pools.sticker.length) return;
+        var weights = wxWeights(main);
+
         var min = Math.max(1, Math.min(10, Number(perm.replyMin) || 1));
         var max = Math.max(min, Math.min(10, Number(perm.replyMax) || min));
         var count = min + Math.floor(Math.random() * (max - min + 1));
@@ -230,11 +337,16 @@
 
             function deliver() {
                 if (round !== wxRound) return;
-                var d = wxData();
-                var content = pool[Math.floor(Math.random() * pool.length)].content;
-                if (!first) first = content;
-                var msg = { from: "ta", type: "text", text: content, time: Date.now() };
+                var m2 = mainData();
+                var p2 = wxPools(m2);
+                var mode = pickMode(weights, p2);
+                var msg = mode ? buildWxMessage(mode, p2, m2) : null;
+                if (!msg) { wxSetTyping(false); return; }
+
+                if (!first) first = msg.type === "image" ? "给你发了一个表情包" : (msg.text || "");
                 if (step === 0 && quoteText) msg.quote = quoteText;
+
+                var d = wxData();
                 d.history.push(msg);
                 wxSave();
 
@@ -503,6 +615,30 @@
         });
     }
 
+    function decorateCall() {
+        var overlay = document.getElementById("philosCallIn");
+        if (!overlay) return;
+        var actions = overlay.querySelector(".call-in-actions");
+        if (!actions) return;
+        Array.prototype.forEach.call(actions.querySelectorAll(".call-in-btn"), function (btn) {
+            if (btn.getAttribute("data-round") === "1") return;
+            var isAnswer = btn.classList.contains("answer");
+            var label = isAnswer ? "接通" : "挂断";
+            btn.setAttribute("data-round", "1");
+            btn.setAttribute("aria-label", label);
+            btn.classList.add("round");
+            btn.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24" style="transform:rotate(' + (isAnswer ? "0" : "135") + 'deg)"><use href="#ic-phone"></use></svg>';
+            var wrap = document.createElement("div");
+            wrap.className = "call-in-act";
+            btn.parentNode.insertBefore(wrap, btn);
+            wrap.appendChild(btn);
+            var lb = document.createElement("span");
+            lb.className = "call-in-act-label";
+            lb.textContent = label;
+            wrap.appendChild(lb);
+        });
+    }
+
     function markVersion() {
         try {
             var page = document.querySelector('[data-page="about"]'); if (!page) return;
@@ -510,7 +646,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H42";
+                    if (val) val.textContent = "3.9 · H51";
                 }
             }
         } catch (e) {}
@@ -531,8 +667,9 @@
         markVersion();
         loadModule("quiz.js");
         loadModule("gallery.js");
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); }, 900);
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); }, 2200);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); }, 900);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); }, 2200);
+        setInterval(decorateCall, 1200);
         if (window.MutationObserver) {
             var hd = document.getElementById("chatHeader");
             if (hd) new MutationObserver(fixAvatarLabels).observe(hd, { childList: true, subtree: true });
