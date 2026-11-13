@@ -1,12 +1,14 @@
-/* Philos 图库 app v1：我的 / 他的 两栏、上传、设为头像或背景、他申请换头像 */
+/* Philos 图库 app v2：我的 / 他的 两栏、上传、设为头像或背景、他申请换头像、他的「我想要」弹窗 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
     var GAL_KEY = "philos_gallery";
     var ASK_KEY = "philos_gallery_ask";
+    var WANT_KEY = "philos_gallery_want";
 
     var view = null, gridEl = null, sheetEl = null, tab = "me", pickTarget = null;
+    var wantOpen = false;
 
     function $(id) { return document.getElementById(id); }
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
@@ -21,23 +23,6 @@
         return d;
     }
     function saveGal(d) { try { localStorage.setItem(GAL_KEY, JSON.stringify(d)); } catch (e) { alert("存储空间已满，图片没有保存。"); } }
-
-    function getPath(obj, path) {
-        var parts = path.split("."), cur = obj;
-        for (var i = 0; i < parts.length; i++) {
-            if (cur === null || cur === undefined) return undefined;
-            cur = cur[parts[i]];
-        }
-        return cur;
-    }
-    function setPath(obj, path, value) {
-        var parts = path.split("."), cur = obj;
-        for (var i = 0; i < parts.length - 1; i++) {
-            if (!cur[parts[i]] || typeof cur[parts[i]] !== "object") cur[parts[i]] = {};
-            cur = cur[parts[i]];
-        }
-        cur[parts[parts.length - 1]] = value;
-    }
 
     function injectStyles() {
         if (document.getElementById("philos-gal-style")) return;
@@ -64,7 +49,11 @@
             ".gal-item{display:block;width:100%;height:44px;border-radius:12px;font-size:15px;color:#1b1d21;text-align:center;}" +
             ".gal-item.danger{color:#ff3b30;}" +
             ".gal-item:active{background:rgba(120,132,148,0.14);}" +
-            ".gal-preview{width:100%;height:112px;border-radius:12px;background-size:cover;background-position:center;margin-bottom:6px;}";
+            ".gal-preview{width:100%;height:112px;border-radius:12px;background-size:cover;background-position:center;margin-bottom:6px;}" +
+            ".want-mask{position:fixed;inset:0;z-index:630;background:rgba(16,20,26,0.34);display:flex;align-items:center;justify-content:center;padding:26px;}" +
+            ".want-card{position:relative;width:82%;max-width:330px;aspect-ratio:3/4;border-radius:28px;overflow:hidden;background:#ffffff;box-shadow:0 26px 60px rgba(20,30,45,0.30);}" +
+            ".want-card img{width:100%;height:100%;object-fit:cover;display:block;}" +
+            ".want-cap{position:absolute;left:0;right:0;bottom:0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));background:rgba(255,255,255,0.58);-webkit-backdrop-filter:blur(16px) saturate(120%);backdrop-filter:blur(16px) saturate(120%);color:#1b1d21;font-size:16px;font-weight:600;letter-spacing:0.3px;text-align:center;word-break:break-word;}";
         document.head.appendChild(st);
     }
 
@@ -178,10 +167,8 @@
 
     function setBg(which, src) {
         var d = mainData();
-        if (!d.settings || !d.settings.appearance) {
-            d.settings = d.settings || {};
-            d.settings.appearance = d.settings.appearance || {};
-        }
+        if (!d.settings) d.settings = {};
+        if (!d.settings.appearance) d.settings.appearance = {};
         if (!d.settings.appearance[which]) d.settings.appearance[which] = { color: "#e9edf2", image: "", opacity: 100, blur: 20 };
         d.settings.appearance[which].image = src;
         saveMain(d);
@@ -196,6 +183,7 @@
         renderGrid();
     }
 
+    /* ===== 他申请换头像 ===== */
     function pickRandom(list) { return list[Math.floor(Math.random() * list.length)]; }
 
     function maybeAskAvatar() {
@@ -207,9 +195,7 @@
         if (now - last < 3 * 3600 * 1000) return;
         if (Math.random() > 0.35) return;
         try { localStorage.setItem(ASK_KEY, String(now)); } catch (e) {}
-        var src = pickRandom(d.ta);
-        var main = mainData();
-        showAsk(src, main.taName || "他");
+        showAsk(pickRandom(d.ta), mainData().taName || "他");
     }
 
     function showAsk(src, name) {
@@ -248,6 +234,127 @@
         card.appendChild(actions);
         mask.appendChild(card);
         document.body.appendChild(mask);
+    }
+
+    /* ===== 他的「我想要」弹窗 + 存进 iMessage ===== */
+    function pickEmoji() {
+        var d = mainData();
+        var list = (d.cards || []).filter(function (c) { return c && c.kind === "emoji" && c.content; });
+        if (!list.length) return "";
+        return list[Math.floor(Math.random() * list.length)].content;
+    }
+
+    function roundRect(g, x, y, w, h, r) {
+        g.beginPath();
+        g.moveTo(x + r, y);
+        g.lineTo(x + w - r, y);
+        g.quadraticCurveTo(x + w, y, x + w, y + r);
+        g.lineTo(x + w, y + h - r);
+        g.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        g.lineTo(x + r, y + h);
+        g.quadraticCurveTo(x, y + h, x, y + h - r);
+        g.lineTo(x, y + r);
+        g.quadraticCurveTo(x, y, x + r, y);
+        g.closePath();
+    }
+
+    function composeCard(imgSrc, caption, cb) {
+        var img = new Image();
+        img.onload = function () {
+            var W = 640, H = Math.round(W * 4 / 3);
+            var c = document.createElement("canvas");
+            c.width = W; c.height = H;
+            var g = c.getContext("2d");
+
+            g.fillStyle = "#ffffff";
+            roundRect(g, 0, 0, W, H, 34);
+            g.fill();
+
+            g.save();
+            roundRect(g, 0, 0, W, H, 34);
+            g.clip();
+            var iw = img.width || 1, ih = img.height || 1;
+            var scale = Math.max(W / iw, H / ih);
+            var dw = iw * scale, dh = ih * scale;
+            g.drawImage(img, (W - dw) / 2, (H - dh) / 2, dw, dh);
+
+            var capH = Math.round(H * 0.19);
+            g.fillStyle = "rgba(255,255,255,0.62)";
+            g.fillRect(0, H - capH, W, capH);
+            g.fillStyle = "#1b1d21";
+            g.textAlign = "center";
+            g.textBaseline = "middle";
+            g.font = "600 46px -apple-system, BlinkMacSystemFont, PingFang SC, sans-serif";
+            g.fillText(caption, W / 2, H - capH / 2 + 4, W - 60);
+            g.restore();
+
+            var out = "";
+            try { out = c.toDataURL("image/webp", 0.86); } catch (e) {}
+            if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
+            cb(out);
+        };
+        img.onerror = function () { cb(""); };
+        img.src = imgSrc;
+    }
+
+    function pushCardToChat(cardSrc) {
+        if (!cardSrc) return;
+        if (window.philosPushMessage) {
+            window.philosPushMessage({ from: "ta", type: "sticker", text: cardSrc, status: "" });
+            return;
+        }
+        var d = mainData();
+        d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        d.chatHistory.push({ from: "ta", type: "sticker", text: cardSrc, time: Date.now(), status: "" });
+        saveMain(d);
+        if (window.philosRefreshChat) window.philosRefreshChat();
+    }
+
+    function showWant(src, caption) {
+        if (wantOpen) return;
+        wantOpen = true;
+        injectStyles();
+
+        var old = $("wantPop");
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+
+        var mask = document.createElement("div");
+        mask.className = "want-mask";
+        mask.id = "wantPop";
+        var card = document.createElement("div");
+        card.className = "want-card";
+        var img = document.createElement("img");
+        img.src = src;
+        img.alt = "";
+        var cap = document.createElement("div");
+        cap.className = "want-cap";
+        cap.textContent = caption;
+        card.appendChild(img);
+        card.appendChild(cap);
+        mask.appendChild(card);
+        document.body.appendChild(mask);
+
+        var done = false;
+        mask.addEventListener("click", function () {
+            if (done) return;
+            done = true;
+            mask.parentNode.removeChild(mask);
+            wantOpen = false;
+            composeCard(src, caption, function (out) { pushCardToChat(out); });
+        });
+    }
+
+    function maybeWantPopup() {
+        var d = galData();
+        if (!d.ta.length) return;
+        var last = 0;
+        try { last = Number(localStorage.getItem(WANT_KEY)) || 0; } catch (e) {}
+        var now = Date.now();
+        if (now - last < 3600 * 1000) return;
+        if (Math.random() > 0.45) return;
+        try { localStorage.setItem(WANT_KEY, String(now)); } catch (e) {}
+        var emoji = pickEmoji();
+        showWant(pickRandom(d.ta), "我想要" + (emoji ? emoji : ""));
     }
 
     function build() {
@@ -308,7 +415,8 @@
         renderTabs();
         renderGrid();
         view.classList.add("show");
-        setTimeout(maybeAskAvatar, 900);
+        setTimeout(maybeWantPopup, 800);
+        setTimeout(maybeAskAvatar, 2600);
     }
 
     document.addEventListener("click", function (e) {
