@@ -1,12 +1,13 @@
-/* Philos 附加功能：存储用量 / 新图标背景 / 字卡库二级界面 / 批量加图 / 分组编辑 */
+/* Philos 附加功能：存储用量 / 新图标背景 / 字卡库二级界面（含情绪）/ 批量加图 / 分组编辑 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
     var GAL_KEY = "philos_gallery";
     var ICON_KEY = "philos_icon_extra";
+    var MOOD_KEY = "philos_moods";
     var KINDS = ["text", "emoji", "sticker", "status"];
-    var KIND_LABEL = { text: "文字", emoji: "emoji", sticker: "表情包", status: "状态" };
+    var KIND_LABEL = { text: "文字", emoji: "emoji", sticker: "表情包", status: "拍一拍" };
 
     function $(id) { return document.getElementById(id); }
     function getMain() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
@@ -180,13 +181,20 @@
             ".ck-block-count{font-size:12px;color:#8b909a;}" +
             ".ck-block-icon{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(91,127,166,0.10);color:#5b7fa6;}" +
             ".ck-block-icon .svg-icon{width:20px;height:20px;}" +
+            ".mo-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;z-index:641;width:88%;max-width:340px;max-height:76vh;display:flex;flex-direction:column;padding:18px;border-radius:20px;background:rgba(255,255,255,0.96);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 22px 50px rgba(20,30,45,0.24);transition:transform .18s ease,opacity .18s ease;}" +
+            ".mo-panel.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}" +
+            ".mo-list{flex:1 1 auto;min-height:0;overflow-y:auto;margin:8px 0 10px;}" +
+            ".mo-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;margin-bottom:8px;border-radius:13px;background:rgba(120,132,148,0.10);font-size:15px;color:#1b1d21;}" +
+            ".mo-del{flex:0 0 auto;font-size:13px;color:#ff3b30;background:none;border:none;}" +
+            ".mo-tip{font-size:12px;color:#8b909a;line-height:1.5;margin-bottom:10px;}" +
             "[data-theme=\"dark\"] .ck-overview{background:#000000;}" +
             "[data-theme=\"dark\"] .ck-block{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
             "[data-theme=\"dark\"] .ck-block-title{color:#f2f3f6;}" +
-            "[data-theme=\"dark\"] .xc-sheet{background:rgba(32,34,39,0.94);border-color:rgba(255,255,255,0.12);}" +
+            "[data-theme=\"dark\"] .xc-sheet,[data-theme=\"dark\"] .mo-panel{background:rgba(32,34,39,0.96);border-color:rgba(255,255,255,0.12);}" +
             "[data-theme=\"dark\"] .xc-title{color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .xc-input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.14);color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .xc-btn.ghost{background:rgba(255,255,255,0.10);color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .mo-item{background:rgba(255,255,255,0.08);color:#f2f3f6;}" +
             "#chatMessages .msg-bubble img.msg-gallery-img{max-width:210px !important;border-radius:12px;}";
         document.head.appendChild(st);
     }
@@ -214,18 +222,14 @@
                 if (window.philosPrewarmImages) window.philosPrewarmImages();
                 btn.textContent = "正在搬…稍后重新测量";
                 setTimeout(updatePanel, 2600);
-            } else {
-                updatePanel();
-            }
+            } else updatePanel();
         });
         return card;
     }
-
     function setVal(card, key, text) {
         var el = card.querySelector('[data-sp="' + key + '"]');
         if (el) el.textContent = text;
     }
-
     function updatePanel() {
         var card = document.querySelector("[data-storage-panel]");
         if (!card) return;
@@ -236,9 +240,8 @@
         try { data = JSON.parse(raw || "{}"); } catch (e) { data = {}; }
         var chatBytes = 0;
         try { chatBytes = JSON.stringify(data.chatHistory || []).length; } catch (e) {}
-        var restBytes = Math.max(0, totalBytes - chatBytes);
         setVal(card, "chat", fmt(chatBytes));
-        setVal(card, "rest", fmt(restBytes));
+        setVal(card, "rest", fmt(Math.max(0, totalBytes - chatBytes)));
         setVal(card, "total", fmt(totalBytes) + "（上限约 5 MB）");
         var pct = Math.min(100, Math.round(totalBytes / (5 * 1024 * 1024) * 100));
         var bar = card.querySelector('[data-sp="bar"]');
@@ -248,7 +251,6 @@
         }
         idbStats().then(function (st) { setVal(card, "img", st.count + " 张 · " + fmt(st.bytes)); });
     }
-
     function ensurePanel() {
         var page = dataPage();
         if (!page) return;
@@ -268,7 +270,6 @@
         { key: "quiz", label: "出题", el: "btnQuiz", sym: "ic-card" },
         { key: "freq", label: "频率", el: "btnFreq", sym: "ic-ecg" }
     ];
-
     function getIcons() {
         var d = null;
         try { d = JSON.parse(localStorage.getItem(ICON_KEY) || "null"); } catch (e) { d = null; }
@@ -308,23 +309,18 @@
             var row = document.createElement("div");
             row.className = "icon-cfg";
             row.setAttribute("data-iconx", def.key);
-
             var prev = document.createElement("span");
             prev.className = "icon-cfg-preview";
             prev.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + def.sym + '"></use></svg>';
             var ref = d[def.key] || "";
-            if (ref) {
-                resolveSrc(ref, function (url) {
-                    if (!url) return;
-                    prev.classList.add("has-image");
-                    prev.style.backgroundImage = 'url("' + url.replace(/"/g, "&quot;") + '")';
-                });
-            }
-
+            if (ref) resolveSrc(ref, function (url) {
+                if (!url) return;
+                prev.classList.add("has-image");
+                prev.style.backgroundImage = 'url("' + url.replace(/"/g, "&quot;") + '")';
+            });
             var name = document.createElement("span");
             name.className = "icon-cfg-name";
             name.textContent = def.label;
-
             var actions = document.createElement("div");
             actions.className = "icon-cfg-actions";
             var up = document.createElement("label");
@@ -343,7 +339,6 @@
             clr.setAttribute("data-iconx-clear", def.key);
             actions.appendChild(up);
             actions.appendChild(clr);
-
             row.appendChild(prev);
             row.appendChild(name);
             row.appendChild(actions);
@@ -363,9 +358,8 @@
             if (!dataUrl) return;
             var id = "i" + hash(dataUrl);
             putImg(id, dataUrl).then(function (ok) {
-                var ref = ok ? "idb://" + id : dataUrl;
                 var d = getIcons();
-                d[key] = ref;
+                d[key] = ok ? "idb://" + id : dataUrl;
                 saveIcons(d);
                 applyIcons();
                 var prev = document.querySelector('[data-iconx="' + key + '"] .icon-cfg-preview');
@@ -389,6 +383,102 @@
         if (prev) { prev.classList.remove("has-image"); prev.style.backgroundImage = ""; }
     }, true);
 
+    /* ================= 情绪（独立存储 philos_moods） ================= */
+    function moodStore() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(MOOD_KEY) || "null"); } catch (e) { v = null; }
+        if (!v || typeof v !== "object") v = {};
+        if (!Array.isArray(v.moods)) v.moods = [];
+        if (!v.state || typeof v.state !== "object") v.state = { text: "", until: 0 };
+        if (!v.range || typeof v.range !== "object") v.range = { min: 20, max: 120 };
+        return v;
+    }
+    function saveMoodStore(v) { try { localStorage.setItem(MOOD_KEY, JSON.stringify(v)); } catch (e) { alert("保存失败。"); } }
+
+    function renderMoodList() {
+        var list = $("moList");
+        if (!list) return;
+        var s = moodStore();
+        list.innerHTML = "";
+        if (!s.moods.length) {
+            var empty = document.createElement("div");
+            empty.className = "mo-tip";
+            empty.textContent = "还没有情绪，下面加一条试试（比如「心情不错」）。";
+            list.appendChild(empty);
+            return;
+        }
+        s.moods.forEach(function (text, idx) {
+            var row = document.createElement("div");
+            row.className = "mo-item";
+            var label = document.createElement("span");
+            label.textContent = text;
+            var del = document.createElement("button");
+            del.type = "button";
+            del.className = "mo-del";
+            del.textContent = "删除";
+            del.addEventListener("click", function () {
+                var cur = moodStore();
+                cur.moods.splice(idx, 1);
+                cur.state = { text: "", until: 0 };
+                saveMoodStore(cur);
+                renderMoodList();
+                syncOverviewCounts();
+            });
+            row.appendChild(label);
+            row.appendChild(del);
+            list.appendChild(row);
+        });
+    }
+
+    function openMoodPanel() {
+        injectStyles();
+        var mask = $("moMask");
+        if (!mask) {
+            mask = document.createElement("div");
+            mask.className = "xc-mask";
+            mask.id = "moMask";
+            document.body.appendChild(mask);
+            mask.addEventListener("click", function () {
+                mask.classList.remove("show");
+                var p = $("moPanel");
+                if (p) p.classList.remove("show");
+            });
+        }
+        var panel = $("moPanel");
+        if (!panel) {
+            panel = document.createElement("div");
+            panel.className = "mo-panel";
+            panel.id = "moPanel";
+            panel.innerHTML =
+                '<div class="xc-title">情绪</div>' +
+                '<div class="mo-tip">这些会显示在他 iMessage 气泡下方，像心情状态一样轮换。</div>' +
+                '<div class="mo-list" id="moList"></div>' +
+                '<input class="xc-input" id="moInput" type="text" maxlength="20" placeholder="输入一条情绪" autocomplete="off">' +
+                '<div class="xc-row"><button class="xc-btn ghost" id="moClose" type="button">关闭</button><button class="xc-btn primary" id="moAdd" type="button">添加</button></div>';
+            document.body.appendChild(panel);
+            $("moClose").addEventListener("click", function () {
+                panel.classList.remove("show");
+                var m = $("moMask");
+                if (m) m.classList.remove("show");
+            });
+            $("moAdd").addEventListener("click", function () {
+                var input = $("moInput");
+                var text = input ? input.value.trim() : "";
+                if (!text) return;
+                var s = moodStore();
+                if (s.moods.indexOf(text) < 0) s.moods.push(text);
+                s.state = { text: "", until: 0 };
+                saveMoodStore(s);
+                if (input) input.value = "";
+                renderMoodList();
+                syncOverviewCounts();
+            });
+        }
+        renderMoodList();
+        mask.classList.add("show");
+        panel.classList.add("show");
+    }
+
     /* ================= 字卡库二级界面 ================= */
     var ckState = "overview";
 
@@ -401,24 +491,23 @@
         return out;
     }
 
-    function buildOverview(view) {
-        var layer = document.createElement("div");
-        layer.className = "ck-overview";
-        layer.setAttribute("data-card-overview", "1");
-        view.appendChild(layer);
-        return layer;
-    }
-
     function renderOverview() {
         var view = $("cardsView");
         if (!view) return;
         var layer = view.querySelector("[data-card-overview]");
-        if (!layer) layer = buildOverview(view);
+        if (!layer) {
+            layer = document.createElement("div");
+            layer.className = "ck-overview";
+            layer.setAttribute("data-card-overview", "1");
+            view.appendChild(layer);
+        }
 
         var counts = kindCounts();
+        var moods = moodStore().moods.length;
+        var icons = { text: "ic-mail", emoji: "ic-chat", sticker: "ic-image", status: "ic-pin" };
+
         layer.innerHTML = '<div class="ck-grid"></div>';
         var grid = layer.querySelector(".ck-grid");
-        var icons = { text: "ic-mail", emoji: "ic-chat", sticker: "ic-image", status: "ic-pin" };
 
         KINDS.forEach(function (kind) {
             var block = document.createElement("button");
@@ -432,9 +521,26 @@
             grid.appendChild(block);
         });
 
+        var moodBlock = document.createElement("button");
+        moodBlock.type = "button";
+        moodBlock.className = "ck-block";
+        moodBlock.setAttribute("data-ck-mood", "1");
+        moodBlock.innerHTML =
+            '<span class="ck-block-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-palette"></use></svg></span>' +
+            '<span class="ck-block-title">情绪</span>' +
+            '<span class="ck-block-count">' + moods + ' 条</span>';
+        grid.appendChild(moodBlock);
+
         var nav = view.querySelector(".app-nav");
         var navH = nav ? nav.getBoundingClientRect().height : 0;
         layer.style.top = Math.max(0, Math.round(navH)) + "px";
+    }
+
+    function syncOverviewCounts() {
+        var view = $("cardsView");
+        if (!view) return;
+        var layer = view.querySelector("[data-card-overview]");
+        if (layer && layer.classList.contains("show")) renderOverview();
     }
 
     function showOverview() {
@@ -463,6 +569,12 @@
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
+
+        if (t.closest("[data-ck-mood]")) {
+            e.stopPropagation();
+            openMoodPanel();
+            return;
+        }
 
         var block = t.closest("[data-ck-kind]");
         if (block) {
@@ -571,7 +683,6 @@
         if (!next || !editName) { closeEditor(); return; }
         if (next === editName) { closeEditor(); return; }
         if (next === "全部" || next === "未分类") { alert("这个名字不能用。"); return; }
-
         var data = getMain();
         if (!data.cardCategories || typeof data.cardCategories !== "object") data.cardCategories = {};
         if (!Array.isArray(data.cardCategories[editKind])) data.cardCategories[editKind] = [];
