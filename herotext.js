@@ -1,4 +1,4 @@
-/* H26 主屏 / 大组件 / 频率；微信在 wx.js */
+/* H37 主屏 / 大组件 / 频率；微信 wx.js；拍一拍 pat.js */
 (function () {
     "use strict";
 
@@ -211,7 +211,7 @@
         var body = document.getElementById("freqBody");
         var page = document.querySelector('[data-page="permission"]');
         if (!v || !body || !page) return;
-        var keys = ["permission.replyDelay", "permission.replyMin", "permission.activeMin", "permission.callMin"];
+        var keys = ["permission.replyDelay", "permission.replyMin", "permission.activeMin", "permission.activeMax", "permission.callMin", "permission.callMax"];
         for (var i = 0; i < keys.length; i++) {
             var el = page.querySelector('[data-key="' + keys[i] + '"]');
             if (!el) continue;
@@ -285,7 +285,7 @@
             else alert("微信加载中，稍后再试。");
         });
         bindOnce(gallery, function () { alert("图库还没做。"); });
-        bindOnce(quiz, function () { alert("出题还没做。"); });
+        bindOnce(quiz, function () { alert("出题加载中。"); });
         bindOnce(freq, function () { openFreq(); });
 
         fillSmallWidget(); syncIconSizes(); applyRowGap(); applyShift(); applyHeroAvatar(); buildHeroAvatarRow();
@@ -300,7 +300,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H26";
+                    if (val) val.textContent = "3.9 · H37";
                 }
             }
         } catch (e) {}
@@ -309,6 +309,7 @@
     function init() {
         injectStyles();
         loadModule("wx.js");
+        loadModule("pat.js");
         buildRow(); applyHeroColor(); applyHeroAvatar(); buildHeroAvatarRow(); takeover(); markVersion();
         setTimeout(takeover, 600); setTimeout(takeover, 1800); setTimeout(takeover, 3000);
         if (window.MutationObserver) {
