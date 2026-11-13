@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v53";
+const CACHE_NAME = "philos-v54";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -21,6 +21,7 @@ var rmWarnedStorage = false;
 
 var rmDb = null;
 var rmDbOk = false;
+var rmIdbFail = false;
 var rmDbPromise = null;
 var rmImgMap = new Map();
 var rmStoredIds = {};
@@ -43,12 +44,25 @@ function rmOpenDb() {
 }
 
 function rmIdbPut(id, value) {
-    if (!rmDbOk || rmStoredIds[id]) return;
+    if (!rmDbOk || rmIdbFail) return;
+    if (rmStoredIds[id]) return;
     rmStoredIds[id] = true;
     try {
         var tx = rmDb.transaction("images", "readwrite");
-        tx.objectStore("images").put(value, id);
-    } catch (e) {}
+        var req = tx.objectStore("images").put(value, id);
+        if (req) {
+            req.onerror = function () {
+                rmStoredIds[id] = false;
+                if (!rmIdbFail) {
+                    rmIdbFail = true;
+                    setTimeout(function () { alert("图片存不下了，新图片会改用普通存储（可能顶掉旧数据）。建议少加一点图。"); }, 60);
+                }
+            };
+        }
+    } catch (e) {
+        rmStoredIds[id] = false;
+        rmIdbFail = true;
+    }
 }
 
 function rmIdbGet(id) {
@@ -59,6 +73,23 @@ function rmIdbGet(id) {
             req.onsuccess = function () { resolve(req.result || null); };
             req.onerror = function () { resolve(null); };
         } catch (e) { resolve(null); }
+    });
+}
+
+function rmIdbAll() {
+    return new Promise(function (resolve) {
+        var out = {};
+        if (!rmDb) { resolve(out); return; }
+        try {
+            var store = rmDb.transaction("images").objectStore("images");
+            var req = store.openCursor();
+            req.onsuccess = function (e) {
+                var cur = e.target.result;
+                if (cur) { out[String(cur.key)] = cur.value; cur.continue(); }
+                else resolve(out);
+            };
+            req.onerror = function () { resolve(out); };
+        } catch (e) { resolve({}); }
     });
 }
 
@@ -75,7 +106,7 @@ function rmHash(str) {
 function rmImgId(url) {
     var id = rmImgMap.get(url);
     if (!id) {
-        id = "i" + (++rmImgSeq).toString(36) + rmHash(url);
+        id = "i" + rmHash(url);
         rmImgMap.set(url, id);
     }
     rmIdbPut(id, url);
@@ -103,7 +134,7 @@ function rmHydrateWalk(obj, map) {
         if (typeof v === "string") {
             if (map[v]) obj[k] = map[v];
         } else if (v && typeof v === "object") {
-            rmHydrateWalk(v, map);
+            rmHydrateWalk(obj, map);
         }
     }
 }
@@ -113,21 +144,57 @@ function rmHydrateImages() {
     rmCollectRefs(appData, refs);
     if (!refs.length) return;
     var unique = refs.filter(function (v, i) { return refs.indexOf(v) === i; });
+
     Promise.all(unique.map(function (id) {
         return rmIdbGet(id).then(function (url) { return { id: id, url: url }; });
     })).then(function (list) {
-        var map = {};
+        var table = {};
+        var missing = [];
         list.forEach(function (item) {
-            if (item.url) {
-                map["idb://" + item.id] = item.url;
-                rmImgMap.set(item.url, item.id);
-                rmStoredIds[item.id] = true;
-            }
+            if (item.url) table[item.id] = item.url;
+            else missing.push(item.id);
         });
-        rmHydrateWalk(appData, map);
-        rmRefreshAll();
-    });
+
+        function finish() {
+            var map = {};
+            var recovered = 0;
+            Object.keys(table).forEach(function (id) {
+                map["idb://" + id] = table[id];
+                rmImgMap.set(table[id], id);
+                rmStoredIds[id] = true;
+            });
+            if (!Object.keys(map).length) return;
+            rmCollectRefs(appData, refs);
+            rmHydrateWalk(appData, map);
+            rmRecoveredCount = recovered;
+            rmRefreshAll();
+            setTimeout(function () { try { saveData(); } catch (e) {} }, 500);
+        }
+
+        if (!missing.length) { finish(); return; }
+
+        rmIdbAll().then(function (all) {
+            var byHash = {};
+            Object.keys(all).forEach(function (key) {
+                var val = all[key];
+                if (typeof val === "string" && val) byHash[rmHash(val)] = val;
+            });
+            missing.forEach(function (id) {
+                var found = "";
+                if (all[id]) found = all[id];
+                if (!found || typeof found !== "string") {
+                    for (var h in byHash) {
+                        if (id.indexOf(h) >= 0) { found = byHash[h]; break; }
+                    }
+                }
+                if (found && typeof found === "string") { table[id] = found; recovered++; }
+            });
+            finish();
+        }).catch(function () { finish(); });
+    }).catch(function () {});
 }
+
+var rmRecoveredCount = 0;
 
 function rmRefreshAll() {
     try {
@@ -157,7 +224,7 @@ function rmWarnStorage() {
 function rmSaveAppData() {
     try {
         var json;
-        if (rmDbOk) {
+        if (rmDbOk && !rmIdbFail) {
             json = JSON.stringify(appData, function (k, v) {
                 if (typeof v === "string" && v.indexOf("data:image/") === 0) {
                     return "idb://" + rmImgId(v);
@@ -752,7 +819,7 @@ function rmBuildHomePages() {
     var wechatBtn = rmAppButton("btnWechat", "微信", "ic-chat");
     var galleryBtn = rmAppButton("btnGallery", "图库", "ic-image");
     var quizBtn = rmAppButton("btnQuiz", "出题", "ic-card");
-    var freqBtn = rmAppButton("btnFreq", "频率", "ic-calendar");
+    var freqBtn = rmAppButton("btnFreq", "频率", "ic-ecg");
 
     grid1.appendChild(phoneBtn);
     if (chatBtn) grid1.appendChild(chatBtn);
@@ -879,7 +946,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v53";
+                if (val) val.textContent = "3.9 · v54";
             }
         }
     } catch (e) {}
@@ -908,7 +975,14 @@ function rmInit() {
         });
     }
 
-    rmOpenDb().then(function () { setTimeout(rmHydrateImages, 0); });
+    rmOpenDb().then(function () {
+        setTimeout(function () {
+            try { rmHydrateImages(); } catch (e) {}
+        }, 0);
+        setTimeout(function () {
+            try { rmHydrateImages(); } catch (e) {}
+        }, 1200);
+    });
 }
 
 if (document.readyState === "loading") {
