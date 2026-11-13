@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v56";
+const CACHE_NAME = "philos-v57";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -7,16 +7,18 @@ const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js
 const REPLY_PATCH = String.raw`
 /* PHILOS_REPLY_PATCH */
 var RM_MODES = [
-    { key: "text", label: "单条文字" },
-    { key: "emoji", label: "纯 emoji" },
+    { key: "text", label: "文字" },
+    { key: "emoji", label: "emoji" },
     { key: "sticker", label: "表情包" },
     { key: "textEmoji", label: "文字 + emoji" },
-    { key: "combo", label: "多条文字组合" }
+    { key: "combo", label: "多条组合" },
+    { key: "sentence", label: "造句" }
 ];
 
 var RM_MOOD_KEY = "philos_moods";
 var RM_SETTINGS_KEY = "philos_patch_settings";
 var RM_CALLS_KEY = "philos_calls";
+var RM_WORDS_KEY = "philos_words";
 var rmWarnedStorage = false;
 var rmWarnedNoDb = false;
 
@@ -255,7 +257,8 @@ function rmDefaults() {
         emoji: { on: true, weight: 10 },
         sticker: { on: true, weight: 10 },
         textEmoji: { on: true, weight: 20 },
-        combo: { on: true, weight: 20 }
+        combo: { on: true, weight: 20 },
+        sentence: { on: true, weight: 10 }
     };
 }
 
@@ -272,6 +275,8 @@ function rmSettings() {
         if (typeof m.weight !== "number") m.weight = 0;
     }
     if (typeof p.comboMax !== "number") p.comboMax = 3;
+    if (typeof p.sentMin !== "number") p.sentMin = 3;
+    if (typeof p.sentMax !== "number") p.sentMax = 5;
     if (typeof p.letterMax !== "number") p.letterMax = 8;
     if (typeof p.letterDelayMin !== "number") p.letterDelayMin = 5;
     if (typeof p.letterDelayMax !== "number") p.letterDelayMax = 15;
@@ -288,6 +293,8 @@ function rmSavePatch() {
             permission: {
                 replyModes: p.replyModes || null,
                 comboMax: p.comboMax,
+                sentMin: p.sentMin,
+                sentMax: p.sentMax,
                 letterMax: p.letterMax,
                 letterDelayMin: p.letterDelayMin,
                 letterDelayMax: p.letterDelayMax
@@ -306,7 +313,7 @@ function rmLoadPatch() {
     if (data.permission) {
         var p = s.permission;
         if (data.permission.replyModes && typeof data.permission.replyModes === "object") p.replyModes = data.permission.replyModes;
-        var keys = ["comboMax", "letterMax", "letterDelayMin", "letterDelayMax"];
+        var keys = ["comboMax", "sentMin", "sentMax", "letterMax", "letterDelayMin", "letterDelayMax"];
         for (var i = 0; i < keys.length; i++) {
             if (typeof data.permission[keys[i]] === "number") p[keys[i]] = data.permission[keys[i]];
         }
@@ -398,12 +405,31 @@ function rmPool() {
     return pool;
 }
 
+/* 造句词库（兼容数组与 {items:[{text}]} 两种结构） */
+function rmWordList() {
+    var v = null;
+    try { v = JSON.parse(localStorage.getItem(RM_WORDS_KEY) || "null"); } catch (e) { v = null; }
+    var out = [];
+    if (Array.isArray(v)) {
+        for (var i = 0; i < v.length; i++) {
+            if (typeof v[i] === "string" && v[i].trim()) out.push(v[i].trim());
+        }
+    } else if (v && Array.isArray(v.items)) {
+        for (var j = 0; j < v.items.length; j++) {
+            var it = v.items[j];
+            if (it && typeof it.text === "string" && it.text.trim()) out.push(it.text.trim());
+        }
+    }
+    return out;
+}
+
 function rmAvailable(mode, pool) {
     if (mode === "text") return pool.text.length > 0;
     if (mode === "emoji") return pool.emoji.length > 0;
     if (mode === "sticker") return pool.sticker.length > 0;
     if (mode === "textEmoji") return pool.text.length > 0;
     if (mode === "combo") return pool.text.length >= 2;
+    if (mode === "sentence") return rmWordList().length >= 2;
     return false;
 }
 
@@ -439,6 +465,21 @@ function rmTakeCards(pool, count) {
     return out;
 }
 
+function rmMakeSentence(p) {
+    var words = rmWordList();
+    if (words.length < 2) return "";
+    var min = Math.max(2, Number(p.sentMin) || 3);
+    var max = Math.max(min, Number(p.sentMax) || min);
+    var n = min + Math.floor(Math.random() * (max - min + 1));
+    if (n > words.length) n = words.length;
+    var rest = words.slice();
+    var picked = [];
+    while (rest.length && picked.length < n) {
+        picked.push(rest.splice(Math.floor(Math.random() * rest.length), 1)[0]);
+    }
+    return picked.join("");
+}
+
 function rmBuildMessage(p, pool) {
     var mode = rmPickMode(p, pool);
     if (!mode) return null;
@@ -456,6 +497,11 @@ function rmBuildMessage(p, pool) {
         var max = clamp(Number(p.comboMax) || 3, 2, 6);
         var count = 2 + Math.floor(Math.random() * (max - 1));
         return { from: "ta", type: "text", text: rmTakeCards(pool, count).join("，"), status: "" };
+    }
+    if (mode === "sentence") {
+        var s = rmMakeSentence(p);
+        if (!s) return { from: "ta", type: "text", text: rmPick(pool.text), status: "" };
+        return { from: "ta", type: "text", text: s, status: "" };
     }
     return null;
 }
@@ -684,7 +730,6 @@ window.philosPushMessage = function (msg) {
 
 window.philosPrewarmImages = function () { try { rmPrewarmImages(); } catch (e) {} };
 
-/* 软刷新：重新从存储读数据并重绘，不重启页面 */
 window.philosReload = function () {
     try {
         loadData();
@@ -692,6 +737,24 @@ window.philosReload = function () {
         rmCollectRefs(appData, refs);
         if (refs.length) rmHydrateImages();
         else rmRefreshAll();
+    } catch (e) {}
+};
+
+/* 供外部 UI 写入回复方式权重（按百分数） */
+window.philosSetReplyWeights = function (weights) {
+    try {
+        if (!weights || typeof weights !== "object") return;
+        var p = rmSettings();
+        if (!p) return;
+        for (var key in weights) {
+            if (!Object.prototype.hasOwnProperty.call(weights, key)) continue;
+            if (!p.replyModes[key]) p.replyModes[key] = { on: true, weight: 0 };
+            var w = Math.max(0, Number(weights[key]) || 0);
+            p.replyModes[key].weight = w;
+            p.replyModes[key].on = w > 0;
+        }
+        saveData();
+        rmSavePatch();
     } catch (e) {}
 };
 
@@ -750,27 +813,6 @@ function rmUpdatePct() {
     }
 }
 
-function rmRender() {
-    var p = rmSettings();
-    if (!p) return;
-    for (var i = 0; i < RM_MODES.length; i++) {
-        var key = RM_MODES[i].key;
-        var onEl = document.querySelector('[data-rm-on="' + key + '"]');
-        var wEl = document.querySelector('[data-rm-weight="' + key + '"]');
-        if (onEl) onEl.checked = !!p.replyModes[key].on;
-        if (wEl) wEl.value = p.replyModes[key].weight;
-    }
-    var combo = document.querySelector("[data-rm-combo]");
-    var letterCount = document.querySelector("[data-rm-lettercount]");
-    var delayMin = document.querySelector("[data-rm-lettermin]");
-    var delayMax = document.querySelector("[data-rm-lettermax]");
-    if (combo) combo.value = p.comboMax;
-    if (letterCount) letterCount.value = p.letterMax;
-    if (delayMin) delayMin.value = p.letterDelayMin;
-    if (delayMax) delayMax.value = p.letterDelayMax;
-    rmUpdatePct();
-}
-
 function rmClampInput(el, min, max) {
     var v = Math.round(Number(el.value));
     if (isNaN(v)) v = min;
@@ -807,65 +849,6 @@ function rmAppButton(id, label, symbol) {
     btn.id = id;
     btn.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span><span class="app-label">' + label + '</span>';
     return btn;
-}
-
-function rmBuildHomePages() {
-    var content = document.querySelector(".desktop-content");
-    if (!content) return;
-    if (content.querySelector(".home-pager")) return;
-    var widget = document.getElementById("widgetLarge");
-    var dock = content.querySelector(".dock");
-    if (!widget || !dock) return;
-
-    var iconGrid = content.querySelector(".icon-grid");
-    var pager = document.createElement("div");
-    pager.className = "home-pager";
-    pager.id = "homePager";
-
-    var page1 = document.createElement("section"); page1.className = "home-page";
-    var page2 = document.createElement("section"); page2.className = "home-page";
-    var grid1 = document.createElement("div"); grid1.className = "home-app-grid";
-    var grid2 = document.createElement("div"); grid2.className = "home-app-grid";
-
-    page1.appendChild(widget);
-    page1.appendChild(grid1);
-    page2.appendChild(grid2);
-
-    var chatBtn = document.getElementById("appChat");
-    var setBtn = document.getElementById("appSettings");
-    var letterBtn = document.getElementById("appLetter");
-    var cdBtn = document.getElementById("appCountdown");
-    var widgetsBtn = document.getElementById("appWidgets");
-
-    var phoneBtn = rmAppButton("btnPhone", "电话", "ic-phone");
-    var wechatBtn = rmAppButton("btnWechat", "微信", "ic-chat");
-    var galleryBtn = rmAppButton("btnGallery", "图库", "ic-image");
-    var quizBtn = rmAppButton("btnQuiz", "出题", "ic-card");
-    var freqBtn = rmAppButton("btnFreq", "频率", "ic-ecg");
-
-    grid1.appendChild(phoneBtn);
-    if (chatBtn) grid1.appendChild(chatBtn);
-    grid1.appendChild(wechatBtn);
-    if (setBtn) grid1.appendChild(setBtn);
-
-    if (widgetsBtn) grid2.appendChild(widgetsBtn);
-    if (letterBtn) grid2.appendChild(letterBtn);
-    if (cdBtn) grid2.appendChild(cdBtn);
-    grid2.appendChild(galleryBtn);
-    grid2.appendChild(quizBtn);
-    grid2.appendChild(freqBtn);
-
-    if (iconGrid && iconGrid.parentNode) iconGrid.parentNode.removeChild(iconGrid);
-
-    pager.appendChild(page1);
-    pager.appendChild(page2);
-    content.insertBefore(pager, dock);
-
-    phoneBtn.addEventListener("click", function () { startCall(); });
-    wechatBtn.addEventListener("click", function () { alert("微信聊天还在搭建，等气泡 CSS。"); });
-    galleryBtn.addEventListener("click", function () { alert("图库还没做。"); });
-    quizBtn.addEventListener("click", function () { alert("出题还没做。"); });
-    freqBtn.addEventListener("click", function () { alert("频率还没拆分完成。"); });
 }
 
 function rmInjectStyles() {
@@ -968,7 +951,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v56";
+                if (val) val.textContent = "3.9 · v57";
             }
         }
     } catch (e) {}
@@ -982,7 +965,6 @@ function rmInit() {
     rmEnsureMoods();
     rmLoadMoodStore();
     rmApplyMoodStyle();
-    rmRender();
     rmMarkVersion();
 
     var input = $("chatInput");
