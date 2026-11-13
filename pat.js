@@ -1,10 +1,11 @@
-/* Philos 他的主动行为：拍一拍 / 主动发消息 / 主动打电话 / 主屏未读红点 / 背景分层 */
+/* Philos 他的主动行为：拍一拍（间隔可调）/ 主动发消息 / 主动打电话 / 主屏未读红点 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
     var WX_KEY = "philos_wechat";
     var UNREAD_KEY = "philos_unread";
+    var PAT_IV_KEY = "philos_pat_interval";
     var patTimer = null, msgTimer = null, callTimer = null, unreadTimer = null;
 
     function $(id) { return document.getElementById(id); }
@@ -36,21 +37,12 @@
             ".php-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;}" +
             ".php-btn{height:44px;border-radius:14px;font-size:14px;font-weight:500;border:none;color:var(--text-primary,#1b1d21);background:rgba(140,155,175,.20);}" +
             ".php-btn.primary{background:#5b7fa6;color:#fff;}" +
-            /* 红点不能被图标裁掉 */
             ".app-icon,.app-icon-box,.dock-btn{overflow:visible !important;}" +
             ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
-            /* 浅色底统一 #EEEEEE */
             "html[data-theme=\"light\"] body{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .splash{background:#EEEEEE !important;}" +
             "html[data-theme=\"light\"] .settings-view,html[data-theme=\"light\"] .app-view{background-color:#EEEEEE !important;background-image:none !important;}" +
-            "html[data-theme=\"light\"] .settings-shell,html[data-theme=\"light\"] .set-page,html[data-theme=\"light\"] .app-scroll{background-color:transparent !important;background-image:none !important;}" +
-            /* 背景分层：颜色在最底、图片在其上（和原来一样图片盖色），都不动子元素定位 */
-            ".desktop-view{overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
-            ".desktop-view::before{content:\"\";position:absolute;inset:0;background-color:var(--home-bg-color,transparent);z-index:-1;pointer-events:none;}" +
-            ".desktop-view::after{content:\"\";position:absolute;inset:-6%;background-image:var(--home-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(var(--home-blur,20px));z-index:-1;pointer-events:none;}" +
-            ".chat-view{overflow:hidden;background-color:transparent !important;background-image:none !important;}" +
-            ".chat-view::before{content:\"\";position:absolute;inset:0;background-color:var(--chat-bg-color,transparent);z-index:-1;pointer-events:none;}" +
-            ".chat-view::after{content:\"\";position:absolute;inset:-6%;background-image:var(--chat-bg-image);background-size:cover;background-position:center;background-repeat:no-repeat;filter:blur(20px);z-index:-1;pointer-events:none;}";
+            "html[data-theme=\"light\"] .settings-shell,html[data-theme=\"light\"] .set-page,html[data-theme=\"light\"] .app-scroll{background-color:transparent !important;background-image:none !important;}";
         document.head.appendChild(st);
     }
 
@@ -127,6 +119,19 @@
     function patPool(d) { return (d.cards || []).filter(function (c) { return c.kind === "status" && c.content; }); }
     function textPool(d) { return (d.cards || []).filter(function (c) { return (c.kind === "text" || c.kind === "emoji") && c.content; }); }
 
+    /* ===== 拍一拍间隔（存在独立键里，免得被设置页的深合并丢掉） ===== */
+    function patInterval() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(PAT_IV_KEY) || "null"); } catch (e) { v = null; }
+        if (!v || typeof v !== "object") v = {};
+        if (typeof v.min !== "number") v.min = 25;
+        if (typeof v.max !== "number") v.max = 90;
+        if (v.min < 1) v.min = 1;
+        if (v.max < v.min) v.max = v.min;
+        return v;
+    }
+    function savePatInterval(v) { try { localStorage.setItem(PAT_IV_KEY, JSON.stringify(v)); } catch (e) {} }
+
     function firePat() {
         var d = getData();
         var perm = (d.settings && d.settings.permission) || {};
@@ -134,18 +139,24 @@
         var cards = patPool(d);
         if (cards.length && chance > 0 && Math.random() * 100 < chance) {
             var text = cards[Math.floor(Math.random() * cards.length)].content;
-            d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-            d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
-            setData(d);
-            if (inChat()) appendToChat("—— " + text + " ——");
-            else showPopup(text);
+            if (inChat() && window.philosPushMessage) {
+                window.philosPushMessage({ type: "status", text: "—— " + text + " ——" });
+            } else {
+                d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+                d.chatHistory.push({ type: "status", text: "—— " + text + " ——", time: Date.now() });
+                setData(d);
+                if (inChat()) appendToChat("—— " + text + " ——");
+                else showPopup(text);
+            }
         }
         schedulePat();
     }
 
     function schedulePat() {
         if (patTimer) clearTimeout(patTimer);
-        patTimer = setTimeout(firePat, (25 + Math.random() * 65) * 60000);
+        var iv = patInterval();
+        var mins = iv.min + Math.random() * Math.max(0, iv.max - iv.min);
+        patTimer = setTimeout(firePat, Math.max(1, mins) * 60000);
     }
 
     function randBetween(min, max) {
@@ -161,6 +172,10 @@
     }
 
     function pushChatMessage(text) {
+        if (window.philosPushMessage) {
+            window.philosPushMessage({ from: "ta", type: "text", text: text, status: "" });
+            return;
+        }
         var d = getData();
         d.chatHistory = Array.isArray(d.chatHistory) ? d.chatHistory : [];
         d.chatHistory.push({ from: "ta", type: "text", text: text, time: Date.now(), status: "" });
@@ -257,6 +272,45 @@
         callTimer = setTimeout(fireProactiveCall, delayMs(perm, "callMin", "callMax", 1));
     }
 
+    /* ===== 频率页：加一张「拍一拍」卡 ===== */
+    function ensureFreqPat() {
+        var view = document.getElementById("freqView");
+        if (!view || !view.classList.contains("show")) return;
+        var body = document.getElementById("freqBody");
+        if (!body || body.querySelector("[data-philos-patcard]")) return;
+
+        var iv = patInterval();
+        var card = document.createElement("div");
+        card.className = "group-card control-card";
+        card.setAttribute("data-philos-patcard", "1");
+        card.innerHTML =
+            '<div class="card-title">拍一拍</div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">最短间隔</span><span class="control-value" data-pat-val="min">' + iv.min + 'min</span></div><input class="slider" type="range" data-pat-key="min" min="1" max="240" step="1"></div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">最长间隔</span><span class="control-value" data-pat-val="max">' + iv.max + 'min</span></div><input class="slider" type="range" data-pat-key="max" min="1" max="480" step="1"></div>';
+
+        var minEl = card.querySelector('[data-pat-key="min"]');
+        var maxEl = card.querySelector('[data-pat-key="max"]');
+        if (minEl) minEl.value = iv.min;
+        if (maxEl) maxEl.value = iv.max;
+
+        function onInput() {
+            var cur = patInterval();
+            cur.min = Math.max(1, Number(minEl.value) || 1);
+            cur.max = Math.max(cur.min, Number(maxEl.value) || cur.min);
+            if (Number(maxEl.value) !== cur.max) maxEl.value = cur.max;
+            savePatInterval(cur);
+            var lmin = card.querySelector('[data-pat-val="min"]');
+            var lmax = card.querySelector('[data-pat-val="max"]');
+            if (lmin) lmin.textContent = cur.min + "min";
+            if (lmax) lmax.textContent = cur.max + "min";
+            schedulePat();
+        }
+        if (minEl) minEl.addEventListener("input", onInput);
+        if (maxEl) maxEl.addEventListener("input", onInput);
+
+        body.appendChild(card);
+    }
+
     /* ===== 主屏未读红点（电话由 phone.js 自己管） ===== */
     function getUnread() {
         var s = null;
@@ -336,18 +390,26 @@
         setTimeout(refreshUnread, 60);
     }
 
-    function startUnreadWatch() {
+    function tick() {
+        if (document.hidden) return;
         refreshUnread();
+        ensureFreqPat();
+    }
+
+    function startWatch() {
+        refreshUnread();
+        ensureFreqPat();
         if (unreadTimer) clearInterval(unreadTimer);
-        unreadTimer = setInterval(function () { if (!document.hidden) refreshUnread(); }, 3000);
+        unreadTimer = setInterval(tick, 2000);
         document.addEventListener("click", function (e) {
             var t = e.target;
             if (!t || !t.closest) return;
             if (t.closest("#appChat")) markRead("chat");
             else if (t.closest("#btnWechat")) markRead("wx");
+            else if (t.closest("#btnFreq")) setTimeout(ensureFreqPat, 120);
         }, true);
-        document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshUnread(); });
-        window.addEventListener("focus", refreshUnread);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) tick(); });
+        window.addEventListener("focus", tick);
     }
 
     function markVersion() {
@@ -357,7 +419,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H44";
+                    if (val) val.textContent = "3.9 · H45";
                 }
             }
         } catch (e) {}
@@ -370,7 +432,7 @@
         schedulePat();
         scheduleMessage();
         scheduleCall();
-        startUnreadWatch();
+        startWatch();
         setTimeout(markVersion, 1500);
     }
 
