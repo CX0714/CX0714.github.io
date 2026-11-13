@@ -1,11 +1,11 @@
-/* Philos 微信模块 v7（由 herotext.js 加载）：回复逐条显示 */
+/* Philos 微信模块 v8（由 herotext.js 加载）：逐条回复 + 外部写入即时同步 + 加载图库 */
 (function () {
     "use strict";
 
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
     var wx = null, wxTyping = false, wxPanelOpen = "", wxQuoteText = null;
-    var wxRound = 0, wxReplyTimer = null;
+    var wxRound = 0, wxReplyTimer = null, wxRaw = "";
 
     var FACES = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕"];
 
@@ -83,8 +83,14 @@
     }
 
     function wxData() {
-        if (wx) return wx;
-        try { wx = JSON.parse(localStorage.getItem(WX_KEY) || "null"); } catch (e) { wx = null; }
+        var raw = "";
+        try { raw = localStorage.getItem(WX_KEY) || ""; } catch (e) { raw = ""; }
+        if (raw !== wxRaw) {
+            wxRaw = raw;
+            var parsed = null;
+            if (raw) { try { parsed = JSON.parse(raw); } catch (e) { parsed = null; } }
+            wx = parsed && typeof parsed === "object" ? parsed : null;
+        }
         if (!wx || typeof wx !== "object") wx = { name: "Ta", avatar: "", myAvatar: "", bg: "#F7F7F7", bgImage: "", history: [], emojis: [], stickers: [] };
         if (!Array.isArray(wx.history)) wx.history = [];
         if (!Array.isArray(wx.emojis)) wx.emojis = [];
@@ -96,7 +102,15 @@
         if (typeof wx.bgImage !== "string") wx.bgImage = "";
         return wx;
     }
-    function wxSave() { try { localStorage.setItem(WX_KEY, JSON.stringify(wxData())); } catch (e) { alert("微信数据空间已满。"); } }
+
+    function wxSave() {
+        try {
+            var json = JSON.stringify(wxData());
+            wxRaw = json;
+            localStorage.setItem(WX_KEY, json);
+        } catch (e) { alert("微信数据空间已满。"); }
+    }
+
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
 
     function wxAvatar(src, fallback) {
@@ -496,17 +510,17 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H39";
+                    if (val) val.textContent = "3.9 · H42";
                 }
             }
         } catch (e) {}
     }
 
-    function loadQuiz() {
-        if (document.querySelector('script[data-philos="quiz.js"]')) return;
+    function loadModule(src) {
+        if (document.querySelector('script[data-philos="' + src + '"]')) return;
         var s = document.createElement("script");
-        s.src = "quiz.js";
-        s.setAttribute("data-philos", "quiz.js");
+        s.src = src;
+        s.setAttribute("data-philos", src);
         document.body.appendChild(s);
     }
 
@@ -515,7 +529,8 @@
         tuneRanges();
         fixAvatarLabels();
         markVersion();
-        loadQuiz();
+        loadModule("quiz.js");
+        loadModule("gallery.js");
         setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); }, 900);
         setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); }, 2200);
         if (window.MutationObserver) {
@@ -530,4 +545,8 @@
     else setTimeout(init, 0);
 
     window.PhilosOpenWeChat = wxOpen;
+    window.PhilosRefreshWeChat = function () {
+        var v = document.getElementById("wechatView");
+        if (v && v.classList.contains("show")) wxRender();
+    };
 })();
