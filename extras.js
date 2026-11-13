@@ -3,10 +3,19 @@
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
+    var GAL_KEY = "philos_gallery";
     var KINDS = ["text", "emoji", "sticker", "status"];
 
     function $(id) { return document.getElementById(id); }
     function getMain() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
+    function getGal() {
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem(GAL_KEY) || "null"); } catch (e) { d = null; }
+        if (!d || typeof d !== "object") d = {};
+        if (!Array.isArray(d.me)) d.me = [];
+        if (!Array.isArray(d.ta)) d.ta = [];
+        return d;
+    }
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
     function injectStyles() {
@@ -155,8 +164,7 @@
         }
 
         var name = chip.getAttribute("data-cat");
-        var isActive = chip.classList.contains("active");
-        if (isActive) {
+        if (chip.classList.contains("active")) {
             e.stopPropagation();
             if (name === "全部" || name === "未分类") return;
             openEditor(name);
@@ -164,11 +172,10 @@
     }, true);
 
     /* ================= 批量添加图片 ================= */
-    function compress(file, cb) {
+    function compress(file, max, cb) {
         var url = URL.createObjectURL(file);
         var img = new Image();
         img.onload = function () {
-            var max = 480;
             var scale = Math.min(1, max / Math.max(img.width, img.height));
             var w = Math.max(1, Math.round(img.width * scale));
             var h = Math.max(1, Math.round(img.height * scale));
@@ -176,7 +183,7 @@
             c.width = w; c.height = h;
             c.getContext("2d").drawImage(img, 0, 0, w, h);
             var out = "";
-            try { out = c.toDataURL("image/webp", 0.66); } catch (e) {}
+            try { out = c.toDataURL("image/webp", 0.68); } catch (e) {}
             if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
             URL.revokeObjectURL(url);
             cb(out);
@@ -192,18 +199,26 @@
         return name;
     }
 
-    function handleBatch(input, mode) {
+    function activeGalTab() {
+        var btn = document.querySelector(".gal-seg-btn.active");
+        var t = btn ? btn.getAttribute("data-galtab") : "me";
+        return t === "ta" ? "ta" : "me";
+    }
+
+    var mode = "", cat = "未分类", bigMode = false, galTab = "me";
+
+    function handleBatch(input) {
         var files = Array.prototype.slice.call(input.files || []);
         input.value = "";
         if (!files.length) return;
-
         var results = [];
         var idx = 0;
+        var limit = mode === "gallery" ? 900 : 480;
 
         function next() {
             if (idx >= files.length) { apply(results); return; }
             var f = files[idx++];
-            compress(f, function (src) {
+            compress(f, limit, function (src) {
                 if (src) results.push(src);
                 next();
             });
@@ -213,10 +228,20 @@
 
     function apply(results) {
         if (!results.length) return;
+
+        if (mode === "gallery") {
+            var g = getGal();
+            var list = galTab === "ta" ? g.ta : g.me;
+            results.slice().reverse().forEach(function (src) { list.unshift(src); });
+            try { localStorage.setItem(GAL_KEY, JSON.stringify(g)); } catch (e) { alert("存储空间不足，这批图片没有保存。"); return; }
+            setTimeout(function () { location.reload(); }, 260);
+            return;
+        }
+
         var data = getMain();
         var sync = $("stickerSync") && $("stickerSync").checked;
 
-        if (apply.mode === "stickers") {
+        if (mode === "stickers") {
             data.stickers = Array.isArray(data.stickers) ? data.stickers : [];
             results.forEach(function (src) {
                 data.stickers.push(src);
@@ -227,13 +252,13 @@
             });
         } else {
             data.cards = Array.isArray(data.cards) ? data.cards : [];
-            var cat = apply.cat || "未分类";
+            var c = cat || "未分类";
             results.forEach(function (src) {
-                data.cards.unshift({ id: uid(), kind: "sticker", content: src, category: cat, createdAt: Date.now() });
+                data.cards.unshift({ id: uid(), kind: "sticker", content: src, category: c, createdAt: Date.now() });
             });
             if (!data.cardCategories || typeof data.cardCategories !== "object") data.cardCategories = {};
             if (!Array.isArray(data.cardCategories.sticker)) data.cardCategories.sticker = [];
-            if (cat !== "未分类" && data.cardCategories.sticker.indexOf(cat) < 0) data.cardCategories.sticker.push(cat);
+            if (c !== "未分类" && data.cardCategories.sticker.indexOf(c) < 0) data.cardCategories.sticker.push(c);
         }
 
         try {
@@ -250,13 +275,18 @@
         if (!el || !el.id) return;
         if (el.id === "stickerFile") {
             e.stopPropagation();
-            apply.mode = "stickers";
-            handleBatch(el, "stickers");
+            mode = "stickers";
+            handleBatch(el);
         } else if (el.id === "cardStickerFile") {
             e.stopPropagation();
-            apply.mode = "cards";
-            apply.cat = activeCatName();
-            handleBatch(el, "cards");
+            mode = "cards";
+            cat = activeCatName();
+            handleBatch(el);
+        } else if (el.id === "galFile") {
+            e.stopPropagation();
+            mode = "gallery";
+            galTab = activeGalTab();
+            handleBatch(el);
         }
     }, true);
 
