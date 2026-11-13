@@ -1,4 +1,4 @@
-/* Philos 附加功能：字卡库分组编辑 + 批量添加图片（图片写 IndexedDB，只存地址，不重启页面） */
+/* Philos 附加功能：存储用量面板 + 字卡库分组编辑 + 批量添加图片 */
 (function () {
     "use strict";
 
@@ -18,7 +18,7 @@
     }
     function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 
-    /* ===== IndexedDB 小工具（和补丁共用同一个库） ===== */
+    /* ===== IndexedDB 工具 ===== */
     var dbPromise = null;
     function db() {
         if (dbPromise) return dbPromise;
@@ -61,13 +61,35 @@
             return putImg(id, url).then(function (ok) { return ok ? "idb://" + id : url; });
         }));
     }
+    function idbStats() {
+        return db().then(function (d) {
+            if (!d) return { count: 0, bytes: 0 };
+            return new Promise(function (resolve) {
+                var out = { count: 0, bytes: 0 };
+                try {
+                    var req = d.transaction("images").objectStore("images").openCursor();
+                    req.onsuccess = function (e) {
+                        var cur = e.target.result;
+                        if (cur) {
+                            out.count++;
+                            if (typeof cur.value === "string") out.bytes += cur.value.length;
+                            cur.continue();
+                        } else resolve(out);
+                    };
+                    req.onerror = function () { resolve(out); };
+                } catch (e) { resolve(out); }
+            });
+        });
+    }
 
     function softRefresh() {
-        if (window.philosReload) {
-            setTimeout(function () { window.philosReload(); }, 80);
-            return;
-        }
+        if (window.philosReload) { setTimeout(function () { window.philosReload(); }, 80); return; }
         setTimeout(function () { location.reload(); }, 200);
+    }
+    function fmt(bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+        return (bytes / 1024 / 1024).toFixed(2) + " MB";
     }
 
     function injectStyles() {
@@ -86,11 +108,88 @@
             ".xc-btn.ghost{background:rgba(120,132,148,0.14);color:#1b1d21;}" +
             ".xc-btn.primary{background:#5b7fa6;color:#fff;}" +
             ".xc-btn.danger{background:rgba(255,59,48,0.12);color:#ff3b30;}" +
+            ".sp-bar{height:7px;border-radius:4px;background:rgba(120,132,148,0.22);overflow:hidden;margin:2px 16px 14px;}" +
+            ".sp-bar span{display:block;height:100%;border-radius:4px;background:#5b7fa6;transition:width .25s ease;}" +
             "[data-theme=\"dark\"] .xc-sheet{background:rgba(32,34,39,0.94);border-color:rgba(255,255,255,0.12);}" +
             "[data-theme=\"dark\"] .xc-title{color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .xc-input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.14);color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .xc-btn.ghost{background:rgba(255,255,255,0.10);color:#f2f3f6;}";
         document.head.appendChild(st);
+    }
+
+    /* ================= 存储用量面板 ================= */
+    function dataPage() { return document.querySelector('[data-page="data"]'); }
+
+    function buildPanel() {
+        var card = document.createElement("div");
+        card.className = "group-card control-card";
+        card.setAttribute("data-storage-panel", "1");
+        card.innerHTML =
+            '<div class="card-title">存储用量</div>' +
+            '<div class="control-row"><span class="control-label">聊天记录</span><span class="control-value" data-sp="chat">—</span></div>' +
+            '<div class="control-row"><span class="control-label">设置 / 字卡等</span><span class="control-value" data-sp="rest">—</span></div>' +
+            '<div class="control-row"><span class="control-label">图片（大仓库）</span><span class="control-value" data-sp="img">—</span></div>' +
+            '<div class="control-block"><div class="control-head"><span class="control-label">localStorage 总占用</span><span class="control-value" data-sp="total">—</span></div></div>' +
+            '<div class="sp-bar"><span data-sp="bar" style="width:0%"></span></div>' +
+            '<div class="control-block"><button class="wide-btn" data-sp-act="prewarm" type="button">把残留图片搬进大仓库</button></div>' +
+            '<div class="control-block"><button class="wide-btn" data-sp-act="measure" type="button">重新测量</button></div>';
+        card.addEventListener("click", function (e) {
+            var btn = e.target.closest ? e.target.closest("[data-sp-act]") : null;
+            if (!btn) return;
+            var act = btn.getAttribute("data-sp-act");
+            if (act === "prewarm") {
+                if (window.philosPrewarmImages) window.philosPrewarmImages();
+                btn.textContent = "正在搬…稍后重新测量";
+                setTimeout(updatePanel, 2600);
+            } else {
+                updatePanel();
+            }
+        });
+        return card;
+    }
+
+    function setVal(card, key, text) {
+        var el = card.querySelector('[data-sp="' + key + '"]');
+        if (el) el.textContent = text;
+    }
+
+    function updatePanel() {
+        var card = document.querySelector("[data-storage-panel]");
+        if (!card) return;
+        var raw = "";
+        try { raw = localStorage.getItem(MAIN_KEY) || ""; } catch (e) {}
+        var totalBytes = raw.length;
+        var data = {};
+        try { data = JSON.parse(raw || "{}"); } catch (e) { data = {}; }
+        var chatBytes = 0;
+        try { chatBytes = JSON.stringify(data.chatHistory || []).length; } catch (e) {}
+        var restBytes = Math.max(0, totalBytes - chatBytes);
+
+        setVal(card, "chat", fmt(chatBytes));
+        setVal(card, "rest", fmt(restBytes));
+        setVal(card, "total", fmt(totalBytes) + "（上限约 5 MB）");
+
+        var pct = Math.min(100, Math.round(totalBytes / (5 * 1024 * 1024) * 100));
+        var bar = card.querySelector('[data-sp="bar"]');
+        if (bar) {
+            bar.style.width = pct + "%";
+            bar.style.background = pct > 85 ? "#ff3b30" : (pct > 60 ? "#e8a13a" : "#5b7fa6");
+        }
+
+        idbStats().then(function (st) {
+            setVal(card, "img", st.count + " 张 · " + fmt(st.bytes));
+        });
+    }
+
+    function ensurePanel() {
+        var page = dataPage();
+        if (!page) return;
+        if (page.querySelector("[data-storage-panel]")) return;
+        var anchor = page.querySelector(".about-note");
+        var card = buildPanel();
+        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(card, anchor);
+        else page.appendChild(card);
+        setTimeout(updatePanel, 120);
     }
 
     /* ================= 字卡库分组编辑 ================= */
@@ -360,7 +459,11 @@
     function init() {
         injectStyles();
         enableMultiple();
-        setInterval(enableMultiple, 2000);
+        ensurePanel();
+        setInterval(function () {
+            enableMultiple();
+            ensurePanel();
+        }, 2000);
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
