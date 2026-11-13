@@ -1,4 +1,4 @@
-/* Philos 附加功能：存储用量 / 图标背景 / 字卡库二级界面（情绪·造句）/ 频率·造句 / 批量加图 / 分组编辑 */
+/* Philos 附加功能：存储用量 / 图标背景 / 字卡库二级界面（情绪·造句为整页）/ 频率·造句 / 批量加图 / 分组编辑 */
 (function () {
     "use strict";
 
@@ -182,20 +182,24 @@
             ".ck-block-count{font-size:12px;color:#8b909a;}" +
             ".ck-block-icon{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(91,127,166,0.10);color:#5b7fa6;}" +
             ".ck-block-icon .svg-icon{width:20px;height:20px;}" +
-            ".mo-panel{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;z-index:641;width:88%;max-width:340px;max-height:76vh;display:flex;flex-direction:column;padding:18px;border-radius:20px;background:rgba(255,255,255,0.96);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,0.9);box-shadow:0 22px 50px rgba(20,30,45,0.24);transition:transform .18s ease,opacity .18s ease;}" +
-            ".mo-panel.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}" +
-            ".mo-list{flex:1 1 auto;min-height:0;overflow-y:auto;margin:8px 0 10px;}" +
-            ".mo-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;margin-bottom:8px;border-radius:13px;background:rgba(120,132,148,0.10);font-size:15px;color:#1b1d21;}" +
-            ".mo-del{flex:0 0 auto;font-size:13px;color:#ff3b30;background:none;border:none;}" +
-            ".mo-tip{font-size:12px;color:#8b909a;line-height:1.5;margin-bottom:10px;}" +
-            "[data-theme=\"dark\"] .ck-overview{background:#000000;}" +
-            "[data-theme=\"dark\"] .ck-block{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
-            "[data-theme=\"dark\"] .ck-block-title{color:#f2f3f6;}" +
-            "[data-theme=\"dark\"] .xc-sheet,[data-theme=\"dark\"] .mo-panel{background:rgba(32,34,39,0.96);border-color:rgba(255,255,255,0.12);}" +
+            ".ck-sub{position:absolute;left:0;right:0;bottom:0;z-index:7;background:#EEEEEE;display:none;flex-direction:column;}" +
+            ".ck-sub.show{display:flex;}" +
+            ".ck-sub-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px 4px;font-size:12.5px;color:#8b909a;}" +
+            ".ck-sub-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 16px 10px;}" +
+            ".ck-sub-item{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#ffffff;border-radius:16px;padding:14px 16px;margin-bottom:10px;box-shadow:0 2px 10px rgba(60,80,105,0.10);font-size:15px;color:#1b1d21;word-break:break-word;}" +
+            ".ck-sub-del{flex:0 0 auto;font-size:13px;color:#ff3b30;background:none;border:none;padding:2px 0;}" +
+            ".ck-sub-empty{text-align:center;font-size:13px;color:#8b909a;padding:44px 0;}" +
+            ".ck-sub-add{flex:0 0 auto;display:flex;gap:10px;padding:10px 16px calc(env(safe-area-inset-bottom) + 16px);}" +
+            ".ck-sub-add input{flex:1 1 auto;min-width:0;height:46px;border-radius:14px;border:1px solid rgba(120,135,155,0.28);background:#ffffff;padding:0 13px;font-size:16px;color:#1b1d21;outline:none;}" +
+            ".ck-sub-add button{flex:0 0 auto;width:86px;height:46px;border-radius:14px;background:#5b7fa6;color:#fff;font-size:15px;border:none;}" +
+            "[data-theme=\"dark\"] .ck-overview,[data-theme=\"dark\"] .ck-sub{background:#000000;}" +
+            "[data-theme=\"dark\"] .ck-block,[data-theme=\"dark\"] .ck-sub-item{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
+            "[data-theme=\"dark\"] .ck-block-title,[data-theme=\"dark\"] .ck-sub-item{color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .ck-sub-add input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.14);color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .xc-sheet{background:rgba(32,34,39,0.96);border-color:rgba(255,255,255,0.12);}" +
             "[data-theme=\"dark\"] .xc-title{color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .xc-input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.14);color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .xc-btn.ghost{background:rgba(255,255,255,0.10);color:#f2f3f6;}" +
-            "[data-theme=\"dark\"] .mo-item{background:rgba(255,255,255,0.08);color:#f2f3f6;}" +
             "#chatMessages .msg-bubble img.msg-gallery-img{max-width:210px !important;border-radius:12px;}";
         document.head.appendChild(st);
     }
@@ -383,7 +387,7 @@
         if (prev) { prev.classList.remove("has-image"); prev.style.backgroundImage = ""; }
     }, true);
 
-    /* ================= 情绪 ================= */
+    /* ================= 情绪 / 造句 数据 ================= */
     function moodStore() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(MOOD_KEY) || "null"); } catch (e) { v = null; }
@@ -395,7 +399,6 @@
     }
     function saveMoodStore(v) { try { localStorage.setItem(MOOD_KEY, JSON.stringify(v)); } catch (e) { alert("保存失败。"); } }
 
-    /* ================= 造句：词库 + 设置 ================= */
     function words() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(WORD_KEY) || "null"); } catch (e) { v = null; }
@@ -501,18 +504,12 @@
 
         card.addEventListener("input", function (e) {
             var key = e.target.getAttribute && e.target.getAttribute("data-sent");
-            if (!key) return;
+            if (!key || key === "on") return;
             var cur = sentCfg();
-            if (key === "on") cur.on = !!e.target.checked;
-            else cur[key] = Number(e.target.value) || cur[key];
+            cur[key] = Number(e.target.value) || cur[key];
             if (cur.max < cur.min) cur.max = cur.min;
             if (cur.ivMax < cur.ivMin) cur.ivMax = cur.ivMin;
             saveSentCfg(cur);
-
-            var unit = key.indexOf("iv") === 0 ? "min" : "个";
-            var label = card.querySelector('[data-sent-val="' + key + '"]');
-            if (label) label.textContent = cur[key] + unit;
-
             ["min", "max", "ivMin", "ivMax"].forEach(function (k) {
                 var el = card.querySelector('[data-sent="' + k + '"]');
                 if (el && Number(el.value) !== cur[k]) el.value = cur[k];
@@ -534,20 +531,26 @@
         card.addEventListener("click", function (e) {
             var btn = e.target.closest ? e.target.closest("[data-sent-act]") : null;
             if (!btn) return;
-            if (!sendSentence(true)) return;
+            sendSentence(true);
         });
 
         body.appendChild(card);
     }
 
-    /* ================= 字卡库二级界面 ================= */
+    /* ================= 字卡库：方块页 + 整页子页 ================= */
     var ckState = "overview";
+    var subKind = "";
 
     function kindCounts() {
         var data = getMain();
         var out = { text: 0, emoji: 0, sticker: 0, status: 0 };
         (data.cards || []).forEach(function (c) { if (c && out[c.kind] != null) out[c.kind]++; });
         return out;
+    }
+
+    function navHeight(view) {
+        var nav = view.querySelector(".app-nav");
+        return nav ? Math.round(nav.getBoundingClientRect().height) : 0;
     }
 
     function renderOverview() {
@@ -594,130 +597,96 @@
             grid.appendChild(block);
         });
 
-        var nav = view.querySelector(".app-nav");
-        var navH = nav ? nav.getBoundingClientRect().height : 0;
-        layer.style.top = Math.max(0, Math.round(navH)) + "px";
+        layer.style.top = Math.max(0, navHeight(view)) + "px";
     }
 
-    function syncOverviewCounts() {
+    function buildSubPage() {
+        var view = $("cardsView");
+        if (!view) return null;
+        var sub = view.querySelector("[data-ck-subpage]");
+        if (sub) return sub;
+
+        sub = document.createElement("div");
+        sub.className = "ck-sub";
+        sub.setAttribute("data-ck-subpage", "1");
+        sub.innerHTML =
+            '<div class="ck-sub-head"><span data-sub-tip>—</span><span data-sub-count>0 条</span></div>' +
+            '<div class="ck-sub-list" data-sub-list></div>' +
+            '<div class="ck-sub-add"><input type="text" maxlength="20" data-sub-input placeholder="输入内容" autocomplete="off"><button type="button" data-sub-add>添加</button></div>';
+        view.appendChild(sub);
+
+        sub.querySelector("[data-sub-add]").addEventListener("click", function () { addSubItem(); });
+        sub.querySelector("[data-sub-input]").addEventListener("keydown", function (e) {
+            if (e.key === "Enter") { e.preventDefault(); addSubItem(); }
+        });
+
+        return sub;
+    }
+
+    function addSubItem() {
+        var sub = document.querySelector("[data-ck-subpage]");
+        if (!sub || !subKind) return;
+        var input = sub.querySelector("[data-sub-input]");
+        var text = input ? input.value.trim() : "";
+        if (!text) return;
+
+        if (subKind === "mood") {
+            var s = moodStore();
+            if (s.moods.indexOf(text) < 0) s.moods.push(text);
+            s.state = { text: "", until: 0 };
+            saveMoodStore(s);
+        } else {
+            var list = words();
+            if (list.indexOf(text) < 0) list.push(text);
+            saveWords(list);
+        }
+        if (input) input.value = "";
+        renderSubPage();
+        renderOverviewCountsOnly();
+    }
+
+    function renderOverviewCountsOnly() {
         var view = $("cardsView");
         if (!view) return;
         var layer = view.querySelector("[data-card-overview]");
         if (layer && layer.classList.contains("show")) renderOverview();
     }
 
-    function showOverview() {
+    function renderSubPage() {
         var view = $("cardsView");
         if (!view) return;
-        ckState = "overview";
-        renderOverview();
-        var layer = view.querySelector("[data-card-overview]");
-        if (layer) layer.classList.add("show");
-    }
-    function hideOverview() {
-        var view = $("cardsView");
-        if (!view) return;
-        var layer = view.querySelector("[data-card-overview]");
-        if (layer) layer.classList.remove("show");
-    }
-    function enterKind(kind) {
-        ckState = "list";
-        hideOverview();
-        var btn = document.querySelector('#cardKindSeg .kind-btn[data-kind="' + kind + '"]');
-        if (btn) btn.click();
-    }
+        var sub = view.querySelector("[data-ck-subpage]");
+        if (!sub) return;
 
-    /* ================= 通用列表面板（情绪 / 造句） ================= */
-    function openListPanel(kind) {
-        injectStyles();
-        var isMood = kind === "mood";
-        var panelId = isMood ? "moPanel" : "wdPanel";
-        var maskId = isMood ? "moMask" : "wdMask";
-        var listId = isMood ? "moList" : "wdList";
-        var inputId = isMood ? "moInput" : "wdInput";
-
-        var mask = $(maskId);
-        if (!mask) {
-            mask = document.createElement("div");
-            mask.className = "xc-mask";
-            mask.id = maskId;
-            document.body.appendChild(mask);
-            mask.addEventListener("click", function () {
-                mask.classList.remove("show");
-                var p = $(panelId);
-                if (p) p.classList.remove("show");
-            });
-        }
-
-        var panel = $(panelId);
-        if (!panel) {
-            panel = document.createElement("div");
-            panel.className = "mo-panel";
-            panel.id = panelId;
-            panel.innerHTML =
-                '<div class="xc-title">' + (isMood ? "情绪" : "造句") + '</div>' +
-                '<div class="mo-tip">' + (isMood
-                    ? "这些会显示在他 iMessage 气泡下方，像心情状态一样轮换。"
-                    : "这里放词。他每次会按「频率 → 造句」里设的个数，随机取几个词拼成一句话。") + '</div>' +
-                '<div class="mo-list" id="' + listId + '"></div>' +
-                '<input class="xc-input" id="' + inputId + '" type="text" maxlength="20" placeholder="' + (isMood ? "输入一条情绪" : "输入一个词或短语") + '" autocomplete="off">' +
-                '<div class="xc-row"><button class="xc-btn ghost" data-lp-close="1" type="button">关闭</button><button class="xc-btn primary" data-lp-add="1" type="button">添加</button></div>';
-            document.body.appendChild(panel);
-
-            panel.addEventListener("click", function (e) {
-                var t = e.target;
-                if (t.closest("[data-lp-close]")) {
-                    panel.classList.remove("show");
-                    var m = $(maskId);
-                    if (m) m.classList.remove("show");
-                }
-                if (t.closest("[data-lp-add]")) {
-                    var input = $(inputId);
-                    var text = input ? input.value.trim() : "";
-                    if (!text) return;
-                    if (isMood) {
-                        var s = moodStore();
-                        if (s.moods.indexOf(text) < 0) s.moods.push(text);
-                        s.state = { text: "", until: 0 };
-                        saveMoodStore(s);
-                    } else {
-                        var list = words();
-                        if (list.indexOf(text) < 0) list.push(text);
-                        saveWords(list);
-                    }
-                    if (input) input.value = "";
-                    renderListPanel(kind);
-                    syncOverviewCounts();
-                }
-            });
-        }
-
-        renderListPanel(kind);
-        mask.classList.add("show");
-        panel.classList.add("show");
-    }
-
-    function renderListPanel(kind) {
-        var isMood = kind === "mood";
-        var list = $(isMood ? "moList" : "wdList");
-        if (!list) return;
+        var isMood = subKind === "mood";
         var arr = isMood ? moodStore().moods : words();
+
+        sub.style.top = Math.max(0, navHeight(view)) + "px";
+        var tip = sub.querySelector("[data-sub-tip]");
+        if (tip) tip.textContent = isMood ? "这些会显示在他气泡下方，轮换出现" : "他每次随机取几个词拼成一句话";
+        var countEl = sub.querySelector("[data-sub-count]");
+        if (countEl) countEl.textContent = arr.length + " 条";
+        var input = sub.querySelector("[data-sub-input]");
+        if (input) input.placeholder = isMood ? "输入一条情绪" : "输入一个词或短语";
+
+        var list = sub.querySelector("[data-sub-list]");
+        if (!list) return;
         list.innerHTML = "";
         if (!arr.length) {
             var empty = document.createElement("div");
-            empty.className = "mo-tip";
-            empty.textContent = isMood ? "还没有情绪，下面加一条试试。" : "还没有词，下面加一个试试。";
+            empty.className = "ck-sub-empty";
+            empty.textContent = isMood ? "还没有情绪，下面加一条试试" : "还没有词，下面加一个试试";
             list.appendChild(empty);
             return;
         }
         arr.forEach(function (text, idx) {
             var row = document.createElement("div");
-            row.className = "mo-item";
+            row.className = "ck-sub-item";
             var label = document.createElement("span");
             label.textContent = text;
             var del = document.createElement("button");
             del.type = "button";
-            del.className = "mo-del";
+            del.className = "ck-sub-del";
             del.textContent = "删除";
             del.addEventListener("click", function () {
                 if (isMood) {
@@ -730,8 +699,8 @@
                     w.splice(idx, 1);
                     saveWords(w);
                 }
-                renderListPanel(kind);
-                syncOverviewCounts();
+                renderSubPage();
+                renderOverviewCountsOnly();
             });
             row.appendChild(label);
             row.appendChild(del);
@@ -739,12 +708,58 @@
         });
     }
 
+    function showSubPage(kind) {
+        var view = $("cardsView");
+        if (!view) return;
+        subKind = kind;
+        ckState = "sub";
+        buildSubPage();
+        renderSubPage();
+        var layer = view.querySelector("[data-card-overview]");
+        if (layer) layer.classList.remove("show");
+        var sub = view.querySelector("[data-ck-subpage]");
+        if (sub) sub.classList.add("show");
+    }
+
+    function hideSubPage() {
+        var view = $("cardsView");
+        if (!view) return;
+        var sub = view.querySelector("[data-ck-subpage]");
+        if (sub) sub.classList.remove("show");
+        subKind = "";
+    }
+
+    function showOverview() {
+        var view = $("cardsView");
+        if (!view) return;
+        ckState = "overview";
+        hideSubPage();
+        renderOverview();
+        var layer = view.querySelector("[data-card-overview]");
+        if (layer) layer.classList.add("show");
+    }
+
+    function hideOverview() {
+        var view = $("cardsView");
+        if (!view) return;
+        var layer = view.querySelector("[data-card-overview]");
+        if (layer) layer.classList.remove("show");
+    }
+
+    function enterKind(kind) {
+        ckState = "list";
+        hideOverview();
+        hideSubPage();
+        var btn = document.querySelector('#cardKindSeg .kind-btn[data-kind="' + kind + '"]');
+        if (btn) btn.click();
+    }
+
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
 
-        if (t.closest("[data-ck-mood]")) { e.stopPropagation(); openListPanel("mood"); return; }
-        if (t.closest("[data-ck-word]")) { e.stopPropagation(); openListPanel("word"); return; }
+        if (t.closest("[data-ck-mood]")) { e.stopPropagation(); showSubPage("mood"); return; }
+        if (t.closest("[data-ck-word]")) { e.stopPropagation(); showSubPage("word"); return; }
 
         var block = t.closest("[data-ck-kind]");
         if (block) {
@@ -753,11 +768,19 @@
             return;
         }
 
-        if (t.closest("#btnCardsBack") && ckState === "list") {
-            e.stopPropagation();
-            e.preventDefault();
-            showOverview();
-            return;
+        if (t.closest("#btnCardsBack")) {
+            if (ckState === "sub") {
+                e.stopPropagation();
+                e.preventDefault();
+                showOverview();
+                return;
+            }
+            if (ckState === "list") {
+                e.stopPropagation();
+                e.preventDefault();
+                showOverview();
+                return;
+            }
         }
 
         if (t.closest("#appCards")) {
@@ -771,9 +794,18 @@
         if (!view) return;
         var active = view.classList.contains("active");
         var layer = view.querySelector("[data-card-overview]");
+        var sub = view.querySelector("[data-ck-subpage]");
+
         if (!active) {
             ckState = "overview";
+            subKind = "";
             if (layer) layer.classList.remove("show");
+            if (sub) sub.classList.remove("show");
+            return;
+        }
+
+        if (ckState === "sub" && sub) {
+            if (!sub.classList.contains("show")) { renderSubPage(); sub.classList.add("show"); }
             return;
         }
         if (ckState === "overview" && layer && !layer.classList.contains("show")) {
