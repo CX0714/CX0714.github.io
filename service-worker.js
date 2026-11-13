@@ -1,4 +1,4 @@
-const CACHE_NAME = "philos-v52";
+const CACHE_NAME = "philos-v53";
 const ASSETS = ["./", "./index.html", "./styles.css", "./widgets.css", "./app.js", "./icon.svg", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png"];
 
 /* =========================================================
@@ -592,6 +592,20 @@ scheduleReply = function () {
 
 window.philosRefreshChat = rmRefreshChat;
 window.philosMoveCalls = rmMoveCalls;
+
+/* 外部模块（pat.js / gallery.js）安全地往聊天里塞一条记录 */
+window.philosPushMessage = function (msg) {
+    try {
+        if (!msg || typeof msg !== "object") return;
+        if (!Array.isArray(appData.chatHistory)) appData.chatHistory = [];
+        if (!msg.time) msg.time = Date.now();
+        appData.chatHistory.push(msg);
+        saveData();
+        renderChat();
+        rmAutoScrollChat();
+    } catch (e) {}
+};
+
 setInterval(function () { try { rmMoveCalls(); } catch (e) {} }, 4000);
 
 function rmLetterDate() {
@@ -865,7 +879,7 @@ function rmMarkVersion() {
         for (var i = 0; i < items.length; i++) {
             if ((items[i].textContent || "").indexOf("版本") >= 0) {
                 var val = items[i].querySelector(".control-value");
-                if (val) val.textContent = "3.9 · v52";
+                if (val) val.textContent = "3.9 · v53";
             }
         }
     } catch (e) {}
