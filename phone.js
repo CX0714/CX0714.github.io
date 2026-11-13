@@ -1,4 +1,4 @@
-/* Philos 电话 app v1：他的头像 / 可编辑联系人名 / 通话记录（白磨砂卡 + 顶部渐隐）/ 可换背景 */
+/* Philos 电话 app v2：他的头像（从已渲染的头像取，兼容 IndexedDB 存图）/ 可编辑联系人名 / 通话记录 / 可换背景 */
 (function () {
     "use strict";
 
@@ -66,7 +66,7 @@
             ".ph-call-text{font-size:14px;line-height:1.5;color:#252b33;word-break:break-word;}" +
             ".ph-call-time{font-size:11.5px;color:rgba(45,55,70,0.55);margin-top:4px;letter-spacing:0.2px;}" +
             ".ph-empty{text-align:center;font-size:13px;color:rgba(45,55,70,0.55);padding:40px 0;}" +
-            ".philos-dot{position:absolute;top:-3px;right:-3px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}";
+            ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}";
         document.head.appendChild(st);
     }
 
@@ -84,9 +84,17 @@
 
     function renderAvatar() {
         if (!avatarEl) return;
-        var d = mainData();
-        var src = d.taAvatar || "";
-        if (/^(data:image\/|https?:\/\/|blob:)/.test(src)) avatarEl.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
+        var src = "";
+
+        var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
+        if (live) src = live.getAttribute("src") || "";
+
+        if (!src) {
+            var raw = mainData().taAvatar || "";
+            if (/^(data:image\/|https?:\/\/|blob:)/.test(raw)) src = raw;
+        }
+
+        if (src) avatarEl.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
         else avatarEl.textContent = "Ta";
     }
 
@@ -267,7 +275,7 @@
         injectStyles();
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
-        unreadTimer = setInterval(refreshBadge, 2500);
+        unreadTimer = setInterval(function () { if (!document.hidden) refreshBadge(); }, 3000);
         document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshBadge(); });
     }
 
