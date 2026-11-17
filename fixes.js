@@ -1,4 +1,4 @@
-/* Philos 小修：字卡库菜单（配色/层级）、覆盖层定位、小组件图片放大、主屏第二页下移、
+/* Philos 小修：字卡库自绘导入导出菜单、覆盖层定位、小组件图片放大、第二页下移、
    只发图片/表情包也会收到回复、点聊天顶部头像让他主动开口 */
 (function () {
     "use strict";
@@ -13,19 +13,28 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            /* 字卡库三个点菜单：浅色卡片底 + 清楚的字 + 压在最上层 */
-            ".cards-menu{z-index:80 !important;background:var(--card-bg,#ffffff) !important;" +
-                "border:1px solid var(--glass-border,rgba(255,255,255,.6)) !important;" +
-                "box-shadow:0 12px 30px rgba(20,30,45,.18) !important;border-radius:16px !important;" +
-                "padding:6px !important;display:flex;flex-direction:column;gap:4px;min-width:130px;}" +
-            ".cards-menu .msg-menu-item{color:var(--text-primary,#1b1d21) !important;font-size:15px !important;" +
-                "height:40px !important;line-height:40px !important;text-align:left !important;" +
-                "padding:0 14px !important;border-radius:11px !important;}" +
-            ".cards-menu .msg-menu-item:active{background:rgba(120,132,148,.14) !important;}" +
-            ".cards-menu .msg-menu-item + .msg-menu-item{border-top:none !important;}" +
-            /* 二级界面从导航栏下方开始，绝不盖住顶栏 */
+            /* 自绘菜单：颜色写死，不跟主题变量 */
+            ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
+            ".phm-mask.show{display:block;}" +
+            ".phm-menu{position:fixed;z-index:901;min-width:152px;padding:6px;border-radius:16px;" +
+                "background:#ffffff;border:1px solid rgba(120,135,155,0.25);box-shadow:0 14px 34px rgba(20,30,45,0.22);" +
+                "display:none;flex-direction:column;gap:4px;}" +
+            ".phm-menu.show{display:flex;}" +
+            ".phm-item{height:44px;line-height:44px;padding:0 16px;border-radius:12px;border:none;background:none;" +
+                "font-size:15px;text-align:left;color:#1b1d21;}" +
+            ".phm-item:active{background:rgba(120,132,148,0.16);}" +
+            "html[data-theme=\"dark\"] .phm-menu{background:#1c1d21;border-color:rgba(255,255,255,0.14);box-shadow:0 14px 34px rgba(0,0,0,0.45);}" +
+            "html[data-theme=\"dark\"] .phm-item{color:#f2f3f6;}" +
+            "html[data-theme=\"dark\"] .phm-item:active{background:rgba(255,255,255,0.10);}" +
+            /* 原菜单也顺手修好，万一还会露出 */
+            ".cards-menu{z-index:80 !important;background:#ffffff !important;border:1px solid rgba(120,135,155,0.25) !important;" +
+                "box-shadow:0 14px 34px rgba(20,30,45,0.22) !important;border-radius:16px !important;padding:6px !important;}" +
+            ".cards-menu .msg-menu-item{color:#1b1d21 !important;font-size:15px !important;height:44px !important;line-height:44px !important;text-align:left !important;}" +
+            "html[data-theme=\"dark\"] .cards-menu{background:#1c1d21 !important;border-color:rgba(255,255,255,0.14) !important;}" +
+            "html[data-theme=\"dark\"] .cards-menu .msg-menu-item{color:#f2f3f6 !important;}" +
+            /* 二级界面从导航栏下方开始 */
             ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}" +
-            /* 小组件 A/B 图片放大、留白收紧 */
+            /* 小组件 A/B 图片放大 */
             ".ws-a{padding:8px !important;gap:6px !important;}" +
             ".ws-a-title{font-size:10.5px !important;margin-bottom:1px;}" +
             ".ws-a-row{gap:7px !important;}" +
@@ -35,14 +44,80 @@
             ".ws-b-title{font-size:10.5px !important;}" +
             ".ws-b-card{width:104px !important;height:104px !important;}" +
             ".ws-c-img{height:56% !important;}" +
-            /* 主屏第二页整体下移一行（给新小组件留位置） */
+            /* 主屏第二页下移一行 */
             "#homePager > .home-page:nth-child(2) .home-app-grid{padding-top:84px !important;}";
         document.head.appendChild(st);
     }
 
+    /* ===== 自绘「三个点」菜单 ===== */
+    var menuEl = null, maskEl = null;
+
+    function buildMenu() {
+        if (menuEl) return;
+        maskEl = document.createElement("div");
+        maskEl.className = "phm-mask";
+        maskEl.id = "phmMask";
+        menuEl = document.createElement("div");
+        menuEl.className = "phm-menu";
+        menuEl.id = "phmMenu";
+        menuEl.innerHTML =
+            '<button class="phm-item" type="button" data-phm="export">导出字卡</button>' +
+            '<button class="phm-item" type="button" data-phm="import">导入字卡</button>';
+        document.body.appendChild(maskEl);
+        document.body.appendChild(menuEl);
+
+        maskEl.addEventListener("click", closeMenu);
+        menuEl.addEventListener("click", function (e) {
+            var btn = e.target.closest ? e.target.closest("[data-phm]") : null;
+            if (!btn) return;
+            var act = btn.getAttribute("data-phm");
+            closeMenu();
+            if (act === "export") {
+                var ex = $("btnExportCards");
+                if (ex) ex.click();
+                else alert("导出按钮没找到。");
+            } else {
+                var im = $("importCardsFile");
+                if (im) im.click();
+                else alert("导入按钮没找到。");
+            }
+        });
+    }
+
+    function openMenu(anchor) {
+        buildMenu();
+        var rect = anchor ? anchor.getBoundingClientRect() : { left: window.innerWidth - 60, bottom: 70, right: window.innerWidth - 16 };
+        menuEl.classList.add("show");
+        maskEl.classList.add("show");
+        var mw = menuEl.offsetWidth || 152;
+        var mh = menuEl.offsetHeight || 100;
+        var left = Math.min(window.innerWidth - mw - 12, Math.max(12, rect.right - mw));
+        var top = Math.min(window.innerHeight - mh - 20, rect.bottom + 8);
+        menuEl.style.left = left + "px";
+        menuEl.style.top = top + "px";
+    }
+
+    function closeMenu() {
+        if (menuEl) menuEl.classList.remove("show");
+        if (maskEl) maskEl.classList.remove("show");
+    }
+
+    document.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        var more = t.closest("#btnCardsMore");
+        if (!more) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        openMenu(more);
+    }, true);
+
     function fixMenu() {
-        var menu = $("cardsMenu");
-        if (menu && menu.style.zIndex !== "80") menu.style.zIndex = "80";
+        /* 原菜单如果被打开，颜色也已经是浅底深字，这里只补层级 */
+        var old = $("cardsMenu");
+        if (old && old.style.zIndex !== "80") old.style.zIndex = "80";
+        if (old && !old.hidden) old.hidden = true;
         var layer = document.querySelector("[data-card-overview]");
         if (layer) {
             var want = "calc(env(safe-area-inset-top) + 56px)";
@@ -134,7 +209,6 @@
         var lo = Math.max(1, Math.min(minCount || Number(pr.replyMin) || 1, 5));
         var hi = Math.max(lo, Math.min(maxCount || Number(pr.replyMax) || lo, 5));
         var count = lo + Math.floor(Math.random() * (hi - lo + 1));
-
         setTimeout(function () {
             var sent = 0;
             function step() {
@@ -198,6 +272,7 @@
 
     function init() {
         injectStyles();
+        buildMenu();
         fixMenu();
         setInterval(tick, 1200);
         window.addEventListener("focus", tick);
