@@ -1,14 +1,80 @@
-/* Philos 微信模块 v9：按百分比回文字/emoji/表情包/组合/造句 + 来电界面美化 */
+/* Philos 微信模块 v10：微信图片搬进 IndexedDB + 清理工具 + 按百分比回复 + 来电界面美化 */
 (function () {
     "use strict";
 
     var WX_KEY = "philos_wechat";
     var MAIN_KEY = "private_chat_app_v1";
     var WORDS_KEY = "philos_words";
+    var GAL_KEY = "philos_gallery";
+
     var wx = null, wxTyping = false, wxPanelOpen = "", wxQuoteText = null;
     var wxRound = 0, wxReplyTimer = null, wxRaw = "";
+    var imgCache = {};
 
     var FACES = ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","😇","🙂","🙃","😉","😌","😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤨","🧐","🤓","😎","🥳","😏","😒","😞","😔","😟","😕","🙁","☹️","😣","😖","😫","😩","🥺","😢","😭","😤","😠","😡","🤬","🤯","😳","🥵","🥶","😱","😨","😰","😥","😓","🤗","🤔","🤭","🤫","🤥","😶","😐","😑","😬","🙄","😯","😦","😧","😮","😲","🥱","😴","🤤","😪","😵","🤐","🥴","🤢","🤮","🤧","😷","🤒","🤕"];
+
+    /* ===== IndexedDB ===== */
+    var dbPromise = null;
+    function db() {
+        if (dbPromise) return dbPromise;
+        dbPromise = new Promise(function (resolve) {
+            try {
+                var req = indexedDB.open("philos_images", 1);
+                req.onupgradeneeded = function () { try { req.result.createObjectStore("images"); } catch (e) {} };
+                req.onsuccess = function () { resolve(req.result); };
+                req.onerror = function () { resolve(null); };
+            } catch (e) { resolve(null); }
+        });
+        return dbPromise;
+    }
+    function hash(str) {
+        var h1 = 5381, h2 = 52711;
+        for (var i = 0; i < str.length; i++) {
+            var c = str.charCodeAt(i);
+            h1 = (h1 * 33 ^ c) >>> 0;
+            h2 = (h2 * 31 + c) >>> 0;
+        }
+        return h1.toString(36) + h2.toString(36) + str.length.toString(36);
+    }
+    function putImg(id, url) {
+        return db().then(function (d) {
+            if (!d) return false;
+            return new Promise(function (resolve) {
+                try {
+                    var tx = d.transaction("images", "readwrite");
+                    tx.objectStore("images").put(url, id);
+                    tx.oncomplete = function () { resolve(true); };
+                    tx.onerror = function () { resolve(false); };
+                    tx.onabort = function () { resolve(false); };
+                } catch (e) { resolve(false); }
+            });
+        });
+    }
+    function getImg(id) {
+        return db().then(function (d) {
+            if (!d) return null;
+            return new Promise(function (resolve) {
+                try {
+                    var req = d.transaction("images").objectStore("images").get(id);
+                    req.onsuccess = function () { resolve(req.result || null); };
+                    req.onerror = function () { resolve(null); };
+                } catch (e) { resolve(null); }
+            });
+        });
+    }
+    function storeImg(url) {
+        var id = "i" + hash(url);
+        return putImg(id, url).then(function (ok) { return ok ? "idb://" + id : url; });
+    }
+    function resolveImg(src, cb) {
+        if (!src || typeof src !== "string") { cb(""); return; }
+        if (src.indexOf("idb://") !== 0) { cb(src); return; }
+        if (imgCache[src]) { cb(imgCache[src]); return; }
+        getImg(src.slice(6)).then(function (url) {
+            if (url) { imgCache[src] = url; cb(url); }
+            else cb("");
+        });
+    }
 
     function injectStyles() {
         if (document.getElementById("philos-wx-style")) return;
@@ -80,7 +146,6 @@
             ".wx-field input[type=text]{flex:1;height:38px;border:1px solid #E5E5E5;border-radius:10px;padding:0 12px;font-size:15px;}" +
             ".wx-mini{height:32px;padding:0 10px;border-radius:8px;border:1px solid #E5E5E5;background:#fff;font-size:13px;color:#333;}" +
             ".wx-mini.danger{color:#FF3B30;border-color:#FFD6D2;}" +
-            /* 来电界面：头像名字下移、圆形按键 */
             ".call-in-body{margin-top:16vh !important;gap:0 !important;}" +
             ".call-in-actions{display:flex !important;grid-template-columns:none !important;align-items:flex-start;justify-content:center;gap:58px !important;width:100%;max-width:330px;margin:0 auto;}" +
             ".call-in-act{display:flex;flex-direction:column;align-items:center;gap:10px;}" +
@@ -116,7 +181,48 @@
             var json = JSON.stringify(wxData());
             wxRaw = json;
             localStorage.setItem(WX_KEY, json);
-        } catch (e) { alert("微信数据空间已满。"); }
+        } catch (e) {
+            alert("网页整体存储已满（localStorage 只有 5MB）。可以去 设置 → 数据管理 里用「清理图片」腾出空间。");
+        }
+    }
+
+    /* ===== 把微信里的图片搬进 IndexedDB ===== */
+    var migrating = false;
+    function migrateWx() {
+        if (migrating) return;
+        var d = wxData();
+        var targets = [];
+        d.history.forEach(function (m) {
+            if (m && m.type === "image" && typeof m.text === "string" && m.text.indexOf("data:image/") === 0) targets.push(m);
+        });
+        d.stickers.forEach(function (s, i) {
+            if (typeof s === "string" && s.indexOf("data:image/") === 0) targets.push({ _sticker: i });
+        });
+        ["avatar", "myAvatar", "bgImage"].forEach(function (k) {
+            if (typeof d[k] === "string" && d[k].indexOf("data:image/") === 0) targets.push({ _field: k });
+        });
+        if (!targets.length) return;
+
+        migrating = true;
+        var jobs = targets.map(function (t) {
+            var url = t._field ? d[t._field] : (t._sticker != null ? d.stickers[t._sticker] : t.text);
+            return storeImg(url).then(function (ref) {
+                if (!ref || ref === url) return;
+                if (t._field) d[t._field] = ref;
+                else if (t._sticker != null) d.stickers[t._sticker] = ref;
+                else t.text = ref;
+            });
+        });
+        Promise.all(jobs).then(function () {
+            try {
+                var json = JSON.stringify(d);
+                wxRaw = json;
+                localStorage.setItem(WX_KEY, json);
+            } catch (e) {}
+            migrating = false;
+            var v = document.getElementById("wechatView");
+            if (v && v.classList.contains("show")) wxRender();
+        }).catch(function () { migrating = false; });
     }
 
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
@@ -124,8 +230,11 @@
     function wxAvatar(src, fallback) {
         var span = document.createElement("span");
         span.className = "wx-avatar";
-        if (src && /^(data:image\/|https?:\/\/|blob:|idb:\/\/|\.\/|\.\.\/)/.test(src)) { var img = document.createElement("img"); img.src = src; span.appendChild(img); }
-        else span.textContent = fallback || "";
+        if (src && typeof src === "string" && (src.indexOf("idb://") === 0 || /^(data:image\/|https?:\/\/|blob:)/.test(src))) {
+            var img = document.createElement("img");
+            span.appendChild(img);
+            resolveImg(src, function (url) { if (url) img.src = url; });
+        } else span.textContent = fallback || "";
         return span;
     }
 
@@ -161,7 +270,9 @@
         if (!box || !view) return;
         var d = wxData(); var main = mainData();
         if (title) title.textContent = wxTyping ? "对方正在输入…" : (d.name || "Ta");
-        view.style.background = d.bgImage ? 'url("' + d.bgImage + '") center/cover no-repeat' : (d.bg || "#F7F7F7");
+        if (d.bgImage) resolveImg(d.bgImage, function (url) { view.style.background = url ? 'url("' + url + '") center/cover no-repeat' : (d.bg || "#F7F7F7"); });
+        else view.style.background = d.bg || "#F7F7F7";
+
         box.innerHTML = "";
         var last = 0;
         d.history.forEach(function (m, idx) {
@@ -179,9 +290,19 @@
             row.appendChild(wxAvatar(m.from === "me" ? (d.myAvatar || main.myAvatar) : (d.avatar || main.taAvatar), m.from === "me" ? "我" : "Ta"));
             var col = document.createElement("div");
             col.className = "wx-col";
-            if (m.type === "image") { var img = document.createElement("img"); img.className = "wx-sticker"; img.src = m.text || ""; col.appendChild(img); }
-            else if (m.type === "location") col.appendChild(wxLocCard(Number(m.distance) || 0));
-            else { var b = document.createElement("div"); b.className = "wx-bubble"; b.textContent = m.text || ""; col.appendChild(b); }
+            if (m.type === "image") {
+                var img = document.createElement("img");
+                img.className = "wx-sticker";
+                col.appendChild(img);
+                resolveImg(m.text, function (url) { if (url) img.src = url; });
+            } else if (m.type === "location") {
+                col.appendChild(wxLocCard(Number(m.distance) || 0));
+            } else {
+                var b = document.createElement("div");
+                b.className = "wx-bubble";
+                b.textContent = m.text || "";
+                col.appendChild(b);
+            }
             if (m.quote) { var q = document.createElement("div"); q.className = "wx-quote"; q.textContent = m.quote; col.appendChild(q); }
             row.appendChild(col);
             box.appendChild(row);
@@ -202,17 +323,17 @@
         var who;
         if (m && m.from === "me") who = (main.myName && main.myName !== "your账户名") ? main.myName : "我";
         else who = (wxData().name || "Ta");
-        return who + "：" + ((m && m.text) || "");
+        var t = m && m.type === "image" ? "[图片]" : ((m && m.text) || "");
+        return who + "：" + t;
     }
 
-    /* ===== 回复用的池子与权重 ===== */
     function wxPools(main) {
         var pools = { text: [], emoji: [], sticker: [] };
         (main.cards || []).forEach(function (c) {
             if (!c || typeof c.content !== "string" || !c.content) return;
             if (c.kind === "text") pools.text.push(c.content);
             else if (c.kind === "emoji") pools.emoji.push(c.content);
-            else if (c.kind === "sticker" && /^(data:image\/|https?:\/\/|blob:)/.test(c.content)) pools.sticker.push(c.content);
+            else if (c.kind === "sticker" && /^(data:image\/|https?:\/\/|blob:|idb:\/\/)/.test(c.content)) pools.sticker.push(c.content);
         });
         return pools;
     }
@@ -362,6 +483,7 @@
                         if (viewOpen()) wxRender();
                     }
                     wxSetTyping(false);
+                    migrateWx();
                     return;
                 }
                 wxReplyTimer = setTimeout(deliver, 900 + Math.floor(Math.random() * 800));
@@ -442,7 +564,8 @@
         var d = wxData(); grid.innerHTML = "";
         (d.stickers || []).forEach(function (src, idx) {
             var b = document.createElement("button"); b.type = "button"; b.className = "wx-stk";
-            var img = document.createElement("img"); img.src = src; b.appendChild(img);
+            var img = document.createElement("img"); b.appendChild(img);
+            resolveImg(src, function (url) { if (url) img.src = url; });
             var del = document.createElement("span"); del.className = "wx-stk-del"; del.textContent = "×";
             del.addEventListener("click", function (e) {
                 e.stopPropagation();
@@ -531,9 +654,9 @@
             d.bg = document.getElementById("wxBg").value || "#F7F7F7";
             wxSave(); openSheet(false); wxRender();
         });
-        document.getElementById("wxFileTa").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().avatar = src; wxSave(); wxRender(); }); });
-        document.getElementById("wxFileMe").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().myAvatar = src; wxSave(); wxRender(); }); });
-        document.getElementById("wxFileBg").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().bgImage = src; wxSave(); wxRender(); }); });
+        document.getElementById("wxFileTa").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().avatar = src; wxSave(); wxRender(); migrateWx(); }); });
+        document.getElementById("wxFileMe").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().myAvatar = src; wxSave(); wxRender(); migrateWx(); }); });
+        document.getElementById("wxFileBg").addEventListener("change", function (e) { readFile(e.target, function (src) { wxData().bgImage = src; wxSave(); wxRender(); migrateWx(); }); });
         document.getElementById("wxClearTa").addEventListener("click", function () { wxData().avatar = ""; wxSave(); wxRender(); });
         document.getElementById("wxClearMe").addEventListener("click", function () { wxData().myAvatar = ""; wxSave(); wxRender(); });
         document.getElementById("wxClearBg").addEventListener("click", function () { wxData().bgImage = ""; wxSave(); wxRender(); });
@@ -577,12 +700,18 @@
         document.getElementById("wxPickPhoto").addEventListener("click", function () { document.getElementById("wxPhotoFile").click(); });
         document.getElementById("wxPhotoFile").addEventListener("change", function (e) {
             var f = e.target.files && e.target.files[0]; if (!f) return;
-            compressImage(f, function (src) { if (src) { wxPush({ from: "me", type: "image", text: src }); wxScheduleReply(); } });
+            compressImage(f, function (src) {
+                if (!src) return;
+                storeImg(src).then(function (ref) { wxPush({ from: "me", type: "image", text: ref }); wxScheduleReply(); });
+            });
             e.target.value = ""; togglePanel("plus");
         });
         document.getElementById("wxStkFile").addEventListener("change", function (e) {
             var f = e.target.files && e.target.files[0]; if (!f) return;
-            compressImage(f, function (src) { if (src) { wxData().stickers.push(src); wxSave(); renderStickerPanel(); } });
+            compressImage(f, function (src) {
+                if (!src) return;
+                storeImg(src).then(function (ref) { wxData().stickers.push(ref); wxSave(); renderStickerPanel(); });
+            });
             e.target.value = "";
         });
         renderEmojiPanel(); renderStickerPanel();
@@ -591,10 +720,99 @@
     function wxOpen() {
         injectStyles();
         wxBuild();
+        migrateWx();
         var view = document.getElementById("wechatView"); if (!view) return;
         wxRender(); renderEmojiPanel(); renderStickerPanel();
         view.classList.add("show");
         setTimeout(function () { var b = document.getElementById("wxMessages"); if (b) b.scrollTop = b.scrollHeight; }, 60);
+    }
+
+    /* ===== 清理工具（数据管理页） ===== */
+    function countImages() {
+        var out = { wx: 0, chat: 0, gal: 0 };
+        var d = wxData();
+        d.history.forEach(function (m) { if (m && m.type === "image") out.wx++; });
+        out.wx += (d.stickers || []).length;
+        var main = mainData();
+        (main.chatHistory || []).forEach(function (m) {
+            if (m && (m.type === "image" || m.type === "sticker")) out.chat++;
+        });
+        var g = null;
+        try { g = JSON.parse(localStorage.getItem(GAL_KEY) || "null"); } catch (e) { g = null; }
+        if (g && typeof g === "object") {
+            out.gal += Array.isArray(g.me) ? g.me.length : 0;
+            out.gal += Array.isArray(g.ta) ? g.ta.length : 0;
+        }
+        return out;
+    }
+
+    function pruneWxImages() {
+        if (!confirm("清理微信里的图片（保留文字记录），确定吗？")) return;
+        var d = wxData();
+        d.history = d.history.filter(function (m) { return !(m && m.type === "image"); });
+        d.stickers = [];
+        try { wxRaw = JSON.stringify(d); localStorage.setItem(WX_KEY, wxRaw); } catch (e) {}
+        alert("已清理微信图片。");
+        var v = document.getElementById("wechatView");
+        if (v && v.classList.contains("show")) wxRender();
+        refreshCleanupCard();
+    }
+
+    function pruneChatImages() {
+        if (!confirm("清理 iMessage 里的图片（保留文字记录），确定吗？")) return;
+        var d = mainData();
+        d.chatHistory = (d.chatHistory || []).filter(function (m) { return !(m && (m.type === "image" || m.type === "sticker")); });
+        try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {}
+        alert("已清理聊天图片。");
+        if (window.philosReload) window.philosReload();
+        refreshCleanupCard();
+    }
+
+    function pruneGallery() {
+        if (!confirm("清空图库照片？大仓库里的图片文件不会被自动删。")) return;
+        try { localStorage.setItem(GAL_KEY, JSON.stringify({ me: [], ta: [] })); } catch (e) {}
+        if (window.PhilosGalleryRefresh) window.PhilosGalleryRefresh();
+        refreshCleanupCard();
+    }
+
+    function refreshCleanupCard() {
+        var card = document.querySelector("[data-cleanup-card]");
+        if (!card) return;
+        var c = countImages();
+        var w = card.querySelector('[data-cl="wx"]');
+        var ch = card.querySelector('[data-cl="chat"]');
+        var g = card.querySelector('[data-cl="gal"]');
+        if (w) w.textContent = c.wx + " 张";
+        if (ch) ch.textContent = c.chat + " 张";
+        if (g) g.textContent = c.gal + " 张";
+    }
+
+    function ensureCleanupCard() {
+        var page = document.querySelector('[data-page="data"]');
+        if (!page || page.querySelector("[data-cleanup-card]")) return;
+        var card = document.createElement("div");
+        card.className = "group-card control-card";
+        card.setAttribute("data-cleanup-card", "1");
+        card.innerHTML =
+            '<div class="card-title">清理图片（腾空间）</div>' +
+            '<div class="control-row"><span class="control-label">微信里的图片</span><span class="control-value" data-cl="wx">—</span></div>' +
+            '<div class="control-row"><span class="control-label">iMessage 里的图片</span><span class="control-value" data-cl="chat">—</span></div>' +
+            '<div class="control-row"><span class="control-label">图库照片</span><span class="control-value" data-cl="gal">—</span></div>' +
+            '<div class="control-block"><button class="wide-btn" data-cl-act="wx" type="button">清理微信图片（保留文字）</button></div>' +
+            '<div class="control-block"><button class="wide-btn" data-cl-act="chat" type="button">清理聊天图片（保留文字）</button></div>' +
+            '<div class="control-block"><button class="wide-btn" data-cl-act="gal" type="button">清空图库照片</button></div>';
+        card.addEventListener("click", function (e) {
+            var btn = e.target.closest ? e.target.closest("[data-cl-act]") : null;
+            if (!btn) return;
+            var act = btn.getAttribute("data-cl-act");
+            if (act === "wx") pruneWxImages();
+            else if (act === "chat") pruneChatImages();
+            else if (act === "gal") pruneGallery();
+        });
+        var anchor = page.querySelector(".about-note");
+        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(card, anchor);
+        else page.appendChild(card);
+        refreshCleanupCard();
     }
 
     function tuneRanges() {
@@ -646,7 +864,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H51";
+                    if (val) val.textContent = "3.9 · H53";
                 }
             }
         } catch (e) {}
@@ -660,6 +878,14 @@
         document.body.appendChild(s);
     }
 
+    function tick() {
+        if (document.hidden) return;
+        migrateWx();
+        ensureCleanupCard();
+        refreshCleanupCard();
+        decorateCall();
+    }
+
     function init() {
         injectStyles();
         tuneRanges();
@@ -667,9 +893,11 @@
         markVersion();
         loadModule("quiz.js");
         loadModule("gallery.js");
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); }, 900);
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); }, 2200);
-        setInterval(decorateCall, 1200);
+        migrateWx();
+        ensureCleanupCard();
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); migrateWx(); ensureCleanupCard(); }, 900);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); migrateWx(); }, 2200);
+        setInterval(tick, 2000);
         if (window.MutationObserver) {
             var hd = document.getElementById("chatHeader");
             if (hd) new MutationObserver(fixAvatarLabels).observe(hd, { childList: true, subtree: true });
