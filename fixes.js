@@ -1,4 +1,4 @@
-/* Philos 小修：字卡库菜单层级与覆盖层定位、小组件图片放大、主屏第二页下移、
+/* Philos 小修：字卡库菜单（配色/层级）、覆盖层定位、小组件图片放大、主屏第二页下移、
    只发图片/表情包也会收到回复、点聊天顶部头像让他主动开口 */
 (function () {
     "use strict";
@@ -13,9 +13,16 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            /* 字卡库：三个点菜单要压在最上面 */
-            ".cards-menu{z-index:80 !important;}" +
-            "#cardsView .cards-menu{z-index:80 !important;}" +
+            /* 字卡库三个点菜单：浅色卡片底 + 清楚的字 + 压在最上层 */
+            ".cards-menu{z-index:80 !important;background:var(--card-bg,#ffffff) !important;" +
+                "border:1px solid var(--glass-border,rgba(255,255,255,.6)) !important;" +
+                "box-shadow:0 12px 30px rgba(20,30,45,.18) !important;border-radius:16px !important;" +
+                "padding:6px !important;display:flex;flex-direction:column;gap:4px;min-width:130px;}" +
+            ".cards-menu .msg-menu-item{color:var(--text-primary,#1b1d21) !important;font-size:15px !important;" +
+                "height:40px !important;line-height:40px !important;text-align:left !important;" +
+                "padding:0 14px !important;border-radius:11px !important;}" +
+            ".cards-menu .msg-menu-item:active{background:rgba(120,132,148,.14) !important;}" +
+            ".cards-menu .msg-menu-item + .msg-menu-item{border-top:none !important;}" +
             /* 二级界面从导航栏下方开始，绝不盖住顶栏 */
             ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}" +
             /* 小组件 A/B 图片放大、留白收紧 */
@@ -29,8 +36,7 @@
             ".ws-b-card{width:104px !important;height:104px !important;}" +
             ".ws-c-img{height:56% !important;}" +
             /* 主屏第二页整体下移一行（给新小组件留位置） */
-            "#homePager > .home-page:nth-child(2) .home-app-grid{padding-top:84px !important;}" +
-            "#homePager > .home-page:nth-child(2) > .home-app-grid:first-child{padding-top:84px !important;}";
+            "#homePager > .home-page:nth-child(2) .home-app-grid{padding-top:84px !important;}";
         document.head.appendChild(st);
     }
 
@@ -143,7 +149,6 @@
         }, delay + 300);
     }
 
-    /* 只发图片/表情包时也要有回复 */
     var lastLen = -1;
     function watchMyMedia() {
         var d = getMain();
@@ -160,7 +165,6 @@
         }
     }
 
-    /* 点聊天顶部头像：让他主动开口（带延迟） */
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
