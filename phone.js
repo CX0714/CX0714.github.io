@@ -1,4 +1,4 @@
-/* Philos 电话 app v2：他的头像（从已渲染的头像取，兼容 IndexedDB 存图）/ 可编辑联系人名 / 通话记录 / 可换背景 */
+/* Philos 电话 app v3：他的头像（从已渲染的头像取，兼容 IndexedDB 存图）/ 可编辑联系人名 / 通话记录 / 可换背景 */
 (function () {
     "use strict";
 
@@ -36,6 +36,14 @@
         return s;
     }
     function saveUnread(s) { try { localStorage.setItem(UNREAD_KEY, JSON.stringify(s)); } catch (e) {} }
+
+    function loadModule(src) {
+        if (document.querySelector('script[data-philos="' + src + '"]')) return;
+        var s = document.createElement("script");
+        s.src = src;
+        s.setAttribute("data-philos", src);
+        document.body.appendChild(s);
+    }
 
     function pad(n) { return n < 10 ? "0" + n : "" + n; }
     function fmtTime(ts) {
@@ -85,15 +93,12 @@
     function renderAvatar() {
         if (!avatarEl) return;
         var src = "";
-
         var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
         if (live) src = live.getAttribute("src") || "";
-
         if (!src) {
             var raw = mainData().taAvatar || "";
             if (/^(data:image\/|https?:\/\/|blob:)/.test(raw)) src = raw;
         }
-
         if (src) avatarEl.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
         else avatarEl.textContent = "Ta";
     }
@@ -273,6 +278,7 @@
 
     function init() {
         injectStyles();
+        loadModule("fixes.js");
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(function () { if (!document.hidden) refreshBadge(); }, 3000);
