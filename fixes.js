@@ -1,9 +1,10 @@
-/* Philos 小修：字卡库自绘导入导出菜单、覆盖层定位、小组件图片放大、第二页下移、
+/* Philos 小修：字卡/造句自动去重、字卡库自绘菜单、覆盖层定位、小组件图片放大、第二页下移、
    只发图片/表情包也会收到回复、点聊天顶部头像让他主动开口 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
+    var WORD_KEY = "philos_words";
 
     function $(id) { return document.getElementById(id); }
     function getMain() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
@@ -13,7 +14,6 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            /* 自绘菜单：颜色写死，不跟主题变量 */
             ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
             ".phm-mask.show{display:block;}" +
             ".phm-menu{position:fixed;z-index:901;min-width:152px;padding:6px;border-radius:16px;" +
@@ -26,15 +26,12 @@
             "html[data-theme=\"dark\"] .phm-menu{background:#1c1d21;border-color:rgba(255,255,255,0.14);box-shadow:0 14px 34px rgba(0,0,0,0.45);}" +
             "html[data-theme=\"dark\"] .phm-item{color:#f2f3f6;}" +
             "html[data-theme=\"dark\"] .phm-item:active{background:rgba(255,255,255,0.10);}" +
-            /* 原菜单也顺手修好，万一还会露出 */
             ".cards-menu{z-index:80 !important;background:#ffffff !important;border:1px solid rgba(120,135,155,0.25) !important;" +
                 "box-shadow:0 14px 34px rgba(20,30,45,0.22) !important;border-radius:16px !important;padding:6px !important;}" +
             ".cards-menu .msg-menu-item{color:#1b1d21 !important;font-size:15px !important;height:44px !important;line-height:44px !important;text-align:left !important;}" +
             "html[data-theme=\"dark\"] .cards-menu{background:#1c1d21 !important;border-color:rgba(255,255,255,0.14) !important;}" +
             "html[data-theme=\"dark\"] .cards-menu .msg-menu-item{color:#f2f3f6 !important;}" +
-            /* 二级界面从导航栏下方开始 */
             ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}" +
-            /* 小组件 A/B 图片放大 */
             ".ws-a{padding:8px !important;gap:6px !important;}" +
             ".ws-a-title{font-size:10.5px !important;margin-bottom:1px;}" +
             ".ws-a-row{gap:7px !important;}" +
@@ -44,12 +41,74 @@
             ".ws-b-title{font-size:10.5px !important;}" +
             ".ws-b-card{width:104px !important;height:104px !important;}" +
             ".ws-c-img{height:56% !important;}" +
-            /* 主屏第二页下移一行 */
             "#homePager > .home-page:nth-child(2) .home-app-grid{padding-top:84px !important;}";
         document.head.appendChild(st);
     }
 
-    /* ===== 自绘「三个点」菜单 ===== */
+    /* ================= 自动去重 ================= */
+    var dedupeLock = false;
+    function dedupeNow(silent) {
+        if (dedupeLock) return 0;
+        dedupeLock = true;
+        var removed = 0;
+        try {
+            var d = getMain();
+            var changed = false;
+
+            if (Array.isArray(d.cards)) {
+                var seen = {};
+                var keep = [];
+                for (var i = 0; i < d.cards.length; i++) {
+                    var c = d.cards[i];
+                    if (!c || typeof c.content !== "string") { changed = true; continue; }
+                    var text = c.content.trim();
+                    if (!text) { changed = true; continue; }
+                    var key = (c.kind || "text") + "|" + (c.category || "未分类") + "|" + text;
+                    if (seen[key]) { changed = true; removed++; continue; }
+                    seen[key] = 1;
+                    if (c.content !== text) { c.content = text; changed = true; }
+                    keep.push(c);
+                }
+                if (keep.length !== d.cards.length) { d.cards = keep; changed = true; }
+            }
+
+            if (changed) {
+                try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {}
+            }
+
+            var w = null;
+            try { w = JSON.parse(localStorage.getItem(WORD_KEY) || "null"); } catch (e) { w = null; }
+            if (w && Array.isArray(w.items)) {
+                var seen2 = {};
+                var keep2 = [];
+                var wChanged = false;
+                for (var j = 0; j < w.items.length; j++) {
+                    var it = w.items[j];
+                    var t = it && typeof it.text === "string" ? it.text.trim() : "";
+                    if (!t) { wChanged = true; continue; }
+                    if (seen2[t]) { wChanged = true; removed++; continue; }
+                    seen2[t] = 1;
+                    if (it.text !== t) { it.text = t; wChanged = true; }
+                    keep2.push(it);
+                }
+                var cats = Array.isArray(w.categories) ? w.categories.filter(function (n, idx, arr) { return n && arr.indexOf(n) === idx; }) : [];
+                if (cats.length !== (w.categories || []).length) wChanged = true;
+                if (keep2.length !== w.items.length) wChanged = true;
+                if (wChanged) {
+                    w.items = keep2;
+                    w.categories = cats;
+                    try { localStorage.setItem(WORD_KEY, JSON.stringify(w)); } catch (e) {}
+                }
+            }
+
+            if (changed && window.philosReload) setTimeout(function () { window.philosReload(); }, 300);
+            if (!silent && removed > 0) alert("已自动合并 " + removed + " 条重复内容。");
+        } catch (e) {}
+        dedupeLock = false;
+        return removed;
+    }
+
+    /* ================= 自绘「三个点」菜单 ================= */
     var menuEl = null, maskEl = null;
 
     function buildMenu() {
@@ -62,7 +121,8 @@
         menuEl.id = "phmMenu";
         menuEl.innerHTML =
             '<button class="phm-item" type="button" data-phm="export">导出字卡</button>' +
-            '<button class="phm-item" type="button" data-phm="import">导入字卡</button>';
+            '<button class="phm-item" type="button" data-phm="import">导入字卡</button>' +
+            '<button class="phm-item" type="button" data-phm="dedupe">去掉重复</button>';
         document.body.appendChild(maskEl);
         document.body.appendChild(menuEl);
 
@@ -75,22 +135,23 @@
             if (act === "export") {
                 var ex = $("btnExportCards");
                 if (ex) ex.click();
-                else alert("导出按钮没找到。");
-            } else {
+            } else if (act === "import") {
                 var im = $("importCardsFile");
                 if (im) im.click();
-                else alert("导入按钮没找到。");
+            } else {
+                var n = dedupeNow(false);
+                if (!n) alert("没有发现重复内容。");
             }
         });
     }
 
     function openMenu(anchor) {
         buildMenu();
-        var rect = anchor ? anchor.getBoundingClientRect() : { left: window.innerWidth - 60, bottom: 70, right: window.innerWidth - 16 };
+        var rect = anchor ? anchor.getBoundingClientRect() : { right: window.innerWidth - 16, bottom: 70 };
         menuEl.classList.add("show");
         maskEl.classList.add("show");
         var mw = menuEl.offsetWidth || 152;
-        var mh = menuEl.offsetHeight || 100;
+        var mh = menuEl.offsetHeight || 140;
         var left = Math.min(window.innerWidth - mw - 12, Math.max(12, rect.right - mw));
         var top = Math.min(window.innerHeight - mh - 20, rect.bottom + 8);
         menuEl.style.left = left + "px";
@@ -114,7 +175,6 @@
     }, true);
 
     function fixMenu() {
-        /* 原菜单如果被打开，颜色也已经是浅底深字，这里只补层级 */
         var old = $("cardsMenu");
         if (old && old.style.zIndex !== "80") old.style.zIndex = "80";
         if (old && !old.hidden) old.hidden = true;
@@ -130,7 +190,7 @@
         }
     }
 
-    /* ===== 他说话的公共件 ===== */
+    /* ================= 他说话的公共件 ================= */
     function pools() {
         var d = getMain();
         var p = { text: [], emoji: [], sticker: [] };
@@ -263,21 +323,27 @@
         }, 900);
     }, true);
 
+    var lastDedupe = 0;
     function tick() {
         if (document.hidden) return;
         injectStyles();
         fixMenu();
         watchMyMedia();
+        var now = Date.now();
+        if (now - lastDedupe > 20000) { lastDedupe = now; dedupeNow(true); }
     }
 
     function init() {
         injectStyles();
         buildMenu();
         fixMenu();
+        setTimeout(function () { dedupeNow(true); }, 1500);
         setInterval(tick, 1200);
         window.addEventListener("focus", tick);
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
     else setTimeout(init, 0);
+
+    window.philosDedupe = function () { return dedupeNow(false); };
 })();
