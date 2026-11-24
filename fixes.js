@@ -1,5 +1,4 @@
-/* Philos 小修：第二页新增「统计」「日历(经期)」、他的天气、自动去重、自绘导入导出菜单、
-   只发图片/表情包也会回复、点聊天顶部头像让他开口 */
+/* Philos 小修：统计/日历/天气小组件、自动去重、自绘导入导出菜单、只发图也会回复、点顶部头像让他开口 */
 (function () {
     "use strict";
 
@@ -28,7 +27,6 @@
             ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;}" +
             ".wxw-right{text-align:left;font-size:11.5px;line-height:1.5;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
             ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;margin-bottom:3px;}" +
-            /* 统计 / 日历 页 */
             ".st-view{position:fixed;inset:0;z-index:487;display:none;flex-direction:column;background:#EEEEEE;}" +
             ".st-view.show{display:flex;}" +
             ".st-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 14px 6px;}" +
@@ -195,7 +193,7 @@
         renderWeather();
     }
 
-    /* ================= 两个新 app ================= */
+    /* ================= 两个新 app + 尺寸对齐 ================= */
     function makeApp(id, label, symbol) {
         var btn = document.createElement("button");
         btn.type = "button";
@@ -203,6 +201,33 @@
         btn.id = id;
         btn.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span><span class="app-label">' + label + '</span>';
         return btn;
+    }
+
+    function syncIconSize() {
+        var grid = document.querySelector("#homePager > .home-page:nth-child(2) .home-app-grid");
+        if (!grid) return;
+        var boxes = grid.querySelectorAll(".app-icon-box");
+        if (!boxes.length) return;
+        var ref = null;
+        for (var i = 0; i < boxes.length; i++) {
+            if (boxes[i].style.width) { ref = boxes[i]; break; }
+        }
+        if (!ref) {
+            var p1 = document.querySelector("#homePager .app-grid-small .app-icon-box");
+            if (p1) ref = p1;
+        }
+        if (!ref) return;
+        var w = Math.round(ref.getBoundingClientRect().width);
+        if (!w || w < 18) return;
+        for (var j = 0; j < boxes.length; j++) {
+            var b = boxes[j];
+            if (b === ref) continue;
+            if (b.style.width === w + "px" && b.style.height === w + "px") continue;
+            b.style.width = w + "px";
+            b.style.height = w + "px";
+            b.style.aspectRatio = "1 / 1";
+            b.style.maxWidth = "none";
+        }
     }
 
     function buildApps() {
@@ -218,6 +243,7 @@
             ca.addEventListener("click", openCalendar);
             grid.appendChild(ca);
         }
+        syncIconSize();
     }
 
     /* ===== 统计 ===== */
@@ -239,8 +265,7 @@
         var v = statsView();
         var d = getMain();
         var h = Array.isArray(d.chatHistory) ? d.chatHistory : [];
-        var mine = 0, his = 0, myChars = 0, hisChars = 0, media = 0;
-        var firstTs = 0;
+        var mine = 0, his = 0, myChars = 0, hisChars = 0, media = 0, firstTs = 0;
         h.forEach(function (m) {
             if (!m) return;
             if (m.time && (!firstTs || m.time < firstTs)) firstTs = m.time;
@@ -250,15 +275,12 @@
             if (m.from === "me") { mine++; myChars += len; }
             else { his++; hisChars += len; }
         });
-
         var letters = Array.isArray(d.letters) ? d.letters.length : 0;
         var cards = Array.isArray(d.cards) ? d.cards : [];
         var byKind = { text: 0, emoji: 0, sticker: 0, status: 0 };
         cards.forEach(function (c) { if (c && byKind[c.kind] != null) byKind[c.kind]++; });
         var anns = Array.isArray(d.anniversaries) ? d.anniversaries : [];
-
-        var knownDays = 0;
-        if (firstTs) knownDays = Math.floor((Date.now() - firstTs) / 86400000) + 1;
+        var knownDays = firstTs ? (Math.floor((Date.now() - firstTs) / 86400000) + 1) : 0;
 
         var html = "";
         if (knownDays) {
@@ -275,8 +297,8 @@
             '<div class="st-row"><span>文字 / emoji / 表情包 / 拍一拍</span><b>' + byKind.text + ' / ' + byKind.emoji + ' / ' + byKind.sticker + ' / ' + byKind.status + '</b></div>' +
             '<div class="st-row"><span>信件</span><b>' + letters + ' 封</b></div>' +
             '<div class="st-row"><span>倒数日</span><b>' + anns.length + ' 个</b></div>' +
-            '</div>';
-        html += '<div class="st-note">时间从最早的一条聊天记录开始算。数据只在本机统计。</div>';
+            '</div>' +
+            '<div class="st-note">时间从最早的一条聊天记录开始算，数据只在本机。</div>';
         $("stStatsBody").innerHTML = html;
         v.classList.add("show");
     }
@@ -298,9 +320,7 @@
         var days = d.days.filter(function (s) { return /^\d{4}-\d{2}-\d{2}$/.test(s); }).sort();
         var set = {};
         days.forEach(function (s) { set[s] = 1; });
-
-        var starts = [];
-        var prev = "";
+        var starts = [], prev = "";
         days.forEach(function (s) {
             if (!prev) { starts.push(s); prev = s; return; }
             var a = new Date(prev + "T00:00:00").getTime();
@@ -308,11 +328,9 @@
             if (b - a > 2 * 86400000) starts.push(s);
             prev = s;
         });
-
         var cycle = 28;
         if (starts.length >= 2) {
-            var recent = starts.slice(-4);
-            var gaps = [];
+            var recent = starts.slice(-4), gaps = [];
             for (var i = 1; i < recent.length; i++) {
                 gaps.push(Math.round((new Date(recent[i] + "T00:00:00") - new Date(recent[i - 1] + "T00:00:00")) / 86400000));
             }
@@ -322,16 +340,13 @@
                 cycle = Math.max(18, Math.min(45, Math.round(sum / gaps.length)));
             }
         }
-
         var lastStart = starts.length ? starts[starts.length - 1] : "";
-        var next = "";
-        var untilNext = -1;
+        var next = "", untilNext = -1;
         if (lastStart) {
             var nd = new Date(lastStart + "T00:00:00");
             nd.setDate(nd.getDate() + cycle);
             next = ymd(nd);
-            var today = new Date();
-            today.setHours(0, 0, 0, 0);
+            var today = new Date(); today.setHours(0, 0, 0, 0);
             untilNext = Math.round((nd - today) / 86400000);
         }
         return { set: set, starts: starts, cycle: cycle, next: next, untilNext: untilNext, lastStart: lastStart };
@@ -356,8 +371,7 @@
         if (!body) return;
         var p = periodSets();
         var year = calCursor.getFullYear(), month = calCursor.getMonth();
-        var first = new Date(year, month, 1);
-        var startWeekday = first.getDay();
+        var startWeekday = new Date(year, month, 1).getDay();
         var daysInMonth = new Date(year, month + 1, 0).getDate();
         var todayStr = ymd(new Date());
 
@@ -372,17 +386,14 @@
             cellsHtml += '<button type="button" class="' + cls + '" data-cal="' + ds + '">' + d + '</button>';
         }
 
-        var info = "";
-        if (p.lastStart) {
-            info = '<div class="st-card">' +
+        var info = p.lastStart
+            ? '<div class="st-card">' +
                 '<div class="st-row"><span>最近一次开始</span><b>' + p.lastStart + '</b></div>' +
                 '<div class="st-row"><span>平均周期</span><b>' + p.cycle + ' 天</b></div>' +
                 '<div class="st-row"><span>预计下次</span><b>' + (p.next || "—") + '</b></div>' +
                 '<div class="st-row"><span>距离下次</span><b>' + (p.untilNext >= 0 ? ("还有 " + p.untilNext + " 天") : ("已过 " + (-p.untilNext) + " 天")) + '</b></div>' +
-                '</div>';
-        } else {
-            info = '<div class="st-card"><div class="st-note">还没有记录。点日期就能标记为经期；连续几天都点一下。</div></div>';
-        }
+                '</div>'
+            : '<div class="st-card"><div class="st-note">还没有记录。点日期就能标记为经期；连续几天都点一下。</div></div>';
 
         body.innerHTML =
             '<div class="st-card">' +
@@ -391,19 +402,12 @@
                     '<div class="cal-wd">日</div><div class="cal-wd">一</div><div class="cal-wd">二</div><div class="cal-wd">三</div><div class="cal-wd">四</div><div class="cal-wd">五</div><div class="cal-wd">六</div>' +
                     cellsHtml +
                 '</div>' +
-            '</div>' +
-            info +
-            '<div class="st-note">点日期 = 标记 / 取消经期日；虚线圈出的是按平均周期预测的下次。数据只存在本机。</div>';
+            '</div>' + info +
+            '<div class="st-note">点日期 = 标记 / 取消经期日；虚线圈出的是按平均周期预测的下次。数据只存本机。</div>';
 
         var prev = $("calPrev"), next = $("calNext");
-        if (prev) prev.addEventListener("click", function () {
-            calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1);
-            renderCalendar();
-        });
-        if (next) next.addEventListener("click", function () {
-            calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1);
-            renderCalendar();
-        });
+        if (prev) prev.addEventListener("click", function () { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1); renderCalendar(); });
+        if (next) next.addEventListener("click", function () { calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1); renderCalendar(); });
 
         Array.prototype.forEach.call(body.querySelectorAll("[data-cal]"), function (btn) {
             btn.addEventListener("click", function () {
@@ -683,6 +687,16 @@
         }, 900);
     }, true);
 
+    /* ================= 调度：主屏一出现就插进去 ================= */
+    var schedTimer = null;
+    function scheduleBuild() {
+        if (schedTimer) return;
+        schedTimer = setTimeout(function () {
+            schedTimer = null;
+            try { injectSprite(); buildWeather(); buildApps(); syncIconSize(); } catch (e) {}
+        }, 40);
+    }
+
     var lastDedupe = 0, lastWeather = 0;
     function tick() {
         if (document.hidden) return;
@@ -692,6 +706,7 @@
         watchMyMedia();
         buildWeather();
         buildApps();
+        syncIconSize();
         var now = Date.now();
         if (now - lastWeather > 60000) { lastWeather = now; renderWeather(); }
         if (now - lastDedupe > 20000) { lastDedupe = now; dedupeNow(true); }
@@ -702,10 +717,15 @@
         injectSprite();
         buildMenu();
         fixMenu();
-        setTimeout(function () { buildWeather(); buildApps(); }, 800);
+        scheduleBuild();
         setTimeout(function () { dedupeNow(true); }, 1500);
+        if (window.MutationObserver) {
+            var mo = new MutationObserver(scheduleBuild);
+            mo.observe(document.body, { childList: true, subtree: true });
+        }
         setInterval(tick, 1200);
         window.addEventListener("focus", tick);
+        window.addEventListener("resize", function () { syncIconSize(); });
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
