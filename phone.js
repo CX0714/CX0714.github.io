@@ -1,4 +1,4 @@
-/* Philos 电话 app v6：头像/名字统一、设置加深色模式开关、大组件默认配色随主题纠正 */
+/* Philos 电话 app v7：头像名字统一 / 深色模式开关 / 大组件配色纠正 / 字卡库分组换行 / 造句分类可改名删除 */
 (function () {
     "use strict";
 
@@ -6,6 +6,7 @@
     var PHONE_KEY = "philos_phone";
     var CALLS_KEY = "philos_calls";
     var UNREAD_KEY = "philos_unread";
+    var WORD_KEY = "philos_words";
 
     var view = null, listEl = null, nameEl = null, avatarEl = null, bgEl = null, unreadTimer = null, syncTimer = null;
 
@@ -76,7 +77,6 @@
         if (meta) meta.setAttribute("content", dark ? "#000000" : "#eef1f5");
     }
 
-    /* 大组件默认配色纠正：浅色模式下不该残留深色、深色模式下不该残留浅色 */
     var LIGHT_TOP = ["#eef1f5", "#eef1f5ff"];
     var LIGHT_BOTTOM = ["#ffffff", "#ffffffff"];
     var DARK_TOP = ["#1e2024"];
@@ -89,7 +89,6 @@
         var d = mainData();
         var hc = d.heroConfig;
         if (!hc || typeof hc !== "object") return;
-
         var top = hc.top && typeof hc.top === "object" ? hc.top : null;
         var bottom = hc.bottom && typeof hc.bottom === "object" ? hc.bottom : null;
         var changed = false;
@@ -100,14 +99,8 @@
             if (!c) return;
             if (list.indexOf(c) >= 0) { el.color = ""; changed = true; }
         }
-
-        if (dark) {
-            check(top, LIGHT_TOP);
-            check(bottom, LIGHT_BOTTOM);
-        } else {
-            check(top, DARK_TOP);
-            check(bottom, DARK_BOTTOM);
-        }
+        if (dark) { check(top, LIGHT_TOP); check(bottom, LIGHT_BOTTOM); }
+        else { check(top, DARK_TOP); check(bottom, DARK_BOTTOM); }
 
         if (!changed) return;
         normalizing = true;
@@ -141,6 +134,114 @@
         else page.appendChild(row);
     }
 
+    /* ================= 造句分类：改名 / 删除 ================= */
+    function wordStore() {
+        var v = null;
+        try { v = JSON.parse(localStorage.getItem(WORD_KEY) || "null"); } catch (e) { v = null; }
+        if (Array.isArray(v)) {
+            v = { items: v.filter(function (s) { return typeof s === "string" && s.trim(); })
+                .map(function (t) { return { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), text: t, category: "未分类" }; }), categories: [] };
+        }
+        if (!v || typeof v !== "object") v = {};
+        if (!Array.isArray(v.items)) v.items = [];
+        if (!Array.isArray(v.categories)) v.categories = [];
+        return v;
+    }
+    function saveWordStore(v) { try { localStorage.setItem(WORD_KEY, JSON.stringify(v)); } catch (e) { alert("保存失败。"); } }
+
+    var wcatEditing = "";
+
+    function buildCatSheet() {
+        if ($("wceSheet")) return;
+        var mask = document.createElement("div");
+        mask.className = "wce-mask";
+        mask.id = "wceMask";
+        var sheet = document.createElement("div");
+        sheet.className = "wce-sheet";
+        sheet.id = "wceSheet";
+        sheet.innerHTML =
+            '<div class="wce-title" id="wceTitle">编辑分类</div>' +
+            '<input class="wce-input" id="wceInput" type="text" maxlength="12" placeholder="分类名称" autocomplete="off">' +
+            '<div class="wce-row"><button class="wce-btn ghost" id="wceCancel" type="button">取消</button><button class="wce-btn primary" id="wceSave" type="button">保存</button></div>' +
+            '<div class="wce-row"><button class="wce-btn danger" id="wceDel" type="button">删除这个分类</button></div>';
+        document.body.appendChild(mask);
+        document.body.appendChild(sheet);
+
+        mask.addEventListener("click", closeCatSheet);
+        $("wceCancel").addEventListener("click", closeCatSheet);
+        $("wceSave").addEventListener("click", saveCatRename);
+        $("wceDel").addEventListener("click", deleteCat);
+    }
+
+    function openCatSheet(name) {
+        buildCatSheet();
+        wcatEditing = name;
+        $("wceTitle").textContent = "编辑分类「" + name + "」";
+        $("wceInput").value = name;
+        $("wceMask").classList.add("show");
+        $("wceSheet").classList.add("show");
+        setTimeout(function () { try { $("wceInput").focus(); $("wceInput").select(); } catch (e) {} }, 60);
+    }
+
+    function closeCatSheet() {
+        var mask = $("wceMask"), sheet = $("wceSheet");
+        if (mask) mask.classList.remove("show");
+        if (sheet) sheet.classList.remove("show");
+        wcatEditing = "";
+    }
+
+    function refreshWordUI() {
+        var chip = document.querySelector("[data-sub-chips] .ck-chip");
+        if (chip) chip.click();
+    }
+
+    function saveCatRename() {
+        var next = ($("wceInput") ? $("wceInput").value : "").trim();
+        if (!wcatEditing) { closeCatSheet(); return; }
+        if (!next || next === wcatEditing) { closeCatSheet(); return; }
+        if (next === "全部" || next === "未分类") { alert("这个名字不能用。"); return; }
+
+        var st = wordStore();
+        var i = st.categories.indexOf(wcatEditing);
+        if (i >= 0) st.categories[i] = next;
+        else st.categories.push(next);
+        st.categories = st.categories.filter(function (n, idx, arr) { return n && arr.indexOf(n) === idx; });
+        st.items.forEach(function (it) {
+            if (it && (it.category || "未分类") === wcatEditing) it.category = next;
+        });
+        saveWordStore(st);
+        closeCatSheet();
+        refreshWordUI();
+    }
+
+    function deleteCat() {
+        if (!wcatEditing) return;
+        if (!confirm("删除分类「" + wcatEditing + "」？里面的词会移到「未分类」。")) return;
+        var st = wordStore();
+        st.categories = st.categories.filter(function (n) { return n !== wcatEditing; });
+        st.items.forEach(function (it) {
+            if (it && (it.category || "未分类") === wcatEditing) it.category = "未分类";
+        });
+        saveWordStore(st);
+        closeCatSheet();
+        refreshWordUI();
+    }
+
+    /* 点“已选中”的分类 = 编辑（和字卡库一致） */
+    document.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        var chip = t.closest("[data-sub-chips] .ck-chip");
+        if (!chip) return;
+        if (!chip.classList.contains("active")) return;
+        var name = (chip.textContent || "").trim();
+        if (!name || name === "全部" || name === "未分类" || name.indexOf("分类") === 0) return;
+        e.stopPropagation();
+        e.preventDefault();
+        openCatSheet(name);
+    }, true);
+
+    /* ================= 样式 ================= */
     function injectStyles() {
         if (document.getElementById("philos-phone-style")) return;
         var st = document.createElement("style");
@@ -157,17 +258,40 @@
             ".ph-avatar{flex:0 0 auto;width:106px;height:106px;margin:30px auto 0;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,0.55);background:rgba(255,255,255,0.40);box-shadow:0 14px 34px rgba(35,50,70,0.22);display:flex;align-items:center;justify-content:center;color:#7d8ea2;font-size:32px;font-weight:600;padding:0;}" +
             ".ph-avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;border:none;box-shadow:none;}" +
             ".ph-name{flex:0 0 auto;width:72%;margin:16px auto 0;height:38px;border:none;background:transparent;outline:none;text-align:center;font-size:21px;font-weight:600;letter-spacing:0.3px;color:#ffffff;text-shadow:0 2px 10px rgba(30,40,55,0.35);padding:0;}" +
-            ".ph-name::placeholder{color:rgba(255,255,255,0.72);text-shadow:0 2px 10px rgba(30,40,55,0.30);}" +
+            ".ph-name::placeholder{color:rgba(255,255,255,0.72);}" +
             ".ph-calls{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-top:24px;}" +
             ".ph-call-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 16px calc(env(safe-area-inset-bottom) + 26px);-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 30px,#000 100%);mask-image:linear-gradient(180deg,transparent 0,#000 30px,#000 100%);}" +
             ".ph-call{background:rgba(255,255,255,0.52);-webkit-backdrop-filter:blur(18px) saturate(115%);backdrop-filter:blur(18px) saturate(115%);border:1px solid rgba(255,255,255,0.58);border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(45,65,90,0.10);}" +
             ".ph-call-text{font-size:14px;line-height:1.5;color:#252b33;word-break:break-word;}" +
-            ".ph-call-time{font-size:11.5px;color:rgba(45,55,70,0.55);margin-top:4px;letter-spacing:0.2px;}" +
+            ".ph-call-time{font-size:11.5px;color:rgba(45,55,70,0.55);margin-top:4px;}" +
             ".ph-empty{text-align:center;font-size:13px;color:rgba(45,55,70,0.55);padding:40px 0;}" +
             ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
             "[data-philos-theme-row]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:52px;}" +
             "[data-philos-theme-row] > span{font-size:16px;color:var(--text-primary);}" +
-            "[data-philos-theme-row] .switch{flex:0 0 auto;margin:0;}";
+            "[data-philos-theme-row] .switch{flex:0 0 auto;margin:0;}" +
+            /* 字卡库 / 造句 的分类：换行排布，不再横向滑动 */
+            "#cardCats,#cardCats.cat-scroll,[data-sub-chips].ck-chips{display:flex !important;flex-wrap:wrap !important;align-items:center !important;" +
+                "gap:8px !important;overflow:visible !important;overflow-x:visible !important;white-space:normal !important;" +
+                "padding:4px 16px 10px !important;height:auto !important;max-height:none !important;}" +
+            "#cardCats > *,[data-sub-chips] > *{flex:0 0 auto !important;}" +
+            /* 造句分类编辑弹层 */
+            ".wce-mask{position:fixed;inset:0;z-index:940;background:rgba(16,20,26,0.32);display:none;}" +
+            ".wce-mask.show{display:block;}" +
+            ".wce-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;z-index:941;" +
+                "width:86%;max-width:330px;padding:18px;border-radius:20px;background:#ffffff;border:1px solid rgba(255,255,255,0.9);" +
+                "box-shadow:0 22px 50px rgba(20,30,45,0.24);transition:transform .18s ease,opacity .18s ease;}" +
+            ".wce-sheet.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto;}" +
+            ".wce-title{font-size:16px;font-weight:600;color:#1b1d21;text-align:center;margin-bottom:14px;}" +
+            ".wce-input{width:100%;height:44px;border-radius:12px;border:1px solid rgba(120,135,155,0.30);background:#fff;padding:0 12px;font-size:16px;color:#1b1d21;outline:none;box-sizing:border-box;}" +
+            ".wce-row{display:flex;gap:10px;margin-top:12px;}" +
+            ".wce-btn{flex:1;height:44px;border-radius:13px;font-size:15px;border:none;}" +
+            ".wce-btn.ghost{background:rgba(120,132,148,0.14);color:#1b1d21;}" +
+            ".wce-btn.primary{background:#5b7fa6;color:#fff;}" +
+            ".wce-btn.danger{background:rgba(255,59,48,0.12);color:#ff3b30;}" +
+            "[data-theme=\"dark\"] .wce-sheet{background:#1c1d21;border-color:rgba(255,255,255,0.12);}" +
+            "[data-theme=\"dark\"] .wce-title{color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .wce-input{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.14);color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .wce-btn.ghost{background:rgba(255,255,255,0.10);color:#f2f3f6;}";
         document.head.appendChild(st);
     }
 
@@ -235,10 +359,7 @@
         if (!el) return;
         var box = el.querySelector(".app-icon-box") || el;
         var dot = box.querySelector(".philos-dot");
-        if (!n) {
-            if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
-            return;
-        }
+        if (!n) { if (dot && dot.parentNode) dot.parentNode.removeChild(dot); return; }
         if (!dot) {
             dot = document.createElement("span");
             dot.className = "philos-dot";
@@ -365,9 +486,7 @@
         setTimeout(function () { if (listEl) listEl.scrollTop = 0; }, 30);
     }
 
-    function close() {
-        if (view) view.classList.remove("show");
-    }
+    function close() { if (view) view.classList.remove("show"); }
 
     document.addEventListener("click", function (e) {
         var t = e.target;
@@ -382,6 +501,7 @@
     function init() {
         injectStyles();
         loadModule("fixes.js");
+        buildCatSheet();
         ensureThemeRow();
         normalizeHeroColors();
         refreshBadge();
