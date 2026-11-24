@@ -1,4 +1,4 @@
-/* Philos 电话 app v5：头像/名字统一用系统那套；设置页加「深色模式」开关（外观上方）；通话记录 / 换背景 / 红点 */
+/* Philos 电话 app v6：头像/名字统一、设置加深色模式开关、大组件默认配色随主题纠正 */
 (function () {
     "use strict";
 
@@ -61,7 +61,7 @@
         return "他";
     }
 
-    /* ================= 设置里的深色模式开关 ================= */
+    /* ================= 主题 ================= */
     function isDarkNow() {
         var d = mainData();
         var mode = d.themeMode || "auto";
@@ -74,6 +74,46 @@
         document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
         var meta = document.querySelector('meta[name="theme-color"]');
         if (meta) meta.setAttribute("content", dark ? "#000000" : "#eef1f5");
+    }
+
+    /* 大组件默认配色纠正：浅色模式下不该残留深色、深色模式下不该残留浅色 */
+    var LIGHT_TOP = ["#eef1f5", "#eef1f5ff"];
+    var LIGHT_BOTTOM = ["#ffffff", "#ffffffff"];
+    var DARK_TOP = ["#1e2024"];
+    var DARK_BOTTOM = ["#202226"];
+
+    var normalizing = false;
+    function normalizeHeroColors() {
+        if (normalizing) return;
+        var dark = isDarkNow();
+        var d = mainData();
+        var hc = d.heroConfig;
+        if (!hc || typeof hc !== "object") return;
+
+        var top = hc.top && typeof hc.top === "object" ? hc.top : null;
+        var bottom = hc.bottom && typeof hc.bottom === "object" ? hc.bottom : null;
+        var changed = false;
+
+        function check(el, list) {
+            if (!el) return;
+            var c = String(el.color || "").toLowerCase();
+            if (!c) return;
+            if (list.indexOf(c) >= 0) { el.color = ""; changed = true; }
+        }
+
+        if (dark) {
+            check(top, LIGHT_TOP);
+            check(bottom, LIGHT_BOTTOM);
+        } else {
+            check(top, DARK_TOP);
+            check(bottom, DARK_BOTTOM);
+        }
+
+        if (!changed) return;
+        normalizing = true;
+        saveMain(d);
+        if (window.philosReload) setTimeout(function () { normalizing = false; window.philosReload(); }, 80);
+        else setTimeout(function () { normalizing = false; }, 400);
     }
 
     function ensureThemeRow() {
@@ -94,6 +134,7 @@
                 saveMain(d);
                 applyThemeNow(dark);
                 if (window.philosReload) setTimeout(function () { window.philosReload(); }, 120);
+                setTimeout(normalizeHeroColors, 260);
             });
         }
         if (appearanceBtn && appearanceBtn.parentNode) appearanceBtn.parentNode.insertBefore(row, appearanceBtn);
@@ -342,6 +383,7 @@
         injectStyles();
         loadModule("fixes.js");
         ensureThemeRow();
+        normalizeHeroColors();
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(function () {
