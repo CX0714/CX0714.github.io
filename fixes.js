@@ -1,4 +1,4 @@
-/* Philos 小修：统计/日历/天气小组件、自动去重、自绘导入导出菜单、只发图也会回复、点顶部头像让他开口 */
+/* Philos 小修：统计(排行+词云)/日历经期/天气小组件、自动去重、自绘菜单、只发图也回复、点顶头像让他开口 */
 (function () {
     "use strict";
 
@@ -17,16 +17,6 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            ".wxw{width:100%;display:flex;align-items:center;justify-content:center;gap:30px;" +
-                "padding:0;background:none;border:none;box-shadow:none;box-sizing:border-box;}" +
-            ".wxw-left{display:flex;align-items:center;gap:11px;min-width:0;}" +
-            ".wxw-icon{width:48px;height:48px;flex:0 0 auto;color:var(--text-primary,#1b1d21);opacity:.92;}" +
-            ".wxw-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;display:block;}" +
-            ".wxw-temp{font-size:30px;font-weight:700;letter-spacing:-1.2px;line-height:1;color:var(--text-primary,#1b1d21);}" +
-            ".wxw-temp span{font-size:14px;font-weight:600;letter-spacing:0;margin-left:1px;}" +
-            ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;}" +
-            ".wxw-right{text-align:left;font-size:11.5px;line-height:1.5;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
-            ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;margin-bottom:3px;}" +
             ".st-view{position:fixed;inset:0;z-index:487;display:none;flex-direction:column;background:#EEEEEE;}" +
             ".st-view.show{display:flex;}" +
             ".st-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 14px 6px;}" +
@@ -42,6 +32,20 @@
             ".st-big .num{font-size:42px;font-weight:800;letter-spacing:-1.5px;color:#1b1d21;line-height:1;}" +
             ".st-big .lab{font-size:12px;color:#8b909a;margin-top:6px;}" +
             ".st-note{font-size:12px;color:#8b909a;line-height:1.5;padding:0 4px;}" +
+            ".st-card-title{font-size:12.5px;font-weight:700;color:#8b909a;letter-spacing:0.4px;margin-bottom:8px;}" +
+            /* 排行 */
+            ".rk{display:flex;align-items:center;gap:12px;padding:10px 0;}" +
+            ".rk + .rk{border-top:1px solid rgba(120,135,155,0.12);}" +
+            ".rk-no{flex:0 0 auto;width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#b9c4d1;}" +
+            ".rk-1 .rk-no{background:#5b7fa6;}" +
+            ".rk-2 .rk-no{background:#7f9cbb;}" +
+            ".rk-3 .rk-no{background:#a3b6ca;}" +
+            ".rk-text{flex:1 1 auto;min-width:0;font-size:15px;color:#1b1d21;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".rk-num{flex:0 0 auto;font-size:13px;font-weight:700;color:#5b7fa6;}" +
+            /* 词云 */
+            ".cloud{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 10px;padding:6px 2px;line-height:1.15;}" +
+            ".cloud span{white-space:nowrap;opacity:.92;}" +
+            /* 日历 */
             ".cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}" +
             ".cal-wd{text-align:center;font-size:11px;color:#8b909a;padding:4px 0 2px;}" +
             ".cal-cell{position:relative;aspect-ratio:1/1;border-radius:12px;background:#ffffff;border:1px solid rgba(120,135,155,0.10);display:flex;align-items:center;justify-content:center;font-size:14px;color:#1b1d21;padding:0;}" +
@@ -54,7 +58,7 @@
             "[data-theme=\"dark\"] .st-view{background:#000000;}" +
             "[data-theme=\"dark\"] .st-card,[data-theme=\"dark\"] .cal-cell{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
             "[data-theme=\"dark\"] .st-row{color:#c7cbd3;}" +
-            "[data-theme=\"dark\"] .st-row b,[data-theme=\"dark\"] .st-big .num,[data-theme=\"dark\"] .cal-nav,[data-theme=\"dark\"] .cal-cell{color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .st-row b,[data-theme=\"dark\"] .st-big .num,[data-theme=\"dark\"] .cal-nav,[data-theme=\"dark\"] .cal-cell,[data-theme=\"dark\"] .rk-text{color:#f2f3f6;}" +
             "[data-theme=\"dark\"] .st-title{color:#f2f3f6;}" +
             ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
             ".phm-mask.show{display:block;}" +
@@ -71,16 +75,7 @@
             ".cards-menu .msg-menu-item{color:#1b1d21 !important;font-size:15px !important;height:44px !important;line-height:44px !important;text-align:left !important;}" +
             "html[data-theme=\"dark\"] .cards-menu{background:#1c1d21 !important;border-color:rgba(255,255,255,0.14) !important;}" +
             "html[data-theme=\"dark\"] .cards-menu .msg-menu-item{color:#f2f3f6 !important;}" +
-            ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}" +
-            ".ws-a{padding:8px !important;gap:6px !important;}" +
-            ".ws-a-title{font-size:10.5px !important;margin-bottom:1px;}" +
-            ".ws-a-row{gap:7px !important;}" +
-            ".ws-a-avatar{width:58px !important;height:58px !important;}" +
-            ".ws-a-days{font-size:19px !important;}" +
-            ".ws-b{padding:8px !important;gap:6px !important;}" +
-            ".ws-b-title{font-size:10.5px !important;}" +
-            ".ws-b-card{width:104px !important;height:104px !important;}" +
-            ".ws-c-img{height:56% !important;}";
+            ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}";
         document.head.appendChild(st);
     }
 
@@ -193,7 +188,7 @@
         renderWeather();
     }
 
-    /* ================= 两个新 app + 尺寸对齐 ================= */
+    /* ================= 新 app + 尺寸对齐 ================= */
     function makeApp(id, label, symbol) {
         var btn = document.createElement("button");
         btn.type = "button";
@@ -246,7 +241,76 @@
         syncIconSize();
     }
 
-    /* ===== 统计 ===== */
+    /* ================= 来电界面：立刻成型 ================= */
+    function decorateCall() {
+        var overlay = $("philosCallIn");
+        if (!overlay) return;
+        var card = overlay.querySelector(".call-in-card");
+        if (!card) return;
+
+        var av = card.querySelector(".call-in-avatar");
+        var nm = card.querySelector(".call-in-name");
+        var stt = card.querySelector(".call-in-state");
+        var body = card.querySelector(".call-in-body");
+        if (!body && av && nm && stt) {
+            body = document.createElement("div");
+            body.className = "call-in-body";
+            card.insertBefore(body, av);
+            body.appendChild(av);
+            body.appendChild(nm);
+            body.appendChild(stt);
+        }
+
+        var actions = card.querySelector(".call-in-actions");
+        if (!actions) return;
+        if (!card.querySelector("[data-call-min]")) {
+            var minBtn = document.createElement("button");
+            minBtn.type = "button";
+            minBtn.className = "call-min";
+            minBtn.setAttribute("data-call-min", "1");
+            minBtn.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-down-double"></use></svg>';
+            minBtn.addEventListener("click", function () {
+                overlay.classList.remove("show");
+                var pill = $("philosCallPill");
+                if (!pill) {
+                    pill = document.createElement("button");
+                    pill.type = "button";
+                    pill.id = "philosCallPill";
+                    pill.className = "call-mini-pill";
+                    pill.innerHTML = '<span>通话中</span>';
+                    pill.addEventListener("click", function () {
+                        pill.classList.remove("show");
+                        overlay.classList.add("show");
+                    });
+                    document.body.appendChild(pill);
+                }
+                pill.classList.add("show");
+            });
+            card.appendChild(minBtn);
+        }
+
+        Array.prototype.forEach.call(actions.querySelectorAll(".call-in-btn"), function (btn) {
+            if (btn.getAttribute("data-round") === "1") return;
+            var isAnswer = btn.classList.contains("answer");
+            var label = isAnswer ? "接通" : "挂断";
+            btn.setAttribute("data-round", "1");
+            btn.setAttribute("aria-label", label);
+            btn.classList.add("round");
+            btn.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24" style="transform:rotate(' + (isAnswer ? "0" : "135") + 'deg)"><use href="#ic-phone"></use></svg>';
+            var wrap = document.createElement("div");
+            wrap.className = "call-in-act";
+            if (btn.parentNode) {
+                btn.parentNode.insertBefore(wrap, btn);
+                wrap.appendChild(btn);
+                var lb = document.createElement("span");
+                lb.className = "call-in-act-label";
+                lb.textContent = label;
+                wrap.appendChild(lb);
+            }
+        });
+    }
+
+    /* ================= 统计 ================= */
     function statsView() {
         var v = $("stStatsView");
         if (v) return v;
@@ -260,6 +324,33 @@
         $("stStatsBack").addEventListener("click", function () { v.classList.remove("show"); });
         return v;
     }
+
+    function hisCardCounts() {
+        var d = getMain();
+        var h = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        var cards = Array.isArray(d.cards) ? d.cards : [];
+        var byText = {};
+        cards.forEach(function (c) {
+            if (!c || c.kind !== "text" || typeof c.content !== "string") return;
+            var t = c.content.trim();
+            if (t) byText[t] = 0;
+        });
+        var list = Object.keys(byText);
+        if (!list.length) return [];
+        h.forEach(function (m) {
+            if (!m || m.from !== "ta" || typeof m.text !== "string" || !m.text) return;
+            var text = m.text;
+            for (var i = 0; i < list.length; i++) {
+                if (text.indexOf(list[i]) >= 0) byText[list[i]] = byText[list[i]] + 1;
+            }
+        });
+        var out = list.map(function (t) { return { text: t, n: byText[t] }; })
+            .filter(function (x) { return x.n > 0; })
+            .sort(function (a, b) { return b.n - a.n; });
+        return out;
+    }
+
+    var CLOUD_COLORS = ["#5b7fa6", "#7f9cbb", "#8b909a", "#a3b6ca", "#6b8bab", "#9aa8b8"];
 
     function openStats() {
         var v = statsView();
@@ -282,28 +373,67 @@
         var anns = Array.isArray(d.anniversaries) ? d.anniversaries : [];
         var knownDays = firstTs ? (Math.floor((Date.now() - firstTs) / 86400000) + 1) : 0;
 
+        var counts = hisCardCounts();
+        var top3 = counts.slice(0, 3);
+        var cloudItems = counts.slice(0, 24);
+
         var html = "";
+
+        /* 排行 */
+        html += '<div class="st-card"><div class="st-card-title">他最常用的字卡</div>';
+        if (!top3.length) {
+            html += '<div class="st-note">他还没用过字卡里的句子（这里统计的是他在 iMessage 里说过、且能对上字卡的话）。</div>';
+        } else {
+            top3.forEach(function (item, i) {
+                html += '<div class="rk rk-' + (i + 1) + '">' +
+                    '<span class="rk-no">' + (i + 1) + '</span>' +
+                    '<span class="rk-text">' + item.text.replace(/</g, "&lt;") + '</span>' +
+                    '<span class="rk-num">' + item.n + ' 次</span>' +
+                    '</div>';
+            });
+        }
+        html += '</div>';
+
+        /* 词云 */
+        if (cloudItems.length) {
+            var maxN = cloudItems[0].n, minN = cloudItems[cloudItems.length - 1].n;
+            html += '<div class="st-card"><div class="st-card-title">他的词云</div><div class="cloud">';
+            cloudItems.forEach(function (item, idx) {
+                var ratio = maxN === minN ? 1 : (item.n - minN) / (maxN - minN);
+                var size = Math.round(13 + ratio * 12);
+                var color = CLOUD_COLORS[idx % CLOUD_COLORS.length];
+                var weight = ratio > 0.66 ? 700 : (ratio > 0.33 ? 600 : 500);
+                html += '<span style="font-size:' + size + 'px;color:' + color + ';font-weight:' + weight + '">' +
+                    item.text.replace(/</g, "&lt;") + '</span>';
+            });
+            html += '</div></div>';
+        }
+
+        /* 天数 */
         if (knownDays) {
             html += '<div class="st-card"><div class="st-big"><div class="num">' + knownDays + '</div><div class="lab">从第一句话到现在（天）</div></div></div>';
         }
+
         html += '<div class="st-card">' +
             '<div class="st-row"><span>消息总数</span><b>' + h.length + '</b></div>' +
             '<div class="st-row"><span>我说的</span><b>' + mine + ' 条 · ' + myChars + ' 字</b></div>' +
             '<div class="st-row"><span>他说的</span><b>' + his + ' 条 · ' + hisChars + ' 字</b></div>' +
             '<div class="st-row"><span>图片 / 表情包</span><b>' + media + ' 条</b></div>' +
             '</div>';
+
         html += '<div class="st-card">' +
             '<div class="st-row"><span>字卡</span><b>' + cards.length + ' 条</b></div>' +
             '<div class="st-row"><span>文字 / emoji / 表情包 / 拍一拍</span><b>' + byKind.text + ' / ' + byKind.emoji + ' / ' + byKind.sticker + ' / ' + byKind.status + '</b></div>' +
             '<div class="st-row"><span>信件</span><b>' + letters + ' 封</b></div>' +
             '<div class="st-row"><span>倒数日</span><b>' + anns.length + ' 个</b></div>' +
             '</div>' +
-            '<div class="st-note">时间从最早的一条聊天记录开始算，数据只在本机。</div>';
+            '<div class="st-note">排行与词云统计的是「他在 iMessage 说过、并能对上某条文字字卡」的次数。</div>';
+
         $("stStatsBody").innerHTML = html;
         v.classList.add("show");
     }
 
-    /* ===== 日历 + 经期 ===== */
+    /* ================= 日历 + 经期 ================= */
     var calCursor = new Date();
 
     function periodData() {
@@ -412,11 +542,11 @@
         Array.prototype.forEach.call(body.querySelectorAll("[data-cal]"), function (btn) {
             btn.addEventListener("click", function () {
                 var ds = btn.getAttribute("data-cal");
-                var d = periodData();
-                var i = d.days.indexOf(ds);
-                if (i >= 0) d.days.splice(i, 1);
-                else d.days.push(ds);
-                savePeriod(d);
+                var dd = periodData();
+                var i = dd.days.indexOf(ds);
+                if (i >= 0) dd.days.splice(i, 1);
+                else dd.days.push(ds);
+                savePeriod(dd);
                 renderCalendar();
             });
         });
@@ -687,14 +817,20 @@
         }, 900);
     }, true);
 
-    /* ================= 调度：主屏一出现就插进去 ================= */
+    /* ================= 调度 ================= */
     var schedTimer = null;
     function scheduleBuild() {
         if (schedTimer) return;
         schedTimer = setTimeout(function () {
             schedTimer = null;
-            try { injectSprite(); buildWeather(); buildApps(); syncIconSize(); } catch (e) {}
-        }, 40);
+            try {
+                injectSprite();
+                buildWeather();
+                buildApps();
+                syncIconSize();
+                decorateCall();
+            } catch (e) {}
+        }, 30);
     }
 
     var lastDedupe = 0, lastWeather = 0;
@@ -707,6 +843,7 @@
         buildWeather();
         buildApps();
         syncIconSize();
+        decorateCall();
         var now = Date.now();
         if (now - lastWeather > 60000) { lastWeather = now; renderWeather(); }
         if (now - lastDedupe > 20000) { lastDedupe = now; dedupeNow(true); }
@@ -720,8 +857,17 @@
         scheduleBuild();
         setTimeout(function () { dedupeNow(true); }, 1500);
         if (window.MutationObserver) {
-            var mo = new MutationObserver(scheduleBuild);
+            var mo = new MutationObserver(function () { scheduleBuild(); });
             mo.observe(document.body, { childList: true, subtree: true });
+            var watchCall = function () {
+                var ov = $("philosCallIn");
+                if (ov && !ov.__philosObs) {
+                    ov.__philosObs = 1;
+                    new MutationObserver(function () { decorateCall(); }).observe(ov, { attributes: true, childList: true, subtree: true });
+                }
+            };
+            watchCall();
+            setInterval(watchCall, 800);
         }
         setInterval(tick, 1200);
         window.addEventListener("focus", tick);
