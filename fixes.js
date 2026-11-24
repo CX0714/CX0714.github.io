@@ -1,10 +1,11 @@
-/* Philos 小修：字卡/造句自动去重、字卡库自绘菜单、覆盖层定位、小组件图片放大、第二页下移、
-   只发图片/表情包也会收到回复、点聊天顶部头像让他主动开口 */
+/* Philos 小修：他的天气小组件、字卡/造句自动去重、自绘导入导出菜单、小组件图片放大、
+   只发图片/表情包也会回复、点聊天顶部头像让他开口 */
 (function () {
     "use strict";
 
     var MAIN_KEY = "private_chat_app_v1";
     var WORD_KEY = "philos_words";
+    var WEA_KEY = "philos_weather";
 
     function $(id) { return document.getElementById(id); }
     function getMain() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
@@ -14,6 +15,18 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
+            /* ===== 他的天气（无底色无边框，4×1） ===== */
+            ".wxw{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;" +
+                "padding:2px 2px;background:none;border:none;box-shadow:none;box-sizing:border-box;}" +
+            ".wxw-left{display:flex;align-items:center;gap:11px;min-width:0;}" +
+            ".wxw-icon{width:48px;height:48px;flex:0 0 auto;color:var(--text-primary,#1b1d21);opacity:.92;}" +
+            ".wxw-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;display:block;}" +
+            ".wxw-temp{font-size:31px;font-weight:700;letter-spacing:-1.2px;line-height:1;color:var(--text-primary,#1b1d21);}" +
+            ".wxw-temp span{font-size:15px;font-weight:600;letter-spacing:0;margin-left:1px;}" +
+            ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;}" +
+            ".wxw-right{text-align:right;font-size:11.5px;line-height:1.6;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
+            ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;}" +
+            /* ===== 自绘菜单 ===== */
             ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
             ".phm-mask.show{display:block;}" +
             ".phm-menu{position:fixed;z-index:901;min-width:152px;padding:6px;border-radius:16px;" +
@@ -32,6 +45,7 @@
             "html[data-theme=\"dark\"] .cards-menu{background:#1c1d21 !important;border-color:rgba(255,255,255,0.14) !important;}" +
             "html[data-theme=\"dark\"] .cards-menu .msg-menu-item{color:#f2f3f6 !important;}" +
             ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}" +
+            /* 小组件模板图片放大 */
             ".ws-a{padding:8px !important;gap:6px !important;}" +
             ".ws-a-title{font-size:10.5px !important;margin-bottom:1px;}" +
             ".ws-a-row{gap:7px !important;}" +
@@ -40,9 +54,125 @@
             ".ws-b{padding:8px !important;gap:6px !important;}" +
             ".ws-b-title{font-size:10.5px !important;}" +
             ".ws-b-card{width:104px !important;height:104px !important;}" +
-            ".ws-c-img{height:56% !important;}" +
-            "#homePager > .home-page:nth-child(2) .home-app-grid{padding-top:84px !important;}";
+            ".ws-c-img{height:56% !important;}";
         document.head.appendChild(st);
+    }
+
+    /* ================= 他的天气 ================= */
+    var CODES = {
+        sunny: { label: "晴", base: [25, 32] },
+        partly: { label: "多云", base: [21, 28] },
+        cloudy: { label: "阴", base: [17, 24] },
+        rain: { label: "小雨", base: [15, 21] },
+        thunder: { label: "雷阵雨", base: [20, 27] },
+        snow: { label: "小雪", base: [-4, 2] },
+        fog: { label: "有雾", base: [13, 19] }
+    };
+    var ORDER = ["sunny", "partly", "cloudy", "rain", "thunder", "snow", "fog"];
+
+    function weatherData() {
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem(WEA_KEY) || "null"); } catch (e) { d = null; }
+        if (!d || typeof d !== "object") d = {};
+        if (typeof d.city !== "string" || !d.city) d.city = "他的城市";
+        return d;
+    }
+    function saveWeather(d) { try { localStorage.setItem(WEA_KEY, JSON.stringify(d)); } catch (e) {} }
+
+    function rollWeather(force) {
+        var d = weatherData();
+        var now = Date.now();
+        if (!force && d.ts && now - d.ts < 45 * 60000 && d.code) return d;
+
+        var weights = [0.40, 0.24, 0.12, 0.12, 0.06, 0.03, 0.03];
+        var r = Math.random(), acc = 0, code = "sunny";
+        for (var i = 0; i < ORDER.length; i++) {
+            acc += weights[i];
+            if (r <= acc) { code = ORDER[i]; break; }
+        }
+        var base = CODES[code].base;
+        var temp = Math.round(base[0] + Math.random() * (base[1] - base[0]));
+        d = {
+            ts: now,
+            city: d.city || "他的城市",
+            code: code,
+            temp: temp,
+            hi: temp + 1 + Math.floor(Math.random() * 3),
+            lo: temp - 2 - Math.floor(Math.random() * 4),
+            hum: 38 + Math.floor(Math.random() * 55),
+            wind: 1 + Math.floor(Math.random() * 5)
+        };
+        saveWeather(d);
+        return d;
+    }
+
+    function iconSvg(code) {
+        var sun = '<circle cx="12" cy="12" r="4.1"/>' +
+            '<path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>';
+        var cloud = '<path d="M7.2 18.2h9.1a3.6 3.6 0 0 0 .3-7.2 5.1 5.1 0 0 0-9.7-1.2 3.2 3.2 0 0 0 .3 8.4z"/>';
+        if (code === "sunny") return sun;
+        if (code === "partly") {
+            return '<circle cx="9" cy="9.2" r="2.9"/>' +
+                '<path d="M9 2.9v1.7M2.9 9.2h1.7M4.7 4.9l1.2 1.2M13.3 4.9l-1.2 1.2"/>' +
+                '<path d="M9.6 19h8.2a3.3 3.3 0 0 0 .3-6.6 4.7 4.7 0 0 0-8.9-1.1 3 3 0 0 0 .4 7.7z"/>';
+        }
+        if (code === "cloudy") return cloud;
+        if (code === "rain") {
+            return cloud + '<path d="M8.4 20.4l-.9 1.8M12 20.4l-.9 1.8M15.6 20.4l-.9 1.8"/>';
+        }
+        if (code === "thunder") {
+            return cloud + '<path d="M12.6 19.4l-2.1 3.2h2.9l-1.4 2.4" transform="translate(0,-1.2)"/>';
+        }
+        if (code === "snow") {
+            return cloud + '<path d="M8.4 20.6v2M12 20.6v2M15.6 20.6v2"/>';
+        }
+        return '<path d="M4.4 9h15.2M3.4 13h15.2M5.4 17h15.2"/>';
+    }
+
+    function renderWeather() {
+        var el = document.querySelector(".wxw");
+        if (!el) return;
+        var d = rollWeather(false);
+        var info = CODES[d.code] || CODES.sunny;
+        el.innerHTML =
+            '<div class="wxw-left">' +
+                '<div class="wxw-icon"><svg viewBox="0 0 24 24">' + iconSvg(d.code) + '</svg></div>' +
+                '<div>' +
+                    '<div class="wxw-temp">' + d.temp + '<span>°</span></div>' +
+                    '<div class="wxw-sub">' + info.label + ' · ' + d.lo + '° / ' + d.hi + '°</div>' +
+                '</div>' +
+            '</div>' +
+            '<div class="wxw-right">' +
+                '<div class="wxw-city">' + d.city + '</div>' +
+                '<div>湿度 ' + d.hum + '%</div>' +
+                '<div>' + d.wind + ' 级风</div>' +
+            '</div>';
+    }
+
+    function buildWeather() {
+        var page2 = document.querySelector("#homePager > .home-page:nth-child(2)");
+        if (!page2) return;
+        if (page2.querySelector(".wxw")) { return; }
+        var el = document.createElement("div");
+        el.className = "wxw";
+        el.setAttribute("role", "button");
+        el.setAttribute("tabindex", "0");
+        el.title = "点一下换一次天气";
+        el.addEventListener("click", function () {
+            rollWeather(true);
+            renderWeather();
+        });
+        el.addEventListener("contextmenu", function (e) {
+            e.preventDefault();
+            var d = weatherData();
+            var name = prompt("这个城市的名字", d.city || "他的城市");
+            if (!name) return;
+            d.city = name.trim().slice(0, 10) || "他的城市";
+            saveWeather(d);
+            renderWeather();
+        });
+        page2.insertBefore(el, page2.firstChild);
+        renderWeather();
     }
 
     /* ================= 自动去重 ================= */
@@ -56,8 +186,7 @@
             var changed = false;
 
             if (Array.isArray(d.cards)) {
-                var seen = {};
-                var keep = [];
+                var seen = {}, keep = [];
                 for (var i = 0; i < d.cards.length; i++) {
                     var c = d.cards[i];
                     if (!c || typeof c.content !== "string") { changed = true; continue; }
@@ -71,17 +200,12 @@
                 }
                 if (keep.length !== d.cards.length) { d.cards = keep; changed = true; }
             }
-
-            if (changed) {
-                try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {}
-            }
+            if (changed) { try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {} }
 
             var w = null;
             try { w = JSON.parse(localStorage.getItem(WORD_KEY) || "null"); } catch (e) { w = null; }
             if (w && Array.isArray(w.items)) {
-                var seen2 = {};
-                var keep2 = [];
-                var wChanged = false;
+                var seen2 = {}, keep2 = [], wChanged = false;
                 for (var j = 0; j < w.items.length; j++) {
                     var it = w.items[j];
                     var t = it && typeof it.text === "string" ? it.text.trim() : "";
@@ -108,9 +232,8 @@
         return removed;
     }
 
-    /* ================= 自绘「三个点」菜单 ================= */
+    /* ================= 自绘菜单 ================= */
     var menuEl = null, maskEl = null;
-
     function buildMenu() {
         if (menuEl) return;
         maskEl = document.createElement("div");
@@ -125,26 +248,17 @@
             '<button class="phm-item" type="button" data-phm="dedupe">去掉重复</button>';
         document.body.appendChild(maskEl);
         document.body.appendChild(menuEl);
-
         maskEl.addEventListener("click", closeMenu);
         menuEl.addEventListener("click", function (e) {
             var btn = e.target.closest ? e.target.closest("[data-phm]") : null;
             if (!btn) return;
             var act = btn.getAttribute("data-phm");
             closeMenu();
-            if (act === "export") {
-                var ex = $("btnExportCards");
-                if (ex) ex.click();
-            } else if (act === "import") {
-                var im = $("importCardsFile");
-                if (im) im.click();
-            } else {
-                var n = dedupeNow(false);
-                if (!n) alert("没有发现重复内容。");
-            }
+            if (act === "export") { var ex = $("btnExportCards"); if (ex) ex.click(); }
+            else if (act === "import") { var im = $("importCardsFile"); if (im) im.click(); }
+            else { var n = dedupeNow(false); if (!n) alert("没有发现重复内容。"); }
         });
     }
-
     function openMenu(anchor) {
         buildMenu();
         var rect = anchor ? anchor.getBoundingClientRect() : { right: window.innerWidth - 16, bottom: 70 };
@@ -157,12 +271,10 @@
         menuEl.style.left = left + "px";
         menuEl.style.top = top + "px";
     }
-
     function closeMenu() {
         if (menuEl) menuEl.classList.remove("show");
         if (maskEl) maskEl.classList.remove("show");
     }
-
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
@@ -323,13 +435,15 @@
         }, 900);
     }, true);
 
-    var lastDedupe = 0;
+    var lastDedupe = 0, lastWeather = 0;
     function tick() {
         if (document.hidden) return;
         injectStyles();
         fixMenu();
         watchMyMedia();
+        buildWeather();
         var now = Date.now();
+        if (now - lastWeather > 60000) { lastWeather = now; renderWeather(); }
         if (now - lastDedupe > 20000) { lastDedupe = now; dedupeNow(true); }
     }
 
@@ -337,6 +451,7 @@
         injectStyles();
         buildMenu();
         fixMenu();
+        setTimeout(function () { buildWeather(); }, 800);
         setTimeout(function () { dedupeNow(true); }, 1500);
         setInterval(tick, 1200);
         window.addEventListener("focus", tick);
