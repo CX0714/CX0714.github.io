@@ -1,4 +1,4 @@
-/* Philos 小修：他的天气小组件、自动去重、自绘导入导出菜单、小组件图片放大、
+/* Philos 小修：第二页新增「统计」「日历(经期)」、他的天气、自动去重、自绘导入导出菜单、
    只发图片/表情包也会回复、点聊天顶部头像让他开口 */
 (function () {
     "use strict";
@@ -6,16 +6,18 @@
     var MAIN_KEY = "private_chat_app_v1";
     var WORD_KEY = "philos_words";
     var WEA_KEY = "philos_weather";
+    var PERIOD_KEY = "philos_period";
 
     function $(id) { return document.getElementById(id); }
     function getMain() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
 
     function injectStyles() {
         if (document.getElementById("philos-fixes-style")) return;
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            /* 天气：整体居中，两组之间拉开 */
             ".wxw{width:100%;display:flex;align-items:center;justify-content:center;gap:30px;" +
                 "padding:0;background:none;border:none;box-shadow:none;box-sizing:border-box;}" +
             ".wxw-left{display:flex;align-items:center;gap:11px;min-width:0;}" +
@@ -26,18 +28,46 @@
             ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;}" +
             ".wxw-right{text-align:left;font-size:11.5px;line-height:1.5;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
             ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;margin-bottom:3px;}" +
+            /* 统计 / 日历 页 */
+            ".st-view{position:fixed;inset:0;z-index:487;display:none;flex-direction:column;background:#EEEEEE;}" +
+            ".st-view.show{display:flex;}" +
+            ".st-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 14px 6px;}" +
+            ".st-btn{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#2b323b;background:rgba(255,255,255,0.78);border:1px solid rgba(255,255,255,0.9);box-shadow:0 2px 10px rgba(50,70,95,0.10);}" +
+            ".st-btn .svg-icon{width:22px;height:22px;stroke-width:1.6;}" +
+            ".st-title{flex:1;text-align:center;font-size:17px;font-weight:600;color:#20242a;}" +
+            ".st-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:6px 16px calc(env(safe-area-inset-bottom) + 24px);}" +
+            ".st-card{background:#ffffff;border-radius:18px;padding:14px 16px;margin-bottom:12px;box-shadow:0 2px 12px rgba(60,80,105,0.10);}" +
+            ".st-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;font-size:14px;color:#4a5563;}" +
+            ".st-row + .st-row{border-top:1px solid rgba(120,135,155,0.12);}" +
+            ".st-row b{font-size:16px;font-weight:700;color:#1b1d21;}" +
+            ".st-big{text-align:center;padding:6px 0 2px;}" +
+            ".st-big .num{font-size:42px;font-weight:800;letter-spacing:-1.5px;color:#1b1d21;line-height:1;}" +
+            ".st-big .lab{font-size:12px;color:#8b909a;margin-top:6px;}" +
+            ".st-note{font-size:12px;color:#8b909a;line-height:1.5;padding:0 4px;}" +
+            ".cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}" +
+            ".cal-wd{text-align:center;font-size:11px;color:#8b909a;padding:4px 0 2px;}" +
+            ".cal-cell{position:relative;aspect-ratio:1/1;border-radius:12px;background:#ffffff;border:1px solid rgba(120,135,155,0.10);display:flex;align-items:center;justify-content:center;font-size:14px;color:#1b1d21;padding:0;}" +
+            ".cal-cell.empty{background:none;border:none;}" +
+            ".cal-cell.period{background:rgba(231,163,171,0.35);border-color:rgba(231,163,171,0.55);color:#8a4a52;font-weight:600;}" +
+            ".cal-cell.today{outline:2px solid #5b7fa6;outline-offset:-2px;}" +
+            ".cal-cell.pred{background:rgba(231,163,171,0.14);border-style:dashed;border-color:rgba(231,163,171,0.6);color:#a8737a;}" +
+            ".cal-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 10px;font-size:15px;font-weight:600;color:#1b1d21;}" +
+            ".cal-nav button{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);color:#2b323b;font-size:16px;}" +
+            "[data-theme=\"dark\"] .st-view{background:#000000;}" +
+            "[data-theme=\"dark\"] .st-card,[data-theme=\"dark\"] .cal-cell{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
+            "[data-theme=\"dark\"] .st-row{color:#c7cbd3;}" +
+            "[data-theme=\"dark\"] .st-row b,[data-theme=\"dark\"] .st-big .num,[data-theme=\"dark\"] .cal-nav,[data-theme=\"dark\"] .cal-cell{color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .st-title{color:#f2f3f6;}" +
             ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
             ".phm-mask.show{display:block;}" +
             ".phm-menu{position:fixed;z-index:901;min-width:152px;padding:6px;border-radius:16px;" +
                 "background:#ffffff;border:1px solid rgba(120,135,155,0.25);box-shadow:0 14px 34px rgba(20,30,45,0.22);" +
                 "display:none;flex-direction:column;gap:4px;}" +
             ".phm-menu.show{display:flex;}" +
-            ".phm-item{height:44px;line-height:44px;padding:0 16px;border-radius:12px;border:none;background:none;" +
-                "font-size:15px;text-align:left;color:#1b1d21;}" +
+            ".phm-item{height:44px;line-height:44px;padding:0 16px;border-radius:12px;border:none;background:none;font-size:15px;text-align:left;color:#1b1d21;}" +
             ".phm-item:active{background:rgba(120,132,148,0.16);}" +
-            "html[data-theme=\"dark\"] .phm-menu{background:#1c1d21;border-color:rgba(255,255,255,0.14);box-shadow:0 14px 34px rgba(0,0,0,0.45);}" +
+            "html[data-theme=\"dark\"] .phm-menu{background:#1c1d21;border-color:rgba(255,255,255,0.14);}" +
             "html[data-theme=\"dark\"] .phm-item{color:#f2f3f6;}" +
-            "html[data-theme=\"dark\"] .phm-item:active{background:rgba(255,255,255,0.10);}" +
             ".cards-menu{z-index:80 !important;background:#ffffff !important;border:1px solid rgba(120,135,155,0.25) !important;" +
                 "box-shadow:0 14px 34px rgba(20,30,45,0.22) !important;border-radius:16px !important;padding:6px !important;}" +
             ".cards-menu .msg-menu-item{color:#1b1d21 !important;font-size:15px !important;height:44px !important;line-height:44px !important;text-align:left !important;}" +
@@ -54,6 +84,19 @@
             ".ws-b-card{width:104px !important;height:104px !important;}" +
             ".ws-c-img{height:56% !important;}";
         document.head.appendChild(st);
+    }
+
+    var SVG_NS = "http://www.w3.org/2000/svg";
+    function injectSprite() {
+        var sprite = document.querySelector("svg.svg-sprite");
+        if (!sprite) return;
+        if (!document.getElementById("ic-stats")) {
+            var s1 = document.createElementNS(SVG_NS, "symbol");
+            s1.setAttribute("id", "ic-stats");
+            s1.setAttribute("viewBox", "0 0 24 24");
+            s1.innerHTML = '<path d="M4.5 20.2V13M12 20.2V5.4M19.5 20.2v-5"/>';
+            sprite.appendChild(s1);
+        }
     }
 
     /* ================= 他的天气 ================= */
@@ -90,10 +133,7 @@
         var base = CODES[code].base;
         var temp = Math.round(base[0] + Math.random() * (base[1] - base[0]));
         d = {
-            ts: now,
-            city: d.city || "他的城市",
-            code: code,
-            temp: temp,
+            ts: now, city: d.city || "他的城市", code: code, temp: temp,
             hi: temp + 1 + Math.floor(Math.random() * 3),
             lo: temp - 2 - Math.floor(Math.random() * 4),
             hum: 38 + Math.floor(Math.random() * 55),
@@ -103,22 +143,16 @@
         return d;
     }
 
-    /* 单朵云（Feather 形状），可缩放平移；描边宽度按比例补偿保持视觉一致 */
     var CLOUD_PATH = "M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z";
     function cloud(scale, tx, ty, sw) {
-        return '<g transform="translate(' + tx + ',' + ty + ') scale(' + scale + ')">' +
-            '<path stroke-width="' + sw + '" d="' + CLOUD_PATH + '"/></g>';
+        return '<g transform="translate(' + tx + ',' + ty + ') scale(' + scale + ')"><path stroke-width="' + sw + '" d="' + CLOUD_PATH + '"/></g>';
     }
-
     function iconSvg(code) {
         if (code === "sunny") {
             return '<circle cx="12" cy="12" r="4.1"/>' +
                 '<path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>';
         }
-        if (code === "partly") {
-            /* 左上小云 + 右下大云，互不相交 */
-            return cloud(0.46, 0.2, 0.4, 2.9) + cloud(0.60, 6.4, 9.2, 2.25);
-        }
+        if (code === "partly") return cloud(0.46, 0.2, 0.4, 2.9) + cloud(0.60, 6.4, 9.2, 2.25);
         if (code === "cloudy") return cloud(0.86, 1.6, 3.4, 1.57);
         if (code === "rain") return cloud(0.86, 1.6, 2.4, 1.57) + '<path d="M9 21v1.4M13 21v1.4M17 21v1.4"/>';
         if (code === "thunder") return cloud(0.86, 1.6, 2.0, 1.57) + '<path d="M12.8 19.6l-2.1 3.1h2.8l-1.3 2.3"/>';
@@ -134,15 +168,11 @@
         el.innerHTML =
             '<div class="wxw-left">' +
                 '<div class="wxw-icon"><svg viewBox="0 0 24 24">' + iconSvg(d.code) + '</svg></div>' +
-                '<div>' +
-                    '<div class="wxw-temp">' + d.temp + '<span>°</span></div>' +
-                    '<div class="wxw-sub">' + info.label + ' · ' + d.lo + '° / ' + d.hi + '°</div>' +
-                '</div>' +
+                '<div><div class="wxw-temp">' + d.temp + '<span>°</span></div>' +
+                '<div class="wxw-sub">' + info.label + ' · ' + d.lo + '° / ' + d.hi + '°</div></div>' +
             '</div>' +
-            '<div class="wxw-right">' +
-                '<div class="wxw-city">' + d.city + '</div>' +
-                '<div>湿度 ' + d.hum + '%　' + d.wind + ' 级风</div>' +
-            '</div>';
+            '<div class="wxw-right"><div class="wxw-city">' + d.city + '</div>' +
+                '<div>湿度 ' + d.hum + '%　' + d.wind + ' 级风</div></div>';
     }
 
     function buildWeather() {
@@ -150,8 +180,6 @@
         if (!page2 || page2.querySelector(".wxw")) return;
         var el = document.createElement("div");
         el.className = "wxw";
-        el.setAttribute("role", "button");
-        el.setAttribute("tabindex", "0");
         el.title = "点一下换一次天气";
         el.addEventListener("click", function () { rollWeather(true); renderWeather(); });
         el.addEventListener("contextmenu", function (e) {
@@ -165,6 +193,236 @@
         });
         page2.insertBefore(el, page2.firstChild);
         renderWeather();
+    }
+
+    /* ================= 两个新 app ================= */
+    function makeApp(id, label, symbol) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "app-icon";
+        btn.id = id;
+        btn.innerHTML = '<span class="app-icon-box"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#' + symbol + '"></use></svg></span><span class="app-label">' + label + '</span>';
+        return btn;
+    }
+
+    function buildApps() {
+        var grid = document.querySelector("#homePager > .home-page:nth-child(2) .home-app-grid");
+        if (!grid) return;
+        if (!document.getElementById("appStats")) {
+            var st = makeApp("appStats", "统计", "ic-stats");
+            st.addEventListener("click", openStats);
+            grid.appendChild(st);
+        }
+        if (!document.getElementById("appCalendar")) {
+            var ca = makeApp("appCalendar", "日历", "ic-calendar");
+            ca.addEventListener("click", openCalendar);
+            grid.appendChild(ca);
+        }
+    }
+
+    /* ===== 统计 ===== */
+    function statsView() {
+        var v = $("stStatsView");
+        if (v) return v;
+        v = document.createElement("div");
+        v.className = "st-view";
+        v.id = "stStatsView";
+        v.innerHTML =
+            '<div class="st-head"><button class="st-btn" id="stStatsBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><div class="st-title">统计</div><span style="width:40px"></span></div>' +
+            '<div class="st-body" id="stStatsBody"></div>';
+        document.body.appendChild(v);
+        $("stStatsBack").addEventListener("click", function () { v.classList.remove("show"); });
+        return v;
+    }
+
+    function openStats() {
+        var v = statsView();
+        var d = getMain();
+        var h = Array.isArray(d.chatHistory) ? d.chatHistory : [];
+        var mine = 0, his = 0, myChars = 0, hisChars = 0, media = 0;
+        var firstTs = 0;
+        h.forEach(function (m) {
+            if (!m) return;
+            if (m.time && (!firstTs || m.time < firstTs)) firstTs = m.time;
+            if (m.type === "image" || m.type === "sticker") { media++; return; }
+            if (m.type === "status" || m.type === "call") return;
+            var len = String(m.text || "").length;
+            if (m.from === "me") { mine++; myChars += len; }
+            else { his++; hisChars += len; }
+        });
+
+        var letters = Array.isArray(d.letters) ? d.letters.length : 0;
+        var cards = Array.isArray(d.cards) ? d.cards : [];
+        var byKind = { text: 0, emoji: 0, sticker: 0, status: 0 };
+        cards.forEach(function (c) { if (c && byKind[c.kind] != null) byKind[c.kind]++; });
+        var anns = Array.isArray(d.anniversaries) ? d.anniversaries : [];
+
+        var knownDays = 0;
+        if (firstTs) knownDays = Math.floor((Date.now() - firstTs) / 86400000) + 1;
+
+        var html = "";
+        if (knownDays) {
+            html += '<div class="st-card"><div class="st-big"><div class="num">' + knownDays + '</div><div class="lab">从第一句话到现在（天）</div></div></div>';
+        }
+        html += '<div class="st-card">' +
+            '<div class="st-row"><span>消息总数</span><b>' + h.length + '</b></div>' +
+            '<div class="st-row"><span>我说的</span><b>' + mine + ' 条 · ' + myChars + ' 字</b></div>' +
+            '<div class="st-row"><span>他说的</span><b>' + his + ' 条 · ' + hisChars + ' 字</b></div>' +
+            '<div class="st-row"><span>图片 / 表情包</span><b>' + media + ' 条</b></div>' +
+            '</div>';
+        html += '<div class="st-card">' +
+            '<div class="st-row"><span>字卡</span><b>' + cards.length + ' 条</b></div>' +
+            '<div class="st-row"><span>文字 / emoji / 表情包 / 拍一拍</span><b>' + byKind.text + ' / ' + byKind.emoji + ' / ' + byKind.sticker + ' / ' + byKind.status + '</b></div>' +
+            '<div class="st-row"><span>信件</span><b>' + letters + ' 封</b></div>' +
+            '<div class="st-row"><span>倒数日</span><b>' + anns.length + ' 个</b></div>' +
+            '</div>';
+        html += '<div class="st-note">时间从最早的一条聊天记录开始算。数据只在本机统计。</div>';
+        $("stStatsBody").innerHTML = html;
+        v.classList.add("show");
+    }
+
+    /* ===== 日历 + 经期 ===== */
+    var calCursor = new Date();
+
+    function periodData() {
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem(PERIOD_KEY) || "null"); } catch (e) { d = null; }
+        if (!d || typeof d !== "object") d = {};
+        if (!Array.isArray(d.days)) d.days = [];
+        return d;
+    }
+    function savePeriod(d) { try { localStorage.setItem(PERIOD_KEY, JSON.stringify(d)); } catch (e) {} }
+
+    function periodSets() {
+        var d = periodData();
+        var days = d.days.filter(function (s) { return /^\d{4}-\d{2}-\d{2}$/.test(s); }).sort();
+        var set = {};
+        days.forEach(function (s) { set[s] = 1; });
+
+        var starts = [];
+        var prev = "";
+        days.forEach(function (s) {
+            if (!prev) { starts.push(s); prev = s; return; }
+            var a = new Date(prev + "T00:00:00").getTime();
+            var b = new Date(s + "T00:00:00").getTime();
+            if (b - a > 2 * 86400000) starts.push(s);
+            prev = s;
+        });
+
+        var cycle = 28;
+        if (starts.length >= 2) {
+            var recent = starts.slice(-4);
+            var gaps = [];
+            for (var i = 1; i < recent.length; i++) {
+                gaps.push(Math.round((new Date(recent[i] + "T00:00:00") - new Date(recent[i - 1] + "T00:00:00")) / 86400000));
+            }
+            if (gaps.length) {
+                var sum = 0;
+                gaps.forEach(function (g) { sum += g; });
+                cycle = Math.max(18, Math.min(45, Math.round(sum / gaps.length)));
+            }
+        }
+
+        var lastStart = starts.length ? starts[starts.length - 1] : "";
+        var next = "";
+        var untilNext = -1;
+        if (lastStart) {
+            var nd = new Date(lastStart + "T00:00:00");
+            nd.setDate(nd.getDate() + cycle);
+            next = ymd(nd);
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            untilNext = Math.round((nd - today) / 86400000);
+        }
+        return { set: set, starts: starts, cycle: cycle, next: next, untilNext: untilNext, lastStart: lastStart };
+    }
+
+    function calendarView() {
+        var v = $("stCalView");
+        if (v) return v;
+        v = document.createElement("div");
+        v.className = "st-view";
+        v.id = "stCalView";
+        v.innerHTML =
+            '<div class="st-head"><button class="st-btn" id="stCalBack" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-back"></use></svg></button><div class="st-title">日历 · 经期</div><span style="width:40px"></span></div>' +
+            '<div class="st-body" id="stCalBody"></div>';
+        document.body.appendChild(v);
+        $("stCalBack").addEventListener("click", function () { v.classList.remove("show"); });
+        return v;
+    }
+
+    function renderCalendar() {
+        var body = $("stCalBody");
+        if (!body) return;
+        var p = periodSets();
+        var year = calCursor.getFullYear(), month = calCursor.getMonth();
+        var first = new Date(year, month, 1);
+        var startWeekday = first.getDay();
+        var daysInMonth = new Date(year, month + 1, 0).getDate();
+        var todayStr = ymd(new Date());
+
+        var cellsHtml = "";
+        for (var i = 0; i < startWeekday; i++) cellsHtml += '<div class="cal-cell empty"></div>';
+        for (var d = 1; d <= daysInMonth; d++) {
+            var ds = year + "-" + pad(month + 1) + "-" + pad(d);
+            var cls = "cal-cell";
+            if (p.set[ds]) cls += " period";
+            else if (p.next && ds === p.next) cls += " pred";
+            if (ds === todayStr) cls += " today";
+            cellsHtml += '<button type="button" class="' + cls + '" data-cal="' + ds + '">' + d + '</button>';
+        }
+
+        var info = "";
+        if (p.lastStart) {
+            info = '<div class="st-card">' +
+                '<div class="st-row"><span>最近一次开始</span><b>' + p.lastStart + '</b></div>' +
+                '<div class="st-row"><span>平均周期</span><b>' + p.cycle + ' 天</b></div>' +
+                '<div class="st-row"><span>预计下次</span><b>' + (p.next || "—") + '</b></div>' +
+                '<div class="st-row"><span>距离下次</span><b>' + (p.untilNext >= 0 ? ("还有 " + p.untilNext + " 天") : ("已过 " + (-p.untilNext) + " 天")) + '</b></div>' +
+                '</div>';
+        } else {
+            info = '<div class="st-card"><div class="st-note">还没有记录。点日期就能标记为经期；连续几天都点一下。</div></div>';
+        }
+
+        body.innerHTML =
+            '<div class="st-card">' +
+                '<div class="cal-nav"><button type="button" id="calPrev">‹</button><span>' + year + ' 年 ' + (month + 1) + ' 月</span><button type="button" id="calNext">›</button></div>' +
+                '<div class="cal-grid">' +
+                    '<div class="cal-wd">日</div><div class="cal-wd">一</div><div class="cal-wd">二</div><div class="cal-wd">三</div><div class="cal-wd">四</div><div class="cal-wd">五</div><div class="cal-wd">六</div>' +
+                    cellsHtml +
+                '</div>' +
+            '</div>' +
+            info +
+            '<div class="st-note">点日期 = 标记 / 取消经期日；虚线圈出的是按平均周期预测的下次。数据只存在本机。</div>';
+
+        var prev = $("calPrev"), next = $("calNext");
+        if (prev) prev.addEventListener("click", function () {
+            calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1);
+            renderCalendar();
+        });
+        if (next) next.addEventListener("click", function () {
+            calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1);
+            renderCalendar();
+        });
+
+        Array.prototype.forEach.call(body.querySelectorAll("[data-cal]"), function (btn) {
+            btn.addEventListener("click", function () {
+                var ds = btn.getAttribute("data-cal");
+                var d = periodData();
+                var i = d.days.indexOf(ds);
+                if (i >= 0) d.days.splice(i, 1);
+                else d.days.push(ds);
+                savePeriod(d);
+                renderCalendar();
+            });
+        });
+    }
+
+    function openCalendar() {
+        var v = calendarView();
+        calCursor = new Date();
+        renderCalendar();
+        v.classList.add("show");
     }
 
     /* ================= 自动去重 ================= */
@@ -429,9 +687,11 @@
     function tick() {
         if (document.hidden) return;
         injectStyles();
+        injectSprite();
         fixMenu();
         watchMyMedia();
         buildWeather();
+        buildApps();
         var now = Date.now();
         if (now - lastWeather > 60000) { lastWeather = now; renderWeather(); }
         if (now - lastDedupe > 20000) { lastDedupe = now; dedupeNow(true); }
@@ -439,9 +699,10 @@
 
     function init() {
         injectStyles();
+        injectSprite();
         buildMenu();
         fixMenu();
-        setTimeout(function () { buildWeather(); }, 800);
+        setTimeout(function () { buildWeather(); buildApps(); }, 800);
         setTimeout(function () { dedupeNow(true); }, 1500);
         setInterval(tick, 1200);
         window.addEventListener("focus", tick);
