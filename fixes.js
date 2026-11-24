@@ -1,4 +1,4 @@
-/* Philos 小修：统计(排行+词云)/日历经期/天气小组件、自动去重、自绘菜单、只发图也回复、点顶头像让他开口 */
+/* Philos 小修：每日拍立得小组件、统计(排行+词云)/日历经期/天气、自动去重、自绘菜单、只发图也回复 */
 (function () {
     "use strict";
 
@@ -6,11 +6,61 @@
     var WORD_KEY = "philos_words";
     var WEA_KEY = "philos_weather";
     var PERIOD_KEY = "philos_period";
+    var GAL_KEY = "philos_gallery";
 
     function $(id) { return document.getElementById(id); }
     function getMain() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
     function pad(n) { return n < 10 ? "0" + n : "" + n; }
     function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+
+    /* ===== IndexedDB 读图 ===== */
+    var dbP = null;
+    function db() {
+        if (dbP) return dbP;
+        dbP = new Promise(function (res) {
+            try {
+                var r = indexedDB.open("philos_images", 1);
+                r.onupgradeneeded = function () { try { r.result.createObjectStore("images"); } catch (e) {} };
+                r.onsuccess = function () { res(r.result); };
+                r.onerror = function () { res(null); };
+            } catch (e) { res(null); }
+        });
+        return dbP;
+    }
+    function idbGet(id) {
+        return db().then(function (d) {
+            if (!d) return null;
+            return new Promise(function (res) {
+                try {
+                    var req = d.transaction("images").objectStore("images").get(id);
+                    req.onsuccess = function () { res(req.result || null); };
+                    req.onerror = function () { res(null); };
+                } catch (e) { res(null); }
+            });
+        });
+    }
+    function resolveRef(src, cb) {
+        if (!src || typeof src !== "string") { cb(""); return; }
+        if (src.indexOf("idb://") !== 0) { cb(src); return; }
+        idbGet(src.slice(6)).then(function (url) { cb(url || ""); });
+    }
+
+    /* ===== 按日期取随机 ===== */
+    function daySeed() {
+        var s = ymd(new Date());
+        var h = 2166136261;
+        for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+        return h >>> 0;
+    }
+    function rndMaker(seed) {
+        var x = seed || 1;
+        return function () {
+            x ^= x << 13; x >>>= 0;
+            x ^= x >> 17;
+            x ^= x << 5; x >>>= 0;
+            return x / 4294967296;
+        };
+    }
 
     function injectStyles() {
         if (document.getElementById("philos-fixes-style")) return;
@@ -33,7 +83,6 @@
             ".st-big .lab{font-size:12px;color:#8b909a;margin-top:6px;}" +
             ".st-note{font-size:12px;color:#8b909a;line-height:1.5;padding:0 4px;}" +
             ".st-card-title{font-size:12.5px;font-weight:700;color:#8b909a;letter-spacing:0.4px;margin-bottom:8px;}" +
-            /* 排行 */
             ".rk{display:flex;align-items:center;gap:12px;padding:10px 0;}" +
             ".rk + .rk{border-top:1px solid rgba(120,135,155,0.12);}" +
             ".rk-no{flex:0 0 auto;width:24px;height:24px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;background:#b9c4d1;}" +
@@ -42,10 +91,8 @@
             ".rk-3 .rk-no{background:#a3b6ca;}" +
             ".rk-text{flex:1 1 auto;min-width:0;font-size:15px;color:#1b1d21;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".rk-num{flex:0 0 auto;font-size:13px;font-weight:700;color:#5b7fa6;}" +
-            /* 词云 */
             ".cloud{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:6px 10px;padding:6px 2px;line-height:1.15;}" +
             ".cloud span{white-space:nowrap;opacity:.92;}" +
-            /* 日历 */
             ".cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}" +
             ".cal-wd{text-align:center;font-size:11px;color:#8b909a;padding:4px 0 2px;}" +
             ".cal-cell{position:relative;aspect-ratio:1/1;border-radius:12px;background:#ffffff;border:1px solid rgba(120,135,155,0.10);display:flex;align-items:center;justify-content:center;font-size:14px;color:#1b1d21;padding:0;}" +
@@ -55,6 +102,28 @@
             ".cal-cell.pred{background:rgba(231,163,171,0.14);border-style:dashed;border-color:rgba(231,163,171,0.6);color:#a8737a;}" +
             ".cal-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 10px;font-size:15px;font-weight:600;color:#1b1d21;}" +
             ".cal-nav button{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);color:#2b323b;font-size:16px;}" +
+            /* 每日拍立得 4×3 */
+            ".dw{width:100%;display:flex;gap:12px;align-items:stretch;box-sizing:border-box;padding:13px;border-radius:26px;" +
+                "background:rgba(255,255,255,0.52);border:1px solid rgba(255,255,255,0.62);" +
+                "-webkit-backdrop-filter:blur(20px) saturate(118%);backdrop-filter:blur(20px) saturate(118%);" +
+                "box-shadow:0 10px 28px rgba(60,80,105,0.12);min-height:236px;}" +
+            ".dw-left{flex:1 1 54%;display:flex;flex-direction:column;gap:8px;min-width:0;}" +
+            ".dw-head{display:flex;align-items:center;gap:9px;min-width:0;}" +
+            ".dw-ava{width:42px;height:42px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:rgba(255,255,255,0.75);" +
+                "display:flex;align-items:center;justify-content:center;color:#7d8ea2;font-size:14px;font-weight:600;box-shadow:0 3px 10px rgba(60,80,105,0.14);}" +
+            ".dw-ava img{width:100%;height:100%;object-fit:cover;display:block;}" +
+            ".dw-name{font-size:13.5px;font-weight:700;color:var(--text-primary,#1b1d21);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".dw-msgs{flex:1 1 auto;display:flex;flex-direction:column;gap:6px;justify-content:center;min-height:0;}" +
+            ".dw-bub{align-self:flex-start;max-width:100%;padding:7px 11px;border-radius:15px 15px 15px 5px;font-size:12.5px;line-height:1.42;" +
+                "color:#1b1d21;background:rgba(255,255,255,0.92);box-shadow:0 2px 9px rgba(60,80,105,0.10);word-break:break-word;}" +
+            ".dw-mood{display:flex;align-items:center;gap:4px;font-size:16px;line-height:1;opacity:.92;}" +
+            ".dw-right{flex:0 0 42%;display:flex;align-items:center;justify-content:center;min-width:0;}" +
+            ".dw-polar{width:100%;max-width:124px;padding:6px 6px 15px;border-radius:5px;background:#ffffff;" +
+                "box-shadow:0 12px 26px rgba(40,60,85,0.20);transform:rotate(-3deg);}" +
+            ".dw-polar img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;border-radius:2px;background:linear-gradient(135deg,rgba(200,212,224,0.55),rgba(232,238,244,0.35));}" +
+            "[data-theme=\"dark\"] .dw{background:rgba(32,34,39,0.55);border-color:rgba(255,255,255,0.12);}" +
+            "[data-theme=\"dark\"] .dw-bub{background:rgba(255,255,255,0.10);color:#f2f3f6;}" +
+            "[data-theme=\"dark\"] .dw-polar{background:#f6f6f7;}" +
             "[data-theme=\"dark\"] .st-view{background:#000000;}" +
             "[data-theme=\"dark\"] .st-card,[data-theme=\"dark\"] .cal-cell{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
             "[data-theme=\"dark\"] .st-row{color:#c7cbd3;}" +
@@ -188,6 +257,125 @@
         renderWeather();
     }
 
+    /* ================= 每日拍立得 4×3 ================= */
+    var dailyStamp = "";
+
+    function hisAvatarSrc() {
+        var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
+        if (live) {
+            var s = live.getAttribute("src") || "";
+            if (s) return s;
+        }
+        var raw = getMain().taAvatar || "";
+        return /^(idb:\/\/|data:image\/|https?:\/\/|blob:)/.test(raw) ? raw : "";
+    }
+    function hisName() {
+        var d = getMain();
+        if (d.taName && d.taName !== "他") return d.taName;
+        var el = document.getElementById("headerName");
+        var t = el ? (el.textContent || "").trim() : "";
+        return t || "他";
+    }
+    function textCards() {
+        var d = getMain();
+        return (d.cards || []).filter(function (c) { return c && c.kind === "text" && typeof c.content === "string" && c.content.trim(); })
+            .map(function (c) { return c.content.trim(); });
+    }
+    function emojiCards() {
+        var d = getMain();
+        return (d.cards || []).filter(function (c) { return c && c.kind === "emoji" && typeof c.content === "string" && c.content.trim(); })
+            .map(function (c) { return c.content.trim(); });
+    }
+    function hisPhotos() {
+        var g = null;
+        try { g = JSON.parse(localStorage.getItem(GAL_KEY) || "null"); } catch (e) { g = null; }
+        if (!g || typeof g !== "object" || !Array.isArray(g.ta)) return [];
+        return g.ta.filter(function (s) { return typeof s === "string" && s; });
+    }
+
+    function renderDaily(force) {
+        var el = document.querySelector(".dw");
+        if (!el) return;
+        var stamp = ymd(new Date());
+        if (!force && el.getAttribute("data-day") === stamp && el.innerHTML.trim()) return;
+        el.setAttribute("data-day", stamp);
+
+        var seed = daySeed();
+        var rnd = rndMaker(seed);
+        function pickRnd(arr) { return arr[Math.floor(rnd() * arr.length) % arr.length]; }
+
+        var texts = textCards();
+        var emojis = emojiCards();
+        var photos = hisPhotos();
+
+        var bubbles = [];
+        if (texts.length) {
+            var n = 1 + (rnd() < 0.5 ? 1 : 0);
+            var pool = texts.slice();
+            for (var i = 0; i < n && pool.length; i++) {
+                bubbles.push(pool.splice(Math.floor(rnd() * pool.length), 1)[0]);
+            }
+        }
+
+        var mood = "";
+        if (emojis.length) {
+            var mn = 1 + Math.floor(rnd() * 3);
+            var e2 = emojis.slice(), out = [];
+            for (var k = 0; k < mn && e2.length; k++) out.push(e2.splice(Math.floor(rnd() * e2.length), 1)[0]);
+            mood = out.join(" ");
+        }
+
+        el.innerHTML =
+            '<div class="dw-left">' +
+                '<div class="dw-head"><span class="dw-ava" id="dwAva">' + (hisName().slice(0, 2) || "他") + '</span>' +
+                    '<span class="dw-name">' + hisName().replace(/</g, "&lt;") + '</span></div>' +
+                '<div class="dw-msgs">' +
+                    (bubbles.length
+                        ? bubbles.map(function (t) { return '<div class="dw-bub">' + t.replace(/</g, "&lt;") + '</div>'; }).join("")
+                        : '<div class="dw-bub">…</div>') +
+                '</div>' +
+                (mood ? '<div class="dw-mood">' + mood + '</div>' : '') +
+            '</div>' +
+            '<div class="dw-right"><div class="dw-polar"><img id="dwPhoto" alt=""></div></div>';
+
+        var avBox = $("dwAva");
+        if (avBox) {
+            resolveRef(hisAvatarSrc(), function (url) {
+                if (url) avBox.innerHTML = '<img src="' + url.replace(/"/g, "&quot;") + '" alt="">';
+            });
+        }
+
+        var photoEl = $("dwPhoto");
+        if (photoEl) {
+            if (photos.length) {
+                var one = photos[Math.floor(rnd() * photos.length) % photos.length];
+                resolveRef(one, function (url) { if (url) photoEl.src = url; });
+            } else {
+                photoEl.removeAttribute("src");
+            }
+        }
+    }
+
+    function buildDaily() {
+        var page2 = document.querySelector("#homePager > .home-page:nth-child(2)");
+        if (!page2) return;
+        if (!page2.querySelector(".dw")) {
+            var el = document.createElement("div");
+            el.className = "dw";
+            el.title = "点一下换一张";
+            el.addEventListener("click", function () { renderDailyForce(); });
+            page2.appendChild(el);
+        }
+        renderDaily(false);
+    }
+
+    function renderDailyForce() {
+        var el = document.querySelector(".dw");
+        if (!el) return;
+        el.innerHTML = "";
+        renderDaily(true);
+    }
+
     /* ================= 新 app + 尺寸对齐 ================= */
     function makeApp(id, label, symbol) {
         var btn = document.createElement("button");
@@ -204,9 +392,7 @@
         var boxes = grid.querySelectorAll(".app-icon-box");
         if (!boxes.length) return;
         var ref = null;
-        for (var i = 0; i < boxes.length; i++) {
-            if (boxes[i].style.width) { ref = boxes[i]; break; }
-        }
+        for (var i = 0; i < boxes.length; i++) { if (boxes[i].style.width) { ref = boxes[i]; break; } }
         if (!ref) {
             var p1 = document.querySelector("#homePager .app-grid-small .app-icon-box");
             if (p1) ref = p1;
@@ -241,13 +427,12 @@
         syncIconSize();
     }
 
-    /* ================= 来电界面：立刻成型 ================= */
+    /* ================= 来电界面 ================= */
     function decorateCall() {
         var overlay = $("philosCallIn");
         if (!overlay) return;
         var card = overlay.querySelector(".call-in-card");
         if (!card) return;
-
         var av = card.querySelector(".call-in-avatar");
         var nm = card.querySelector(".call-in-name");
         var stt = card.querySelector(".call-in-state");
@@ -256,11 +441,8 @@
             body = document.createElement("div");
             body.className = "call-in-body";
             card.insertBefore(body, av);
-            body.appendChild(av);
-            body.appendChild(nm);
-            body.appendChild(stt);
+            body.appendChild(av); body.appendChild(nm); body.appendChild(stt);
         }
-
         var actions = card.querySelector(".call-in-actions");
         if (!actions) return;
         if (!card.querySelector("[data-call-min]")) {
@@ -288,7 +470,6 @@
             });
             card.appendChild(minBtn);
         }
-
         Array.prototype.forEach.call(actions.querySelectorAll(".call-in-btn"), function (btn) {
             if (btn.getAttribute("data-round") === "1") return;
             var isAnswer = btn.classList.contains("answer");
@@ -339,15 +520,13 @@
         if (!list.length) return [];
         h.forEach(function (m) {
             if (!m || m.from !== "ta" || typeof m.text !== "string" || !m.text) return;
-            var text = m.text;
             for (var i = 0; i < list.length; i++) {
-                if (text.indexOf(list[i]) >= 0) byText[list[i]] = byText[list[i]] + 1;
+                if (m.text.indexOf(list[i]) >= 0) byText[list[i]] = byText[list[i]] + 1;
             }
         });
-        var out = list.map(function (t) { return { text: t, n: byText[t] }; })
+        return list.map(function (t) { return { text: t, n: byText[t] }; })
             .filter(function (x) { return x.n > 0; })
             .sort(function (a, b) { return b.n - a.n; });
-        return out;
     }
 
     var CLOUD_COLORS = ["#5b7fa6", "#7f9cbb", "#8b909a", "#a3b6ca", "#6b8bab", "#9aa8b8"];
@@ -378,8 +557,6 @@
         var cloudItems = counts.slice(0, 24);
 
         var html = "";
-
-        /* 排行 */
         html += '<div class="st-card"><div class="st-card-title">他最常用的字卡</div>';
         if (!top3.length) {
             html += '<div class="st-note">他还没用过字卡里的句子（这里统计的是他在 iMessage 里说过、且能对上字卡的话）。</div>';
@@ -394,7 +571,6 @@
         }
         html += '</div>';
 
-        /* 词云 */
         if (cloudItems.length) {
             var maxN = cloudItems[0].n, minN = cloudItems[cloudItems.length - 1].n;
             html += '<div class="st-card"><div class="st-card-title">他的词云</div><div class="cloud">';
@@ -409,18 +585,15 @@
             html += '</div></div>';
         }
 
-        /* 天数 */
         if (knownDays) {
             html += '<div class="st-card"><div class="st-big"><div class="num">' + knownDays + '</div><div class="lab">从第一句话到现在（天）</div></div></div>';
         }
-
         html += '<div class="st-card">' +
             '<div class="st-row"><span>消息总数</span><b>' + h.length + '</b></div>' +
             '<div class="st-row"><span>我说的</span><b>' + mine + ' 条 · ' + myChars + ' 字</b></div>' +
             '<div class="st-row"><span>他说的</span><b>' + his + ' 条 · ' + hisChars + ' 字</b></div>' +
             '<div class="st-row"><span>图片 / 表情包</span><b>' + media + ' 条</b></div>' +
             '</div>';
-
         html += '<div class="st-card">' +
             '<div class="st-row"><span>字卡</span><b>' + cards.length + ' 条</b></div>' +
             '<div class="st-row"><span>文字 / emoji / 表情包 / 拍一拍</span><b>' + byKind.text + ' / ' + byKind.emoji + ' / ' + byKind.sticker + ' / ' + byKind.status + '</b></div>' +
@@ -827,13 +1000,14 @@
                 injectSprite();
                 buildWeather();
                 buildApps();
+                buildDaily();
                 syncIconSize();
                 decorateCall();
             } catch (e) {}
         }, 30);
     }
 
-    var lastDedupe = 0, lastWeather = 0;
+    var lastDedupe = 0, lastWeather = 0, lastDay = "";
     function tick() {
         if (document.hidden) return;
         injectStyles();
@@ -842,9 +1016,12 @@
         watchMyMedia();
         buildWeather();
         buildApps();
+        buildDaily();
         syncIconSize();
         decorateCall();
         var now = Date.now();
+        var today = ymd(new Date());
+        if (today !== lastDay) { lastDay = today; renderDaily(true); }
         if (now - lastWeather > 60000) { lastWeather = now; renderWeather(); }
         if (now - lastDedupe > 20000) { lastDedupe = now; dedupeNow(true); }
     }
@@ -878,4 +1055,5 @@
     else setTimeout(init, 0);
 
     window.philosDedupe = function () { return dedupeNow(false); };
+    window.philosRefreshDaily = function () { renderDailyForce(); };
 })();
