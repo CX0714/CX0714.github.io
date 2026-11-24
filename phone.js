@@ -1,4 +1,4 @@
-/* Philos 电话 app v3：他的头像（从已渲染的头像取，兼容 IndexedDB 存图）/ 可编辑联系人名 / 通话记录 / 可换背景 */
+/* Philos 电话 app v4：头像与名字统一用系统（他的信息）里的那一套，和 iMessage 一致；通话记录 / 换背景 / 红点 */
 (function () {
     "use strict";
 
@@ -7,16 +7,16 @@
     var CALLS_KEY = "philos_calls";
     var UNREAD_KEY = "philos_unread";
 
-    var view = null, listEl = null, nameEl = null, avatarEl = null, bgEl = null, unreadTimer = null;
+    var view = null, listEl = null, nameEl = null, avatarEl = null, bgEl = null, unreadTimer = null, syncTimer = null;
 
     function $(id) { return document.getElementById(id); }
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
+    function saveMain(d) { try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {} }
 
     function phoneData() {
         var d = null;
         try { d = JSON.parse(localStorage.getItem(PHONE_KEY) || "null"); } catch (e) { d = null; }
         if (!d || typeof d !== "object") d = {};
-        if (typeof d.name !== "string") d.name = "";
         if (typeof d.bgImage !== "string") d.bgImage = "";
         return d;
     }
@@ -49,6 +49,17 @@
     function fmtTime(ts) {
         var d = new Date(Number(ts) || Date.now());
         return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+    }
+
+    /* 系统里的他的称呼 */
+    function systemName() {
+        var d = mainData();
+        var n = typeof d.taName === "string" ? d.taName.trim() : "";
+        if (n && n !== "他") return n;
+        var h = $("headerName");
+        var t = h ? (h.textContent || "").trim() : "";
+        if (t && t !== "Typing...") return t;
+        return "他";
     }
 
     function injectStyles() {
@@ -100,13 +111,15 @@
             if (/^(data:image\/|https?:\/\/|blob:)/.test(raw)) src = raw;
         }
         if (src) avatarEl.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
-        else avatarEl.textContent = "Ta";
+        else avatarEl.textContent = (systemName() || "他").slice(0, 2);
     }
 
     function renderName() {
         if (!nameEl) return;
-        var d = phoneData();
-        if (document.activeElement !== nameEl) nameEl.value = d.name;
+        if (document.activeElement === nameEl) return;
+        var n = systemName();
+        nameEl.value = n === "他" ? "" : n;
+        nameEl.placeholder = "他的称呼（在设置里改）";
     }
 
     function renderCalls() {
@@ -206,7 +219,7 @@
                     '<button class="ph-btn" id="phBgBtn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></button>' +
                 '</div>' +
                 '<button class="ph-avatar" id="phAvatar" type="button">Ta</button>' +
-                '<input class="ph-name" id="phName" type="text" maxlength="16" placeholder="联系人" autocomplete="off" autocapitalize="off" spellcheck="false">' +
+                '<input class="ph-name" id="phName" type="text" maxlength="16" placeholder="他的称呼（在设置里改）" autocomplete="off" autocapitalize="off" spellcheck="false">' +
                 '<div class="ph-calls"><div class="ph-call-list" id="phCallList"></div></div>' +
             '</div>' +
             '<input type="file" id="phBgFile" accept="image/*" hidden>';
@@ -234,10 +247,21 @@
             input.value = "";
         });
 
+        /* 名字 = 系统里的他的称呼；改了会写回设置，iMessage 同步 */
         nameEl.addEventListener("input", function () {
-            var d = phoneData();
-            d.name = nameEl.value;
-            savePhone(d);
+            var val = nameEl.value.trim();
+            if (syncTimer) clearTimeout(syncTimer);
+            syncTimer = setTimeout(function () {
+                var d = mainData();
+                d.taName = val || "他";
+                saveMain(d);
+                var h = $("headerName");
+                if (h) h.textContent = d.taName;
+                var hp = $("headerProfileName");
+                if (hp) hp.value = val;
+                if (window.philosReload) setTimeout(function () { window.philosReload(); }, 120);
+                renderAvatar();
+            }, 500);
         });
 
         avatarEl.addEventListener("click", function () {
@@ -281,7 +305,11 @@
         loadModule("fixes.js");
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
-        unreadTimer = setInterval(function () { if (!document.hidden) refreshBadge(); }, 3000);
+        unreadTimer = setInterval(function () {
+            if (document.hidden) return;
+            refreshBadge();
+            if (view && view.classList.contains("show")) { renderAvatar(); renderName(); }
+        }, 3000);
         document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshBadge(); });
     }
 
