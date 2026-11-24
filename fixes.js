@@ -1,4 +1,4 @@
-/* Philos 小修：他的天气小组件、字卡/造句自动去重、自绘导入导出菜单、小组件图片放大、
+/* Philos 小修：他的天气小组件、自动去重、自绘导入导出菜单、小组件图片放大、
    只发图片/表情包也会回复、点聊天顶部头像让他开口 */
 (function () {
     "use strict";
@@ -15,16 +15,17 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            ".wxw{width:100%;display:flex;align-items:center;justify-content:flex-start;gap:16px;" +
+            /* 天气：整体居中，两组之间拉开 */
+            ".wxw{width:100%;display:flex;align-items:center;justify-content:center;gap:30px;" +
                 "padding:0;background:none;border:none;box-shadow:none;box-sizing:border-box;}" +
-            ".wxw-left{display:flex;align-items:center;gap:8px;min-width:0;}" +
-            ".wxw-icon{width:44px;height:44px;flex:0 0 auto;color:var(--text-primary,#1b1d21);opacity:.92;}" +
+            ".wxw-left{display:flex;align-items:center;gap:11px;min-width:0;}" +
+            ".wxw-icon{width:48px;height:48px;flex:0 0 auto;color:var(--text-primary,#1b1d21);opacity:.92;}" +
             ".wxw-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;display:block;}" +
             ".wxw-temp{font-size:30px;font-weight:700;letter-spacing:-1.2px;line-height:1;color:var(--text-primary,#1b1d21);}" +
             ".wxw-temp span{font-size:14px;font-weight:600;letter-spacing:0;margin-left:1px;}" +
-            ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:4px;white-space:nowrap;}" +
-            ".wxw-right{text-align:left;font-size:11.5px;line-height:1.45;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
-            ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;margin-bottom:2px;}" +
+            ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;}" +
+            ".wxw-right{text-align:left;font-size:11.5px;line-height:1.5;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
+            ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;margin-bottom:3px;}" +
             ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
             ".phm-mask.show{display:block;}" +
             ".phm-menu{position:fixed;z-index:901;min-width:152px;padding:6px;border-radius:16px;" +
@@ -102,8 +103,12 @@
         return d;
     }
 
-    /* 云（底部 y≈11 → 18.6） */
-    var CLOUD = '<path d="M9.6 18.4h8.8a3.2 3.2 0 0 0 .3-6.4 4.6 4.6 0 0 0-8.7-1.1 2.9 2.9 0 0 0-.4 7.5z"/>';
+    /* 单朵云（Feather 形状），可缩放平移；描边宽度按比例补偿保持视觉一致 */
+    var CLOUD_PATH = "M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z";
+    function cloud(scale, tx, ty, sw) {
+        return '<g transform="translate(' + tx + ',' + ty + ') scale(' + scale + ')">' +
+            '<path stroke-width="' + sw + '" d="' + CLOUD_PATH + '"/></g>';
+    }
 
     function iconSvg(code) {
         if (code === "sunny") {
@@ -111,15 +116,13 @@
                 '<path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>';
         }
         if (code === "partly") {
-            /* 太阳在左上，只在左侧/上方留三条短射线，避免和云重叠 */
-            return '<circle cx="8.4" cy="7.4" r="2.3"/>' +
-                '<path d="M8.4 3.1v1.2M4.2 7.4h1.2M5.5 4.6l.9.9"/>' +
-                CLOUD;
+            /* 左上小云 + 右下大云，互不相交 */
+            return cloud(0.46, 0.2, 0.4, 2.9) + cloud(0.60, 6.4, 9.2, 2.25);
         }
-        if (code === "cloudy") return CLOUD;
-        if (code === "rain") return CLOUD + '<path d="M10 20.2l-.7 1.6M13 20.2l-.7 1.6M16 20.2l-.7 1.6"/>';
-        if (code === "thunder") return CLOUD + '<path d="M12.6 19.4l-2 3h2.7l-1.2 2.4"/>';
-        if (code === "snow") return CLOUD + '<path d="M10 20.4v1.7M13 20.4v1.7M16 20.4v1.7"/>';
+        if (code === "cloudy") return cloud(0.86, 1.6, 3.4, 1.57);
+        if (code === "rain") return cloud(0.86, 1.6, 2.4, 1.57) + '<path d="M9 21v1.4M13 21v1.4M17 21v1.4"/>';
+        if (code === "thunder") return cloud(0.86, 1.6, 2.0, 1.57) + '<path d="M12.8 19.6l-2.1 3.1h2.8l-1.3 2.3"/>';
+        if (code === "snow") return cloud(0.86, 1.6, 2.4, 1.57) + '<path d="M9 21v1.6M13 21v1.6M17 21v1.6"/>';
         return '<path d="M4.4 9h15.2M3.4 13h15.2M5.4 17h15.2"/>';
     }
 
@@ -150,10 +153,7 @@
         el.setAttribute("role", "button");
         el.setAttribute("tabindex", "0");
         el.title = "点一下换一次天气";
-        el.addEventListener("click", function () {
-            rollWeather(true);
-            renderWeather();
-        });
+        el.addEventListener("click", function () { rollWeather(true); renderWeather(); });
         el.addEventListener("contextmenu", function (e) {
             e.preventDefault();
             var d = weatherData();
