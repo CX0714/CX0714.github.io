@@ -1,4 +1,4 @@
-/* Philos 电话 app v4：头像与名字统一用系统（他的信息）里的那一套，和 iMessage 一致；通话记录 / 换背景 / 红点 */
+/* Philos 电话 app v5：头像/名字统一用系统那套；设置页加「深色模式」开关（外观上方）；通话记录 / 换背景 / 红点 */
 (function () {
     "use strict";
 
@@ -51,7 +51,6 @@
         return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + pad(d.getHours()) + ":" + pad(d.getMinutes());
     }
 
-    /* 系统里的他的称呼 */
     function systemName() {
         var d = mainData();
         var n = typeof d.taName === "string" ? d.taName.trim() : "";
@@ -60,6 +59,45 @@
         var t = h ? (h.textContent || "").trim() : "";
         if (t && t !== "Typing...") return t;
         return "他";
+    }
+
+    /* ================= 设置里的深色模式开关 ================= */
+    function isDarkNow() {
+        var d = mainData();
+        var mode = d.themeMode || "auto";
+        if (mode === "dark") return true;
+        if (mode === "light") return false;
+        try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; }
+    }
+
+    function applyThemeNow(dark) {
+        document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", dark ? "#000000" : "#eef1f5");
+    }
+
+    function ensureThemeRow() {
+        var page = document.querySelector('[data-page="main"]');
+        if (!page || page.querySelector("[data-philos-theme-row]")) return;
+        var appearanceBtn = page.querySelector('[data-goto="appearance"]');
+        var row = document.createElement("div");
+        row.className = "settings-item";
+        row.setAttribute("data-philos-theme-row", "1");
+        row.innerHTML = '<span>深色模式</span><label class="switch"><input type="checkbox" data-philos-theme><span class="switch-track"></span></label>';
+        var input = row.querySelector("[data-philos-theme]");
+        if (input) {
+            input.checked = isDarkNow();
+            input.addEventListener("change", function (e) {
+                var dark = !!e.target.checked;
+                var d = mainData();
+                d.themeMode = dark ? "dark" : "light";
+                saveMain(d);
+                applyThemeNow(dark);
+                if (window.philosReload) setTimeout(function () { window.philosReload(); }, 120);
+            });
+        }
+        if (appearanceBtn && appearanceBtn.parentNode) appearanceBtn.parentNode.insertBefore(row, appearanceBtn);
+        else page.appendChild(row);
     }
 
     function injectStyles() {
@@ -85,7 +123,10 @@
             ".ph-call-text{font-size:14px;line-height:1.5;color:#252b33;word-break:break-word;}" +
             ".ph-call-time{font-size:11.5px;color:rgba(45,55,70,0.55);margin-top:4px;letter-spacing:0.2px;}" +
             ".ph-empty{text-align:center;font-size:13px;color:rgba(45,55,70,0.55);padding:40px 0;}" +
-            ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}";
+            ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
+            "[data-philos-theme-row]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:52px;}" +
+            "[data-philos-theme-row] > span{font-size:16px;color:var(--text-primary);}" +
+            "[data-philos-theme-row] .switch{flex:0 0 auto;margin:0;}";
         document.head.appendChild(st);
     }
 
@@ -247,7 +288,6 @@
             input.value = "";
         });
 
-        /* 名字 = 系统里的他的称呼；改了会写回设置，iMessage 同步 */
         nameEl.addEventListener("input", function () {
             var val = nameEl.value.trim();
             if (syncTimer) clearTimeout(syncTimer);
@@ -257,8 +297,6 @@
                 saveMain(d);
                 var h = $("headerName");
                 if (h) h.textContent = d.taName;
-                var hp = $("headerProfileName");
-                if (hp) hp.value = val;
                 if (window.philosReload) setTimeout(function () { window.philosReload(); }, 120);
                 renderAvatar();
             }, 500);
@@ -303,13 +341,15 @@
     function init() {
         injectStyles();
         loadModule("fixes.js");
+        ensureThemeRow();
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(function () {
             if (document.hidden) return;
+            ensureThemeRow();
             refreshBadge();
             if (view && view.classList.contains("show")) { renderAvatar(); renderName(); }
-        }, 3000);
+        }, 2500);
         document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshBadge(); });
     }
 
