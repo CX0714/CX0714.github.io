@@ -315,7 +315,7 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
 .hero-group-title { font-size: 12px; font-weight: 600; letter-spacing: 0.4px; color: var(--text-secondary); padding: 14px 16px 4px; }
 
 /* =========================================================
-   补充：小组件内容放大 + 他的天气 + 来电全屏（随样式表立即生效，避免闪现旧样式）
+   补充：小组件内容放大 + 他的天气 + 来电全屏（随样式表立即生效）
    ========================================================= */
 .ws-a { padding: 8px !important; gap: 6px !important; }
 .ws-a-title { font-size: 10.5px !important; margin-bottom: 1px; }
@@ -355,3 +355,42 @@ select.cfg-input { -webkit-appearance: none; appearance: none; text-align-last: 
 .call-min .svg-icon { width: 22px; height: 22px; }
 .call-mini-pill { position: fixed; right: 16px; bottom: calc(env(safe-area-inset-bottom) + 96px); z-index: 626; display: none; align-items: center; gap: 8px; height: 44px; padding: 0 16px; border-radius: 22px; background: rgba(30,34,40,.86); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); color: #fff; font-size: 13px; box-shadow: 0 10px 26px rgba(0,0,0,.28); }
 .call-mini-pill.show { display: flex; }
+
+/* =========================================================
+   每日拍立得：宽度/左右边距与 app 网格一致，去掉卡片底，左右留足间距
+   ========================================================= */
+.dw {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 22px !important;
+    padding: 0 !important;
+    margin: 6px 0 2px !important;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border-radius: 0 !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+.dw-left {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 12px !important;
+}
+.dw-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.dw-ava { width: 46px !important; height: 46px !important; }
+.dw-name { font-size: 14px !important; }
+.dw-msgs { flex: 0 1 auto !important; display: flex !important; flex-direction: column !important; gap: 9px !important; justify-content: flex-start !important; }
+.dw-bub { padding: 8px 12px !important; font-size: 12.5px !important; line-height: 1.45 !important; max-width: 100% !important; }
+.dw-mood { margin-top: 2px !important; font-size: 17px !important; }
+.dw-right { flex: 0 0 auto !important; display: flex; align-items: center; justify-content: flex-end !important; }
+.dw-polar { width: 112px !important; max-width: 112px !important; padding: 6px 6px 14px !important; transform: rotate(-3deg); }
+.dw-polar img { width: 100% !important; aspect-ratio: 3 / 4 !important; object-fit: cover; display: block; border-radius: 2px; }
