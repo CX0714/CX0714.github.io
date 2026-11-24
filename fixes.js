@@ -15,18 +15,16 @@
         var st = document.createElement("style");
         st.id = "philos-fixes-style";
         st.textContent =
-            /* ===== 他的天气（无底色无边框，4×1） ===== */
-            ".wxw{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;" +
-                "padding:2px 2px;background:none;border:none;box-shadow:none;box-sizing:border-box;}" +
-            ".wxw-left{display:flex;align-items:center;gap:11px;min-width:0;}" +
-            ".wxw-icon{width:48px;height:48px;flex:0 0 auto;color:var(--text-primary,#1b1d21);opacity:.92;}" +
+            ".wxw{width:100%;display:flex;align-items:center;justify-content:flex-start;gap:16px;" +
+                "padding:0;background:none;border:none;box-shadow:none;box-sizing:border-box;}" +
+            ".wxw-left{display:flex;align-items:center;gap:8px;min-width:0;}" +
+            ".wxw-icon{width:44px;height:44px;flex:0 0 auto;color:var(--text-primary,#1b1d21);opacity:.92;}" +
             ".wxw-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;display:block;}" +
-            ".wxw-temp{font-size:31px;font-weight:700;letter-spacing:-1.2px;line-height:1;color:var(--text-primary,#1b1d21);}" +
-            ".wxw-temp span{font-size:15px;font-weight:600;letter-spacing:0;margin-left:1px;}" +
-            ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:5px;white-space:nowrap;}" +
-            ".wxw-right{text-align:right;font-size:11.5px;line-height:1.6;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
-            ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;}" +
-            /* ===== 自绘菜单 ===== */
+            ".wxw-temp{font-size:30px;font-weight:700;letter-spacing:-1.2px;line-height:1;color:var(--text-primary,#1b1d21);}" +
+            ".wxw-temp span{font-size:14px;font-weight:600;letter-spacing:0;margin-left:1px;}" +
+            ".wxw-sub{font-size:11.5px;color:var(--text-secondary,#8b909a);margin-top:4px;white-space:nowrap;}" +
+            ".wxw-right{text-align:left;font-size:11.5px;line-height:1.45;color:var(--text-secondary,#8b909a);flex:0 0 auto;}" +
+            ".wxw-city{font-size:12px;font-weight:600;color:var(--text-primary,#1b1d21);letter-spacing:0.2px;margin-bottom:2px;}" +
             ".phm-mask{position:fixed;inset:0;z-index:900;background:rgba(16,20,26,0.28);display:none;}" +
             ".phm-mask.show{display:block;}" +
             ".phm-menu{position:fixed;z-index:901;min-width:152px;padding:6px;border-radius:16px;" +
@@ -45,7 +43,6 @@
             "html[data-theme=\"dark\"] .cards-menu{background:#1c1d21 !important;border-color:rgba(255,255,255,0.14) !important;}" +
             "html[data-theme=\"dark\"] .cards-menu .msg-menu-item{color:#f2f3f6 !important;}" +
             ".ck-overview,.ck-sub{top:calc(env(safe-area-inset-top) + 56px) !important;}" +
-            /* 小组件模板图片放大 */
             ".ws-a{padding:8px !important;gap:6px !important;}" +
             ".ws-a-title{font-size:10.5px !important;margin-bottom:1px;}" +
             ".ws-a-row{gap:7px !important;}" +
@@ -83,7 +80,6 @@
         var d = weatherData();
         var now = Date.now();
         if (!force && d.ts && now - d.ts < 45 * 60000 && d.code) return d;
-
         var weights = [0.40, 0.24, 0.12, 0.12, 0.06, 0.03, 0.03];
         var r = Math.random(), acc = 0, code = "sunny";
         for (var i = 0; i < ORDER.length; i++) {
@@ -106,26 +102,24 @@
         return d;
     }
 
+    /* 云（底部 y≈11 → 18.6） */
+    var CLOUD = '<path d="M9.6 18.4h8.8a3.2 3.2 0 0 0 .3-6.4 4.6 4.6 0 0 0-8.7-1.1 2.9 2.9 0 0 0-.4 7.5z"/>';
+
     function iconSvg(code) {
-        var sun = '<circle cx="12" cy="12" r="4.1"/>' +
-            '<path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>';
-        var cloud = '<path d="M7.2 18.2h9.1a3.6 3.6 0 0 0 .3-7.2 5.1 5.1 0 0 0-9.7-1.2 3.2 3.2 0 0 0 .3 8.4z"/>';
-        if (code === "sunny") return sun;
+        if (code === "sunny") {
+            return '<circle cx="12" cy="12" r="4.1"/>' +
+                '<path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.4 5.4l1.6 1.6M17 17l1.6 1.6M18.6 5.4L17 7M7 17l-1.6 1.6"/>';
+        }
         if (code === "partly") {
-            return '<circle cx="9" cy="9.2" r="2.9"/>' +
-                '<path d="M9 2.9v1.7M2.9 9.2h1.7M4.7 4.9l1.2 1.2M13.3 4.9l-1.2 1.2"/>' +
-                '<path d="M9.6 19h8.2a3.3 3.3 0 0 0 .3-6.6 4.7 4.7 0 0 0-8.9-1.1 3 3 0 0 0 .4 7.7z"/>';
+            /* 太阳在左上，只在左侧/上方留三条短射线，避免和云重叠 */
+            return '<circle cx="8.4" cy="7.4" r="2.3"/>' +
+                '<path d="M8.4 3.1v1.2M4.2 7.4h1.2M5.5 4.6l.9.9"/>' +
+                CLOUD;
         }
-        if (code === "cloudy") return cloud;
-        if (code === "rain") {
-            return cloud + '<path d="M8.4 20.4l-.9 1.8M12 20.4l-.9 1.8M15.6 20.4l-.9 1.8"/>';
-        }
-        if (code === "thunder") {
-            return cloud + '<path d="M12.6 19.4l-2.1 3.2h2.9l-1.4 2.4" transform="translate(0,-1.2)"/>';
-        }
-        if (code === "snow") {
-            return cloud + '<path d="M8.4 20.6v2M12 20.6v2M15.6 20.6v2"/>';
-        }
+        if (code === "cloudy") return CLOUD;
+        if (code === "rain") return CLOUD + '<path d="M10 20.2l-.7 1.6M13 20.2l-.7 1.6M16 20.2l-.7 1.6"/>';
+        if (code === "thunder") return CLOUD + '<path d="M12.6 19.4l-2 3h2.7l-1.2 2.4"/>';
+        if (code === "snow") return CLOUD + '<path d="M10 20.4v1.7M13 20.4v1.7M16 20.4v1.7"/>';
         return '<path d="M4.4 9h15.2M3.4 13h15.2M5.4 17h15.2"/>';
     }
 
@@ -144,15 +138,13 @@
             '</div>' +
             '<div class="wxw-right">' +
                 '<div class="wxw-city">' + d.city + '</div>' +
-                '<div>湿度 ' + d.hum + '%</div>' +
-                '<div>' + d.wind + ' 级风</div>' +
+                '<div>湿度 ' + d.hum + '%　' + d.wind + ' 级风</div>' +
             '</div>';
     }
 
     function buildWeather() {
         var page2 = document.querySelector("#homePager > .home-page:nth-child(2)");
-        if (!page2) return;
-        if (page2.querySelector(".wxw")) { return; }
+        if (!page2 || page2.querySelector(".wxw")) return;
         var el = document.createElement("div");
         el.className = "wxw";
         el.setAttribute("role", "button");
@@ -184,7 +176,6 @@
         try {
             var d = getMain();
             var changed = false;
-
             if (Array.isArray(d.cards)) {
                 var seen = {}, keep = [];
                 for (var i = 0; i < d.cards.length; i++) {
@@ -224,7 +215,6 @@
                     try { localStorage.setItem(WORD_KEY, JSON.stringify(w)); } catch (e) {}
                 }
             }
-
             if (changed && window.philosReload) setTimeout(function () { window.philosReload(); }, 300);
             if (!silent && removed > 0) alert("已自动合并 " + removed + " 条重复内容。");
         } catch (e) {}
