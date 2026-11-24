@@ -1,4 +1,5 @@
-/* Philos 小修：每日拍立得小组件、统计(排行+词云)/日历经期/天气、自动去重、自绘菜单、只发图也回复 */
+/* Philos 小修：每日拍立得、统计(排行+词云)/日历经期/天气、自动去重、自绘菜单、只发图也回复
+   注意：.dw / .wxw / 来电 的样式统一在 widgets.css，这里不要重复定义 */
 (function () {
     "use strict";
 
@@ -45,7 +46,6 @@
         idbGet(src.slice(6)).then(function (url) { cb(url || ""); });
     }
 
-    /* ===== 按日期取随机 ===== */
     function daySeed() {
         var s = ymd(new Date());
         var h = 2166136261;
@@ -102,28 +102,6 @@
             ".cal-cell.pred{background:rgba(231,163,171,0.14);border-style:dashed;border-color:rgba(231,163,171,0.6);color:#a8737a;}" +
             ".cal-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:2px 2px 10px;font-size:15px;font-weight:600;color:#1b1d21;}" +
             ".cal-nav button{width:34px;height:34px;border-radius:11px;background:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.9);color:#2b323b;font-size:16px;}" +
-            /* 每日拍立得 4×3 */
-            ".dw{width:100%;display:flex;gap:12px;align-items:stretch;box-sizing:border-box;padding:13px;border-radius:26px;" +
-                "background:rgba(255,255,255,0.52);border:1px solid rgba(255,255,255,0.62);" +
-                "-webkit-backdrop-filter:blur(20px) saturate(118%);backdrop-filter:blur(20px) saturate(118%);" +
-                "box-shadow:0 10px 28px rgba(60,80,105,0.12);min-height:236px;}" +
-            ".dw-left{flex:1 1 54%;display:flex;flex-direction:column;gap:8px;min-width:0;}" +
-            ".dw-head{display:flex;align-items:center;gap:9px;min-width:0;}" +
-            ".dw-ava{width:42px;height:42px;border-radius:50%;overflow:hidden;flex:0 0 auto;background:rgba(255,255,255,0.75);" +
-                "display:flex;align-items:center;justify-content:center;color:#7d8ea2;font-size:14px;font-weight:600;box-shadow:0 3px 10px rgba(60,80,105,0.14);}" +
-            ".dw-ava img{width:100%;height:100%;object-fit:cover;display:block;}" +
-            ".dw-name{font-size:13.5px;font-weight:700;color:var(--text-primary,#1b1d21);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
-            ".dw-msgs{flex:1 1 auto;display:flex;flex-direction:column;gap:6px;justify-content:center;min-height:0;}" +
-            ".dw-bub{align-self:flex-start;max-width:100%;padding:7px 11px;border-radius:15px 15px 15px 5px;font-size:12.5px;line-height:1.42;" +
-                "color:#1b1d21;background:rgba(255,255,255,0.92);box-shadow:0 2px 9px rgba(60,80,105,0.10);word-break:break-word;}" +
-            ".dw-mood{display:flex;align-items:center;gap:4px;font-size:16px;line-height:1;opacity:.92;}" +
-            ".dw-right{flex:0 0 42%;display:flex;align-items:center;justify-content:center;min-width:0;}" +
-            ".dw-polar{width:100%;max-width:124px;padding:6px 6px 15px;border-radius:5px;background:#ffffff;" +
-                "box-shadow:0 12px 26px rgba(40,60,85,0.20);transform:rotate(-3deg);}" +
-            ".dw-polar img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;border-radius:2px;background:linear-gradient(135deg,rgba(200,212,224,0.55),rgba(232,238,244,0.35));}" +
-            "[data-theme=\"dark\"] .dw{background:rgba(32,34,39,0.55);border-color:rgba(255,255,255,0.12);}" +
-            "[data-theme=\"dark\"] .dw-bub{background:rgba(255,255,255,0.10);color:#f2f3f6;}" +
-            "[data-theme=\"dark\"] .dw-polar{background:#f6f6f7;}" +
             "[data-theme=\"dark\"] .st-view{background:#000000;}" +
             "[data-theme=\"dark\"] .st-card,[data-theme=\"dark\"] .cal-cell{background:#1c1d21;border-color:rgba(255,255,255,0.08);}" +
             "[data-theme=\"dark\"] .st-row{color:#c7cbd3;}" +
@@ -257,9 +235,7 @@
         renderWeather();
     }
 
-    /* ================= 每日拍立得 4×3 ================= */
-    var dailyStamp = "";
-
+    /* ================= 每日拍立得（结构 only，样式在 widgets.css） ================= */
     function hisAvatarSrc() {
         var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
         if (live) {
@@ -302,7 +278,6 @@
 
         var seed = daySeed();
         var rnd = rndMaker(seed);
-        function pickRnd(arr) { return arr[Math.floor(rnd() * arr.length) % arr.length]; }
 
         var texts = textCards();
         var emojis = emojiCards();
@@ -327,7 +302,7 @@
 
         el.innerHTML =
             '<div class="dw-left">' +
-                '<div class="dw-head"><span class="dw-ava" id="dwAva">' + (hisName().slice(0, 2) || "他") + '</span>' +
+                '<div class="dw-head"><span class="dw-ava" id="dwAva">' + hisName().slice(0, 2) + '</span>' +
                     '<span class="dw-name">' + hisName().replace(/</g, "&lt;") + '</span></div>' +
                 '<div class="dw-msgs">' +
                     (bubbles.length
@@ -350,8 +325,6 @@
             if (photos.length) {
                 var one = photos[Math.floor(rnd() * photos.length) % photos.length];
                 resolveRef(one, function (url) { if (url) photoEl.src = url; });
-            } else {
-                photoEl.removeAttribute("src");
             }
         }
     }
@@ -363,17 +336,13 @@
             var el = document.createElement("div");
             el.className = "dw";
             el.title = "点一下换一张";
-            el.addEventListener("click", function () { renderDailyForce(); });
+            el.addEventListener("click", function () {
+                el.innerHTML = "";
+                renderDaily(true);
+            });
             page2.appendChild(el);
         }
         renderDaily(false);
-    }
-
-    function renderDailyForce() {
-        var el = document.querySelector(".dw");
-        if (!el) return;
-        el.innerHTML = "";
-        renderDaily(true);
     }
 
     /* ================= 新 app + 尺寸对齐 ================= */
@@ -427,7 +396,7 @@
         syncIconSize();
     }
 
-    /* ================= 来电界面 ================= */
+    /* ================= 来电界面（只补结构和图标，样式在 widgets.css） ================= */
     function decorateCall() {
         var overlay = $("philosCallIn");
         if (!overlay) return;
@@ -1055,5 +1024,10 @@
     else setTimeout(init, 0);
 
     window.philosDedupe = function () { return dedupeNow(false); };
-    window.philosRefreshDaily = function () { renderDailyForce(); };
+    window.philosRefreshDaily = function () {
+        var el = document.querySelector(".dw");
+        if (!el) return;
+        el.innerHTML = "";
+        renderDaily(true);
+    };
 })();
