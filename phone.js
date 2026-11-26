@@ -1,4 +1,4 @@
-/* Philos 电话 app v7：头像名字统一 / 深色模式开关 / 大组件配色纠正 / 字卡库分组换行 / 造句分类可改名删除 */
+/* Philos 电话 app v8：头像名字统一 / 深色开关 / 大组件配色纠正 / 分类换行 / 造句分类可编辑 / 气泡预设生效 */
 (function () {
     "use strict";
 
@@ -134,6 +134,42 @@
         else page.appendChild(row);
     }
 
+    /* ================= 气泡预设真正生效 + 高度下限降低 ================= */
+    function currentPreset() {
+        var d = mainData();
+        var b = d.settings && d.settings.bubble;
+        var p = b && typeof b.preset === "string" ? b.preset : "tail";
+        if (["tail", "large", "small", "square"].indexOf(p) < 0) p = "tail";
+        return p;
+    }
+
+    function syncBubblePreset() {
+        var p = currentPreset();
+        var root = document.documentElement;
+        if (root.getAttribute("data-bubble-preset") !== p) root.setAttribute("data-bubble-preset", p);
+
+        /* 气泡高度滑块下限降到 4px，方便调更紧凑 */
+        var h = document.querySelector('[data-key="bubble.height"]');
+        if (h) {
+            if (h.getAttribute("min") !== "4") { h.setAttribute("min", "4"); h.min = 4; }
+        }
+        var r = document.querySelector('[data-key="bubble.radius"]');
+        if (r && r.getAttribute("min") !== "0") { r.setAttribute("min", "0"); r.min = 0; }
+
+        /* 预设卡片高亮跟随 */
+        var cards = document.querySelectorAll("[data-preset]");
+        for (var i = 0; i < cards.length; i++) {
+            cards[i].classList.toggle("selected", cards[i].getAttribute("data-preset") === p);
+        }
+    }
+
+    document.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (!t.closest("[data-preset]")) return;
+        setTimeout(syncBubblePreset, 30);
+    }, true);
+
     /* ================= 造句分类：改名 / 删除 ================= */
     function wordStore() {
         var v = null;
@@ -166,7 +202,6 @@
             '<div class="wce-row"><button class="wce-btn danger" id="wceDel" type="button">删除这个分类</button></div>';
         document.body.appendChild(mask);
         document.body.appendChild(sheet);
-
         mask.addEventListener("click", closeCatSheet);
         $("wceCancel").addEventListener("click", closeCatSheet);
         $("wceSave").addEventListener("click", saveCatRename);
@@ -227,7 +262,6 @@
         refreshWordUI();
     }
 
-    /* 点“已选中”的分类 = 编辑（和字卡库一致） */
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
@@ -269,11 +303,21 @@
             "[data-philos-theme-row]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:52px;}" +
             "[data-philos-theme-row] > span{font-size:16px;color:var(--text-primary);}" +
             "[data-philos-theme-row] .switch{flex:0 0 auto;margin:0;}" +
-            /* 字卡库 / 造句 的分类：换行排布，不再横向滑动 */
             "#cardCats,#cardCats.cat-scroll,[data-sub-chips].ck-chips{display:flex !important;flex-wrap:wrap !important;align-items:center !important;" +
                 "gap:8px !important;overflow:visible !important;overflow-x:visible !important;white-space:normal !important;" +
                 "padding:4px 16px 10px !important;height:auto !important;max-height:none !important;}" +
             "#cardCats > *,[data-sub-chips] > *{flex:0 0 auto !important;}" +
+            /* ===== 气泡预设真正生效 ===== */
+            "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px !important;}" +
+            "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px !important;}" +
+            "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
+            "html[data-bubble-preset=\"tail\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}" +
+            "html[data-bubble-preset=\"large\"] .msg-row .msg-bubble,html[data-bubble-preset=\"large\"] .pv-row .pv-bubble{border-radius:calc(var(--bubble-radius,16px) * 1.4) !important;}" +
+            "html[data-bubble-preset=\"small\"] .msg-row .msg-bubble,html[data-bubble-preset=\"small\"] .pv-row .pv-bubble{border-radius:calc(var(--bubble-radius,16px) * 0.6) !important;" +
+                "padding-top:calc(var(--bubble-pad-y,10px) * 0.7) !important;padding-bottom:calc(var(--bubble-pad-y,10px) * 0.7) !important;}" +
+            "html[data-bubble-preset=\"square\"] .msg-row .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row .pv-bubble{border-radius:5px !important;}" +
+            "html[data-bubble-preset=\"square\"] .msg-row.me .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
+            "html[data-bubble-preset=\"square\"] .msg-row.ta .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}" +
             /* 造句分类编辑弹层 */
             ".wce-mask{position:fixed;inset:0;z-index:940;background:rgba(16,20,26,0.32);display:none;}" +
             ".wce-mask.show{display:block;}" +
@@ -504,15 +548,18 @@
         buildCatSheet();
         ensureThemeRow();
         normalizeHeroColors();
+        syncBubblePreset();
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(function () {
             if (document.hidden) return;
             ensureThemeRow();
+            syncBubblePreset();
             refreshBadge();
             if (view && view.classList.contains("show")) { renderAvatar(); renderName(); }
-        }, 2500);
-        document.addEventListener("visibilitychange", function () { if (!document.hidden) refreshBadge(); });
+        }, 2000);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) { refreshBadge(); syncBubblePreset(); } });
+        window.addEventListener("focus", function () { syncBubblePreset(); });
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
