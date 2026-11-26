@@ -1,4 +1,4 @@
-/* Philos 微信模块 v12：头像/背景先压缩再进 IndexedDB（不再塞爆 localStorage）+ 清理工具 + 百分比回复 */
+/* Philos 微信模块 v13：自带未读红点 / 表情包批量上传 / 位置 20 米内一位小数 + 就在你身边 */
 (function () {
     "use strict";
 
@@ -6,6 +6,7 @@
     var MAIN_KEY = "private_chat_app_v1";
     var WORDS_KEY = "philos_words";
     var GAL_KEY = "philos_gallery";
+    var UNREAD_KEY = "philos_unread";
 
     var wx = null, wxTyping = false, wxPanelOpen = "", wxQuoteText = null;
     var wxRound = 0, wxReplyTimer = null, wxRaw = "";
@@ -75,6 +76,58 @@
         });
     }
 
+    function getUnread() {
+        var s = null;
+        try { s = JSON.parse(localStorage.getItem(UNREAD_KEY) || "null"); } catch (e) { s = null; }
+        if (!s || typeof s !== "object") s = {};
+        if (typeof s.chat !== "number") s.chat = 0;
+        if (typeof s.wx !== "number") s.wx = 0;
+        if (typeof s.call !== "number") s.call = 0;
+        return s;
+    }
+    function saveUnread(s) { try { localStorage.setItem(UNREAD_KEY, JSON.stringify(s)); } catch (e) {} }
+
+    function countWxUnread() {
+        var s = getUnread();
+        var d = wxData();
+        var n = 0;
+        (d.history || []).forEach(function (m) {
+            if (!m || m.from !== "ta") return;
+            if ((Number(m.time) || 0) > s.wx) n++;
+        });
+        return n;
+    }
+
+    function paintWxBadge(n) {
+        var el = document.getElementById("btnWechat");
+        if (!el) return;
+        var box = el.querySelector(".app-icon-box") || el;
+        var dot = box.querySelector(".wx-unread");
+        if (!n) {
+            if (dot && dot.parentNode) dot.parentNode.removeChild(dot);
+            return;
+        }
+        if (!dot) {
+            dot = document.createElement("span");
+            dot.className = "wx-unread";
+            try { if (getComputedStyle(box).position === "static") box.style.position = "relative"; } catch (e) { box.style.position = "relative"; }
+            box.appendChild(dot);
+        }
+        dot.textContent = n > 99 ? "99+" : String(n);
+    }
+
+    function refreshWxBadge() {
+        var v = document.getElementById("wechatView");
+        if (v && v.classList.contains("show")) {
+            var s = getUnread();
+            s.wx = Date.now();
+            saveUnread(s);
+            paintWxBadge(0);
+            return;
+        }
+        paintWxBadge(countWxUnread());
+    }
+
     function injectStyles() {
         if (document.getElementById("philos-wx-style")) return;
         var st = document.createElement("style");
@@ -82,6 +135,7 @@
         st.textContent =
             "#btnChatCall{display:none !important;}" +
             ".chat-center{position:absolute !important;left:50% !important;transform:translateX(-50%) !important;top:calc(env(safe-area-inset-top) + 6px) !important;}" +
+            ".wx-unread{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:9;pointer-events:none;box-sizing:border-box;}" +
             ".wx-view{position:fixed;inset:0;z-index:480;display:none;flex-direction:column;background:#F7F7F7;}" +
             ".wx-view.show{display:flex;}" +
             ".wx-header{flex:0 0 auto;display:flex;align-items:center;padding:calc(env(safe-area-inset-top) + 6px) 10px 8px;background:#EEEEEE;border-bottom:1px solid #E5E5E5;}" +
@@ -89,7 +143,7 @@
             ".wx-head-btn .svg-icon{width:27px;height:27px;stroke-width:1.5;}" +
             ".wx-title{flex:1;text-align:center;font-size:17px;font-weight:500;color:#1a1a1a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
             ".wx-messages{flex:1;min-height:0;overflow-y:auto;padding:8px 0 12px;background-size:cover;background-position:center;}" +
-            ".wx-time{display:flex;width:fit-content;height:auto;margin:8px auto;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:0.5px solid rgba(0,0,0,0.10);color:#9A9A9A;font-size:14px;line-height:1.2;}" +
+            ".wx-time{display:flex;width:fit-content;height:auto;margin:8px auto;padding:2px 5px;border-radius:3px;background:rgba(255,255,255,0.72);color:#9A9A9A;font-size:14px;line-height:1.2;}" +
             ".wx-row{display:flex;align-items:flex-start;gap:8px;padding:6px 12px;}" +
             ".wx-row.mine{flex-direction:row-reverse;}" +
             ".wx-col{display:flex;flex-direction:column;max-width:72%;min-width:0;}" +
@@ -100,8 +154,8 @@
             ".wx-bubble::before{content:\"\";position:absolute;top:14px;left:-5px;width:0;height:0;border-top:5px solid transparent;border-bottom:5px solid transparent;border-right:6px solid #FFFFFF;}" +
             ".wx-row.mine .wx-bubble{background:#95EC69;}" +
             ".wx-row.mine .wx-bubble::before{left:auto;right:-5px;border-right:none;border-left:6px solid #95EC69;}" +
-            ".wx-quote{margin-top:6px;max-width:100%;font-size:12px;line-height:1.4;color:#8A8A8A;background:rgba(0,0,0,0.05);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-radius:4px;padding:4px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
-            ".wx-menubar{position:fixed;z-index:600;display:none;gap:2px;padding:4px;border-radius:10px;background:rgba(28,28,30,.95);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 8px 24px rgba(0,0,0,.3);}" +
+            ".wx-quote{margin-top:6px;max-width:100%;font-size:12px;line-height:1.4;color:#8A8A8A;background:rgba(0,0,0,0.05);border-radius:4px;padding:4px 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}" +
+            ".wx-menubar{position:fixed;z-index:600;display:none;gap:2px;padding:4px;border-radius:10px;background:rgba(28,28,30,.95);box-shadow:0 8px 24px rgba(0,0,0,.3);}" +
             ".wx-menubar button{height:34px;padding:0 12px;border:none;background:none;color:#fff;font-size:14px;border-radius:7px;}" +
             ".wx-menubar button.danger{color:#FF453A;}" +
             ".wx-quotebar{display:none;align-items:center;gap:8px;margin:0 8px 6px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.06);font-size:12px;color:#666;}" +
@@ -187,89 +241,6 @@
         }
     }
 
-    /* ===== 图片压缩（头像/背景用） ===== */
-    function compressDataUrl(src, max, quality, cb) {
-        var img = new Image();
-        img.onload = function () {
-            var scale = Math.min(1, max / Math.max(img.width, img.height));
-            var w = Math.max(1, Math.round(img.width * scale));
-            var h = Math.max(1, Math.round(img.height * scale));
-            var c = document.createElement("canvas");
-            c.width = w; c.height = h;
-            c.getContext("2d").drawImage(img, 0, 0, w, h);
-            var out = "";
-            try { out = c.toDataURL("image/webp", quality); } catch (e) {}
-            if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
-            cb(out);
-        };
-        img.onerror = function () { cb(""); };
-        img.src = src;
-    }
-
-    /* 上传图片：压缩 → 存大仓库 → 只留地址 */
-    function setWxImageField(field, file, max) {
-        var reader = new FileReader();
-        reader.onload = function () {
-            compressDataUrl(reader.result, max || 480, 0.8, function (small) {
-                if (!small) return;
-                storeImg(small).then(function (ref) {
-                    var d = wxData();
-                    d[field] = ref;
-                    if (wxSave()) {
-                        if (field === "bgImage") imgCache[ref] = small;
-                        wxRender();
-                        setTimeout(migrateWx, 300);
-                    }
-                });
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-
-    var migrating = false;
-    function migrateWx() {
-        if (migrating) return;
-        var d = wxData();
-        var targets = [];
-        d.history.forEach(function (m) {
-            if (m && m.type === "image" && typeof m.text === "string" && m.text.indexOf("data:image/") === 0) targets.push(m);
-        });
-        d.stickers.forEach(function (s, i) {
-            if (typeof s === "string" && s.indexOf("data:image/") === 0) targets.push({ _sticker: i });
-        });
-        ["avatar", "myAvatar", "bgImage"].forEach(function (k) {
-            if (typeof d[k] === "string" && d[k].indexOf("data:image/") === 0) targets.push({ _field: k });
-        });
-        if (!targets.length) return;
-
-        migrating = true;
-        var jobs = targets.map(function (t) {
-            var url = t._field ? d[t._field] : (t._sticker != null ? d[t._sticker] : t.text);
-            var small = url;
-            return new Promise(function (resolve) {
-                if (t._field) compressDataUrl(url, 480, 0.8, function (s) { resolve(s || url); });
-                else resolve(small);
-            }).then(function (toStore) {
-                return storeImg(toStore).then(function (ref) {
-                    if (!ref || ref === toStore) return;
-                    if (t._field) d[t._field] = ref;
-                    else if (t._sticker != null) d.stickers[t._sticker] = ref;
-                    else t.text = ref;
-                });
-            });
-        });
-        Promise.all(jobs).then(function () {
-            try {
-                var json = JSON.stringify(d);
-                wxRaw = json;
-                localStorage.setItem(WX_KEY, json);
-            } catch (e) {}
-            migrating = false;
-            var v = document.getElementById("wechatView");
-            if (v && v.classList.contains("show")) wxRender();
-        }).catch(function () { migrating = false; });
-    }
-
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
 
     function wxAvatar(src, fallback) {
@@ -283,12 +254,22 @@
         return span;
     }
 
+    function randDistance() {
+        var d = 0.4 + Math.random() * 19.6;
+        return Math.round(d * 10) / 10;
+    }
+    function distanceText(d) {
+        var n = Number(d) || 0;
+        if (n <= 1) return "就在你身边";
+        return "距离你 " + n.toFixed(1) + " 米";
+    }
+
     function wxLocCard(distance) {
         var wrap = document.createElement("div");
         wrap.className = "wx-loc";
         var top = document.createElement("div");
         top.className = "wx-loc-top";
-        top.textContent = distance > 100 ? "不在你周围" : ("距离你 " + distance + " 米");
+        top.textContent = distanceText(distance);
         var map = document.createElement("div");
         map.className = "wx-loc-map";
         map.innerHTML = '<svg viewBox="0 0 210 80" preserveAspectRatio="none"><rect width="210" height="80" fill="#E9F1EA"/><path d="M-10 26 H220" stroke="#FFFFFF" stroke-width="9"/><path d="M-10 58 H220" stroke="#FFFFFF" stroke-width="7"/><path d="M52 -10 V90" stroke="#FFFFFF" stroke-width="8"/><path d="M150 -10 V90" stroke="#FFFFFF" stroke-width="6"/><circle cx="105" cy="42" r="11" fill="#07C160" opacity=".16"/><circle cx="105" cy="42" r="5" fill="#07C160"/></svg>';
@@ -355,7 +336,7 @@
         box.scrollTop = box.scrollHeight;
     }
 
-    function wxPush(msg) { var d = wxData(); msg.time = Date.now(); d.history.push(msg); wxSave(); wxRender(); }
+    function wxPush(msg) { var d = wxData(); msg.time = Date.now(); d.history.push(msg); wxSave(); wxRender(); refreshWxBadge(); }
 
     function wxSetTyping(on) {
         wxTyping = !!on;
@@ -517,12 +498,13 @@
 
                 if (viewOpen()) wxRender();
                 else if (step === 0 && first) wxNotify(first);
+                refreshWxBadge();
 
                 step++;
                 if (step >= count) {
                     if (Math.random() < 0.12) {
                         var d2 = wxData();
-                        d2.history.push({ from: "ta", type: "location", distance: 1 + Math.floor(Math.random() * 110), time: Date.now() });
+                        d2.history.push({ from: "ta", type: "location", distance: randDistance(), time: Date.now() });
                         wxSave();
                         if (viewOpen()) wxRender();
                     }
@@ -669,7 +651,7 @@
             '<div class="wx-panel" id="wxPanel-plus"><div class="wx-plus-grid"><button class="wx-plus-item" id="wxPickPhoto" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-image"></use></svg></span><span>照片</span></button><button class="wx-plus-item" id="wxPickLoc" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-pin"></use></svg></span><span>位置</span></button><button class="wx-plus-item" id="wxPickFile" type="button"><span class="wx-plus-icon"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-card"></use></svg></span><span>文件</span></button></div></div>' +
             '<div class="wx-quotebar" id="wxQuoteBar"><span></span><button type="button" id="wxQuoteClose">✕</button></div>' +
             '<div class="wx-inputbar"><button class="wx-ibar-btn" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="none"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3M9 21h6" fill="none"/></svg></button><div class="wx-inputwrap"><input id="wxInput" type="text" placeholder="可按住 转文字"></div><button class="wx-send" id="wxSend" type="button" style="display:none">发送</button><button class="wx-ibar-btn" id="wxBtnFace" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M8.5 14.2c1 1.4 6 1.4 7 0" fill="none"/><circle cx="9" cy="10" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="10" r=".9" fill="currentColor" stroke="none"/></svg></button><button class="wx-ibar-btn" id="wxBtnPlus" type="button"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none"/><path d="M12 8.2v7.6M8.2 12h7.6" fill="none"/></svg></button></div>' +
-            '<input type="file" id="wxPhotoFile" accept="image/*" hidden><input type="file" id="wxStkFile" accept="image/*" hidden>' +
+            '<input type="file" id="wxPhotoFile" accept="image/*" hidden><input type="file" id="wxStkFile" accept="image/*" multiple hidden>' +
             '<div class="wx-sheet-mask" id="wxSheetMask"></div>' +
             '<div class="wx-sheet" id="wxSheet"><h3>聊天设置</h3><div class="wx-field"><span>备注</span><input type="text" id="wxName" maxlength="16"></div><div class="wx-field"><span>他的头像</span><label class="wx-mini">上传<input type="file" id="wxFileTa" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearTa" type="button">清除</button></div><div class="wx-field"><span>我的头像</span><label class="wx-mini">上传<input type="file" id="wxFileMe" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearMe" type="button">清除</button></div><div class="wx-field"><span>背景颜色</span><input type="color" id="wxBg" style="width:48px;height:32px;border:none;background:none;"></div><div class="wx-field"><span>背景图</span><label class="wx-mini">上传<input type="file" id="wxFileBg" accept="image/*" hidden></label><button class="wx-mini danger" id="wxClearBg" type="button">清除</button></div><button class="wide-btn" id="wxSaveBtn" type="button" style="margin-top:8px;">保存并关闭</button></div>';
         document.body.appendChild(view);
@@ -679,7 +661,7 @@
         menu.innerHTML = '<button type="button" data-wxact="quote">引用</button><button type="button" class="danger" data-wxact="del">删除</button>';
         document.body.appendChild(menu);
 
-        document.getElementById("wxBack").addEventListener("click", function () { view.classList.remove("show"); hideMenu(); });
+        document.getElementById("wxBack").addEventListener("click", function () { view.classList.remove("show"); hideMenu(); refreshWxBadge(); });
         document.getElementById("wxMore").addEventListener("click", function () {
             var d = wxData();
             document.getElementById("wxName").value = d.name || "";
@@ -747,7 +729,7 @@
         });
 
         document.getElementById("wxPickLoc").addEventListener("click", function () {
-            wxPush({ from: "me", type: "location", distance: 1 + Math.floor(Math.random() * 110) });
+            wxPush({ from: "me", type: "location", distance: randDistance() });
             wxScheduleReply(); togglePanel("plus");
         });
         document.getElementById("wxPickPhoto").addEventListener("click", function () { document.getElementById("wxPhotoFile").click(); });
@@ -760,14 +742,107 @@
             e.target.value = ""; togglePanel("plus");
         });
         document.getElementById("wxStkFile").addEventListener("change", function (e) {
-            var f = e.target.files && e.target.files[0]; if (!f) return;
-            compressImage(f, function (src) {
-                if (!src) return;
-                storeImg(src).then(function (ref) { wxData().stickers.push(ref); wxSave(); renderStickerPanel(); });
-            });
+            var files = Array.prototype.slice.call(e.target.files || []);
             e.target.value = "";
+            if (!files.length) return;
+            var done = 0;
+            files.forEach(function (f) {
+                compressImage(f, function (src) {
+                    if (!src) { done++; finish(); return; }
+                    storeImg(src).then(function (ref) {
+                        wxData().stickers.push(ref);
+                        done++;
+                        finish();
+                    });
+                });
+            });
+            function finish() {
+                if (done < files.length) return;
+                wxSave();
+                renderStickerPanel();
+            }
         });
         renderEmojiPanel(); renderStickerPanel();
+    }
+
+    function compressDataUrl(src, max, quality, cb) {
+        var img = new Image();
+        img.onload = function () {
+            var scale = Math.min(1, max / Math.max(img.width, img.height));
+            var w = Math.max(1, Math.round(img.width * scale));
+            var h = Math.max(1, Math.round(img.height * scale));
+            var c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            c.getContext("2d").drawImage(img, 0, 0, w, h);
+            var out = "";
+            try { out = c.toDataURL("image/webp", quality); } catch (e) {}
+            if (!out || out.indexOf("data:image/") !== 0) out = c.toDataURL("image/png");
+            cb(out);
+        };
+        img.onerror = function () { cb(""); };
+        img.src = src;
+    }
+
+    function setWxImageField(field, file, max) {
+        var reader = new FileReader();
+        reader.onload = function () {
+            compressDataUrl(reader.result, max || 480, 0.8, function (small) {
+                if (!small) return;
+                storeImg(small).then(function (ref) {
+                    var d = wxData();
+                    d[field] = ref;
+                    if (wxSave()) {
+                        if (field === "bgImage") imgCache[ref] = small;
+                        wxRender();
+                        setTimeout(migrateWx, 300);
+                    }
+                });
+            });
+        };
+        reader.readAsDataURL(file);
+    }
+
+    var migrating = false;
+    function migrateWx() {
+        if (migrating) return;
+        var d = wxData();
+        var targets = [];
+        d.history.forEach(function (m) {
+            if (m && m.type === "image" && typeof m.text === "string" && m.text.indexOf("data:image/") === 0) targets.push(m);
+        });
+        d.stickers.forEach(function (s, i) {
+            if (typeof s === "string" && s.indexOf("data:image/") === 0) targets.push({ _sticker: i });
+        });
+        ["avatar", "myAvatar", "bgImage"].forEach(function (k) {
+            if (typeof d[k] === "string" && d[k].indexOf("data:image/") === 0) targets.push({ _field: k });
+        });
+        if (!targets.length) return;
+
+        migrating = true;
+        var jobs = targets.map(function (t) {
+            var url = t._field ? d[t._field] : (t._sticker != null ? d[t._sticker] : t.text);
+            return new Promise(function (resolve) {
+                if (t._field) compressDataUrl(url, 480, 0.8, function (s) { resolve(s || url); });
+                else resolve(url);
+            }).then(function (toStore) {
+                return storeImg(toStore).then(function (ref) {
+                    if (!ref || ref === toStore) return;
+                    if (t._field) d[t._field] = ref;
+                    else if (t._sticker != null) d.stickers[t._sticker] = ref;
+                    else t.text = ref;
+                });
+            });
+        });
+        Promise.all(jobs).then(function () {
+            try {
+                var json = JSON.stringify(d);
+                wxRaw = json;
+                localStorage.setItem(WX_KEY, json);
+            } catch (e) {}
+            migrating = false;
+            var v = document.getElementById("wechatView");
+            if (v && v.classList.contains("show")) wxRender();
+        }).catch(function () { migrating = false; });
     }
 
     function wxOpen() {
@@ -777,101 +852,14 @@
         var view = document.getElementById("wechatView"); if (!view) return;
         wxRender(); renderEmojiPanel(); renderStickerPanel();
         view.classList.add("show");
+        refreshWxBadge();
         setTimeout(function () { var b = document.getElementById("wxMessages"); if (b) b.scrollTop = b.scrollHeight; }, 60);
-    }
-
-    /* ===== 清理工具 ===== */
-    function countImages() {
-        var out = { wx: 0, chat: 0, gal: 0 };
-        var d = wxData();
-        d.history.forEach(function (m) { if (m && m.type === "image") out.wx++; });
-        out.wx += (d.stickers || []).length;
-        var main = mainData();
-        (main.chatHistory || []).forEach(function (m) {
-            if (m && (m.type === "image" || m.type === "sticker")) out.chat++;
-        });
-        var g = null;
-        try { g = JSON.parse(localStorage.getItem(GAL_KEY) || "null"); } catch (e) { g = null; }
-        if (g && typeof g === "object") {
-            out.gal += Array.isArray(g.me) ? g.me.length : 0;
-            out.gal += Array.isArray(g.ta) ? g.ta.length : 0;
-        }
-        return out;
-    }
-
-    function pruneWxImages() {
-        if (!confirm("清理微信里的图片（保留文字记录），确定吗？")) return;
-        var d = wxData();
-        d.history = d.history.filter(function (m) { return !(m && m.type === "image"); });
-        d.stickers = [];
-        try { wxRaw = JSON.stringify(d); localStorage.setItem(WX_KEY, wxRaw); } catch (e) {}
-        alert("已清理微信图片。");
-        var v = document.getElementById("wechatView");
-        if (v && v.classList.contains("show")) wxRender();
-        refreshCleanupCard();
-    }
-
-    function pruneChatImages() {
-        if (!confirm("清理 iMessage 里的图片（保留文字记录），确定吗？")) return;
-        var d = mainData();
-        d.chatHistory = (d.chatHistory || []).filter(function (m) { return !(m && (m.type === "image" || m.type === "sticker")); });
-        try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {}
-        alert("已清理聊天图片。");
-        if (window.philosReload) window.philosReload();
-        refreshCleanupCard();
-    }
-
-    function pruneGallery() {
-        if (!confirm("清空图库照片？大仓库里的图片文件不会被自动删。")) return;
-        try { localStorage.setItem(GAL_KEY, JSON.stringify({ me: [], ta: [] })); } catch (e) {}
-        if (window.PhilosGalleryRefresh) window.PhilosGalleryRefresh();
-        refreshCleanupCard();
-    }
-
-    function refreshCleanupCard() {
-        var card = document.querySelector("[data-cleanup-card]");
-        if (!card) return;
-        var c = countImages();
-        var w = card.querySelector('[data-cl="wx"]');
-        var ch = card.querySelector('[data-cl="chat"]');
-        var g = card.querySelector('[data-cl="gal"]');
-        if (w) w.textContent = c.wx + " 张";
-        if (ch) ch.textContent = c.chat + " 张";
-        if (g) g.textContent = c.gal + " 张";
-    }
-
-    function ensureCleanupCard() {
-        var page = document.querySelector('[data-page="data"]');
-        if (!page || page.querySelector("[data-cleanup-card]")) return;
-        var card = document.createElement("div");
-        card.className = "group-card control-card";
-        card.setAttribute("data-cleanup-card", "1");
-        card.innerHTML =
-            '<div class="card-title">清理图片（腾空间）</div>' +
-            '<div class="control-row"><span class="control-label">微信里的图片</span><span class="control-value" data-cl="wx">—</span></div>' +
-            '<div class="control-row"><span class="control-label">iMessage 里的图片</span><span class="control-value" data-cl="chat">—</span></div>' +
-            '<div class="control-row"><span class="control-label">图库照片</span><span class="control-value" data-cl="gal">—</span></div>' +
-            '<div class="control-block"><button class="wide-btn" data-cl-act="wx" type="button">清理微信图片（保留文字）</button></div>' +
-            '<div class="control-block"><button class="wide-btn" data-cl-act="chat" type="button">清理聊天图片（保留文字）</button></div>' +
-            '<div class="control-block"><button class="wide-btn" data-cl-act="gal" type="button">清空图库照片</button></div>';
-        card.addEventListener("click", function (e) {
-            var btn = e.target.closest ? e.target.closest("[data-cl-act]") : null;
-            if (!btn) return;
-            var act = btn.getAttribute("data-cl-act");
-            if (act === "wx") pruneWxImages();
-            else if (act === "chat") pruneChatImages();
-            else if (act === "gal") pruneGallery();
-        });
-        var anchor = page.querySelector(".about-note");
-        if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(card, anchor);
-        else page.appendChild(card);
-        refreshCleanupCard();
     }
 
     function tuneRanges() {
         var d = document.querySelector('[data-key="permission.replyDelay"]');
         if (d) { d.setAttribute("max", "300"); d.max = "300"; }
-        ["permission.activeMin", "permission.activeMax", "permission.callMin", "permission.callMax"].forEach(function (k) {
+        ["permission.activeMin", "permission.callMin"].forEach(function (k) {
             var el = document.querySelector('[data-key="' + k + '"]');
             if (el) { el.setAttribute("min", "0"); el.min = "0"; }
         });
@@ -901,12 +889,14 @@
             btn.innerHTML = '<svg class="svg-icon" viewBox="0 0 24 24" style="transform:rotate(' + (isAnswer ? "0" : "135") + 'deg)"><use href="#ic-phone"></use></svg>';
             var wrap = document.createElement("div");
             wrap.className = "call-in-act";
-            btn.parentNode.insertBefore(wrap, btn);
-            wrap.appendChild(btn);
-            var lb = document.createElement("span");
-            lb.className = "call-in-act-label";
-            lb.textContent = label;
-            wrap.appendChild(lb);
+            if (btn.parentNode) {
+                btn.parentNode.insertBefore(wrap, btn);
+                wrap.appendChild(btn);
+                var lb = document.createElement("span");
+                lb.className = "call-in-act-label";
+                lb.textContent = label;
+                wrap.appendChild(lb);
+            }
         });
     }
 
@@ -917,7 +907,7 @@
             for (var i = 0; i < items.length; i++) {
                 if ((items[i].textContent || "").indexOf("版本") >= 0) {
                     var val = items[i].querySelector(".control-value");
-                    if (val) val.textContent = "3.9 · H54";
+                    if (val) val.textContent = "3.9 · H55";
                 }
             }
         } catch (e) {}
@@ -933,10 +923,11 @@
 
     function tick() {
         if (document.hidden) return;
+        injectStyles();
         migrateWx();
-        ensureCleanupCard();
-        refreshCleanupCard();
+        refreshWxBadge();
         decorateCall();
+        tuneRanges();
     }
 
     function init() {
@@ -947,9 +938,9 @@
         loadModule("quiz.js");
         loadModule("gallery.js");
         migrateWx();
-        ensureCleanupCard();
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); migrateWx(); ensureCleanupCard(); }, 900);
-        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); migrateWx(); }, 2200);
+        refreshWxBadge();
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); migrateWx(); refreshWxBadge(); }, 900);
+        setTimeout(function () { tuneRanges(); fixAvatarLabels(); markVersion(); decorateCall(); migrateWx(); refreshWxBadge(); }, 2200);
         setInterval(tick, 2000);
         if (window.MutationObserver) {
             var hd = document.getElementById("chatHeader");
