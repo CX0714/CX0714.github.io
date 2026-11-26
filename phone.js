@@ -1,4 +1,4 @@
-/* Philos 电话 app v8：头像名字统一 / 深色开关 / 大组件配色纠正 / 分类换行 / 造句分类可编辑 / 气泡预设生效 */
+/* Philos 电话 app v9：头像名字统一 / 深色开关 / 大组件配色纠正 / 分类换行 / 造句分类可编辑 / 气泡预设 / 频率页即时生成 + 间隔上限 120 */
 (function () {
     "use strict";
 
@@ -7,6 +7,7 @@
     var CALLS_KEY = "philos_calls";
     var UNREAD_KEY = "philos_unread";
     var WORD_KEY = "philos_words";
+    var PAT_IV_KEY = "philos_pat_interval";
 
     var view = null, listEl = null, nameEl = null, avatarEl = null, bgEl = null, unreadTimer = null, syncTimer = null;
 
@@ -134,7 +135,7 @@
         else page.appendChild(row);
     }
 
-    /* ================= 气泡预设真正生效 + 高度下限降低 ================= */
+    /* ================= 气泡预设 ================= */
     function currentPreset() {
         var d = mainData();
         var b = d.settings && d.settings.bubble;
@@ -148,15 +149,11 @@
         var root = document.documentElement;
         if (root.getAttribute("data-bubble-preset") !== p) root.setAttribute("data-bubble-preset", p);
 
-        /* 气泡高度滑块下限降到 4px，方便调更紧凑 */
         var h = document.querySelector('[data-key="bubble.height"]');
-        if (h) {
-            if (h.getAttribute("min") !== "4") { h.setAttribute("min", "4"); h.min = 4; }
-        }
+        if (h && h.getAttribute("min") !== "4") { h.setAttribute("min", "4"); h.min = 4; }
         var r = document.querySelector('[data-key="bubble.radius"]');
         if (r && r.getAttribute("min") !== "0") { r.setAttribute("min", "0"); r.min = 0; }
 
-        /* 预设卡片高亮跟随 */
         var cards = document.querySelectorAll("[data-preset]");
         for (var i = 0; i < cards.length; i++) {
             cards[i].classList.toggle("selected", cards[i].getAttribute("data-preset") === p);
@@ -168,6 +165,192 @@
         if (!t || !t.closest) return;
         if (!t.closest("[data-preset]")) return;
         setTimeout(syncBubblePreset, 30);
+    }, true);
+
+    /* ================= 频率页 ================= */
+    var MODE_ROWS = [["text", "文字"], ["emoji", "emoji"], ["sticker", "表情包"], ["textEmoji", "文字 + emoji"], ["combo", "多条组合"], ["sentence", "造句"]];
+    var MODE_DEFAULTS = { text: 40, emoji: 10, sticker: 10, textEmoji: 20, combo: 20, sentence: 10 };
+    var CAP_MIN = 120;
+
+    function replyModes() {
+        var d = mainData();
+        var p = (d.settings && d.settings.permission) || {};
+        var m = p.replyModes && typeof p.replyModes === "object" ? p.replyModes : {};
+        var out = {};
+        MODE_ROWS.forEach(function (row) {
+            var cfg = m[row[0]];
+            out[row[0]] = cfg && typeof cfg.weight === "number" ? Math.max(0, cfg.weight) : MODE_DEFAULTS[row[0]];
+        });
+        return out;
+    }
+    function pctTotal(w) { var t = 0; for (var k in w) t += w[k]; return t; }
+    function percentOf(w, key) { var t = pctTotal(w); return t ? Math.round(w[key] / t * 100) : 0; }
+
+    function buildPercentCard() {
+        var body = $("freqBody");
+        if (!body || body.querySelector("[data-freq-percent]")) return;
+        var w = replyModes();
+        var perm = (mainData().settings && mainData().settings.permission) || {};
+
+        var card = document.createElement("div");
+        card.className = "group-card control-card";
+        card.setAttribute("data-freq-percent", "1");
+        card.innerHTML = '<div class="card-title">他回复的方式（按百分比）</div>';
+
+        MODE_ROWS.forEach(function (row) {
+            var key = row[0], label = row[1];
+            var block = document.createElement("div");
+            block.className = "control-block";
+            block.innerHTML =
+                '<div class="control-head"><span class="control-label">' + label + '</span><span class="control-value" data-pct-val="' + key + '">' + percentOf(w, key) + '%</span></div>' +
+                '<input class="slider" type="range" data-pct-key="' + key + '" min="0" max="100" step="1" value="' + w[key] + '">';
+            card.appendChild(block);
+        });
+
+        var block2 = document.createElement("div");
+        block2.className = "control-block";
+        block2.innerHTML =
+            '<div class="control-head"><span class="control-label">造句最少用几个词</span><span class="control-value" data-sent-min>' + (perm.sentMin || 3) + '个</span></div>' +
+            '<input class="slider" type="range" data-sent-key="min" min="2" max="10" step="1" value="' + (perm.sentMin || 3) + '">' +
+            '<div class="control-head"><span class="control-label">造句最多用几个词</span><span class="control-value" data-sent-max>' + (perm.sentMax || 5) + '个</span></div>' +
+            '<input class="slider" type="range" data-sent-key="max" min="2" max="12" step="1" value="' + (perm.sentMax || 5) + '">';
+        card.appendChild(block2);
+
+        var btns = document.createElement("div");
+        btns.className = "control-block";
+        btns.innerHTML = '<button class="wide-btn" data-pct-act="test" type="button">让他回一句试试</button>';
+        card.appendChild(btns);
+
+        card.addEventListener("input", function (e) {
+            var key = e.target.getAttribute && e.target.getAttribute("data-pct-key");
+            if (key) {
+                var cur = replyModes();
+                cur[key] = Number(e.target.value) || 0;
+                MODE_ROWS.forEach(function (row) {
+                    var k = row[0];
+                    var lbl = card.querySelector('[data-pct-val="' + k + '"]');
+                    if (lbl) lbl.textContent = percentOf(cur, k) + "%";
+                });
+            }
+            var sk = e.target.getAttribute && e.target.getAttribute("data-sent-key");
+            if (sk) {
+                var v = Number(e.target.value) || 2;
+                var lbl2 = card.querySelector(sk === "min" ? "[data-sent-min]" : "[data-sent-max]");
+                if (lbl2) lbl2.textContent = v + "个";
+            }
+        });
+
+        card.addEventListener("change", function (e) {
+            var key = e.target.getAttribute && e.target.getAttribute("data-pct-key");
+            if (key) {
+                if (window.philosSetReplyWeights) window.philosSetReplyWeights(replyModes());
+                return;
+            }
+            var sk = e.target.getAttribute && e.target.getAttribute("data-sent-key");
+            if (sk) {
+                var d = mainData();
+                if (!d.settings) d.settings = {};
+                if (!d.settings.permission) d.settings.permission = {};
+                var v = Number(e.target.value) || 2;
+                if (sk === "min") d.settings.permission.sentMin = v;
+                else d.settings.permission.sentMax = v;
+                var p = d.settings.permission;
+                if (p.sentMax < p.sentMin) p.sentMax = p.sentMin;
+                try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (err) {}
+                if (window.philosReload) setTimeout(window.philosReload, 120);
+            }
+        });
+
+        card.addEventListener("click", function (e) {
+            var btn = e.target.closest ? e.target.closest("[data-pct-act]") : null;
+            if (!btn) return;
+            var chat = document.getElementById("appChat");
+            if (chat) chat.click();
+        });
+
+        body.appendChild(card);
+    }
+
+    function orderFreq() {
+        var body = $("freqBody");
+        if (!body) return;
+        var cards = Array.prototype.slice.call(body.children);
+        if (cards.length < 3) return;
+        function text(c) { return (c.textContent || "").slice(0, 40); }
+        function find(kw) {
+            for (var i = 0; i < cards.length; i++) if (text(cards[i]).indexOf(kw) >= 0) return cards[i];
+            return null;
+        }
+        var groups = [
+            find("回复延迟"),
+            body.querySelector("[data-freq-percent]"),
+            find("他回复的条数"),
+            find("主动发消息"),
+            find("主动打电话"),
+            find("拍一拍"),
+            body.querySelector("[data-philos-testcard]")
+        ];
+        var used = [];
+        groups.forEach(function (el) {
+            if (!el || used.indexOf(el) >= 0) return;
+            used.push(el);
+            body.appendChild(el);
+        });
+        cards.forEach(function (el) { if (used.indexOf(el) < 0) body.appendChild(el); });
+    }
+
+    /* 间隔上限 120 分钟 */
+    var clamping = false;
+    function capIntervals() {
+        [["permission.activeMax"], ["permission.callMax"]].forEach(function (pair) {
+            var el = document.querySelector('[data-key="' + pair[0] + '"]');
+            if (!el) return;
+            if (el.getAttribute("max") !== String(CAP_MIN)) { el.setAttribute("max", String(CAP_MIN)); el.max = CAP_MIN; }
+            if (Number(el.value) > CAP_MIN) el.value = CAP_MIN;
+        });
+        var patMax = document.querySelector('[data-pat-key="max"]');
+        if (patMax) {
+            if (patMax.getAttribute("max") !== String(CAP_MIN)) { patMax.setAttribute("max", String(CAP_MIN)); patMax.max = CAP_MIN; }
+            if (Number(patMax.value) > CAP_MIN) patMax.value = CAP_MIN;
+        }
+
+        if (clamping) return;
+        var changed = false;
+        var d = mainData();
+        var p = d.settings && d.settings.permission;
+        if (p) {
+            if (typeof p.activeMax === "number" && p.activeMax > CAP_MIN) { p.activeMax = CAP_MIN; changed = true; }
+            if (typeof p.callMax === "number" && p.callMax > CAP_MIN) { p.callMax = CAP_MIN; changed = true; }
+            if (typeof p.activeMin === "number" && p.activeMin > CAP_MIN) { p.activeMin = CAP_MIN; changed = true; }
+            if (typeof p.callMin === "number" && p.callMin > CAP_MIN) { p.callMin = CAP_MIN; changed = true; }
+        }
+        var iv = null;
+        try { iv = JSON.parse(localStorage.getItem(PAT_IV_KEY) || "null"); } catch (e) { iv = null; }
+        if (iv && typeof iv === "object" && typeof iv.max === "number" && iv.max > CAP_MIN) {
+            iv.max = CAP_MIN;
+            if (iv.min > iv.max) iv.min = iv.max;
+            try { localStorage.setItem(PAT_IV_KEY, JSON.stringify(iv)); } catch (e) {}
+        }
+        if (changed) {
+            clamping = true;
+            saveMain(d);
+            if (window.philosReload) setTimeout(function () { clamping = false; window.philosReload(); }, 150);
+            else setTimeout(function () { clamping = false; }, 400);
+        }
+    }
+
+    function ensureFreqReady() {
+        buildPercentCard();
+        orderFreq();
+        capIntervals();
+    }
+
+    document.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!t || !t.closest) return;
+        if (!t.closest("#btnFreq")) return;
+        setTimeout(ensureFreqReady, 20);
+        setTimeout(ensureFreqReady, 120);
     }, true);
 
     /* ================= 造句分类：改名 / 删除 ================= */
@@ -287,7 +470,7 @@
             ".ph-scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,0.10) 0%,rgba(255,255,255,0) 34%,rgba(30,40,55,0.14) 100%);pointer-events:none;}" +
             ".ph-content{position:relative;z-index:2;display:flex;flex-direction:column;height:100%;min-height:0;}" +
             ".ph-top{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top) + 10px) 14px 0;}" +
-            ".ph-btn{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#2b323b;background:rgba(255,255,255,0.52);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.62);box-shadow:0 2px 10px rgba(50,70,95,0.10);}" +
+            ".ph-btn{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;color:#2b323b;background:rgba(255,255,255,0.52);border:1px solid rgba(255,255,255,0.62);box-shadow:0 2px 10px rgba(50,70,95,0.10);}" +
             ".ph-btn .svg-icon{width:22px;height:22px;stroke-width:1.6;}" +
             ".ph-avatar{flex:0 0 auto;width:106px;height:106px;margin:30px auto 0;border-radius:50%;overflow:hidden;border:3px solid rgba(255,255,255,0.55);background:rgba(255,255,255,0.40);box-shadow:0 14px 34px rgba(35,50,70,0.22);display:flex;align-items:center;justify-content:center;color:#7d8ea2;font-size:32px;font-weight:600;padding:0;}" +
             ".ph-avatar img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%;border:none;box-shadow:none;}" +
@@ -295,7 +478,7 @@
             ".ph-name::placeholder{color:rgba(255,255,255,0.72);}" +
             ".ph-calls{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;margin-top:24px;}" +
             ".ph-call-list{flex:1 1 auto;min-height:0;overflow-y:auto;padding:0 16px calc(env(safe-area-inset-bottom) + 26px);-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 30px,#000 100%);mask-image:linear-gradient(180deg,transparent 0,#000 30px,#000 100%);}" +
-            ".ph-call{background:rgba(255,255,255,0.52);-webkit-backdrop-filter:blur(18px) saturate(115%);backdrop-filter:blur(18px) saturate(115%);border:1px solid rgba(255,255,255,0.58);border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(45,65,90,0.10);}" +
+            ".ph-call{background:rgba(255,255,255,0.52);border:1px solid rgba(255,255,255,0.58);border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(45,65,90,0.10);}" +
             ".ph-call-text{font-size:14px;line-height:1.5;color:#252b33;word-break:break-word;}" +
             ".ph-call-time{font-size:11.5px;color:rgba(45,55,70,0.55);margin-top:4px;}" +
             ".ph-empty{text-align:center;font-size:13px;color:rgba(45,55,70,0.55);padding:40px 0;}" +
@@ -307,7 +490,6 @@
                 "gap:8px !important;overflow:visible !important;overflow-x:visible !important;white-space:normal !important;" +
                 "padding:4px 16px 10px !important;height:auto !important;max-height:none !important;}" +
             "#cardCats > *,[data-sub-chips] > *{flex:0 0 auto !important;}" +
-            /* ===== 气泡预设真正生效 ===== */
             "html[data-bubble-preset=\"tail\"] .msg-row.me .msg-bubble{border-bottom-right-radius:5px !important;}" +
             "html[data-bubble-preset=\"tail\"] .msg-row.ta .msg-bubble{border-bottom-left-radius:5px !important;}" +
             "html[data-bubble-preset=\"tail\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
@@ -316,9 +498,6 @@
             "html[data-bubble-preset=\"small\"] .msg-row .msg-bubble,html[data-bubble-preset=\"small\"] .pv-row .pv-bubble{border-radius:calc(var(--bubble-radius,16px) * 0.6) !important;" +
                 "padding-top:calc(var(--bubble-pad-y,10px) * 0.7) !important;padding-bottom:calc(var(--bubble-pad-y,10px) * 0.7) !important;}" +
             "html[data-bubble-preset=\"square\"] .msg-row .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row .pv-bubble{border-radius:5px !important;}" +
-            "html[data-bubble-preset=\"square\"] .msg-row.me .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row.me .pv-bubble{border-bottom-right-radius:5px !important;}" +
-            "html[data-bubble-preset=\"square\"] .msg-row.ta .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row.ta .pv-bubble{border-bottom-left-radius:5px !important;}" +
-            /* 造句分类编辑弹层 */
             ".wce-mask{position:fixed;inset:0;z-index:940;background:rgba(16,20,26,0.32);display:none;}" +
             ".wce-mask.show{display:block;}" +
             ".wce-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;z-index:941;" +
@@ -549,6 +728,7 @@
         ensureThemeRow();
         normalizeHeroColors();
         syncBubblePreset();
+        capIntervals();
         refreshBadge();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(function () {
@@ -557,6 +737,8 @@
             syncBubblePreset();
             refreshBadge();
             if (view && view.classList.contains("show")) { renderAvatar(); renderName(); }
+            var fv = document.getElementById("freqView");
+            if (fv && fv.classList.contains("show")) ensureFreqReady();
         }, 2000);
         document.addEventListener("visibilitychange", function () { if (!document.hidden) { refreshBadge(); syncBubblePreset(); } });
         window.addEventListener("focus", function () { syncBubblePreset(); });
