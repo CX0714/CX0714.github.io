@@ -1,4 +1,5 @@
-/* Philos 电话 app v9：头像名字统一 / 深色开关 / 大组件配色纠正 / 分类换行 / 造句分类可编辑 / 气泡预设 / 频率页即时生成 + 间隔上限 120 */
+/* Philos 电话 v10：自带拨出通话（只有你能挂断）/ 通话小窗永远压在最上层 / 微信未读红点兜底 /
+   深色开关 / 大组件配色纠正 / 分类换行 / 造句分类 / 气泡预设 / 频率页即时 + 间隔上限 120 */
 (function () {
     "use strict";
 
@@ -7,13 +8,20 @@
     var CALLS_KEY = "philos_calls";
     var UNREAD_KEY = "philos_unread";
     var WORD_KEY = "philos_words";
+    var WX_KEY = "philos_wechat";
     var PAT_IV_KEY = "philos_pat_interval";
+    var CAP_MIN = 120;
 
     var view = null, listEl = null, nameEl = null, avatarEl = null, bgEl = null, unreadTimer = null, syncTimer = null;
 
     function $(id) { return document.getElementById(id); }
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
     function saveMain(d) { try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {} }
+    function pad(n) { return n < 10 ? "0" + n : "" + n; }
+    function fmtDur(sec) {
+        var m = Math.floor(sec / 60), s = sec % 60;
+        return pad(m) + ":" + pad(s);
+    }
 
     function phoneData() {
         var d = null;
@@ -47,7 +55,6 @@
         document.body.appendChild(s);
     }
 
-    function pad(n) { return n < 10 ? "0" + n : "" + n; }
     function fmtTime(ts) {
         var d = new Date(Number(ts) || Date.now());
         return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + pad(d.getHours()) + ":" + pad(d.getMinutes());
@@ -62,6 +69,15 @@
         if (t && t !== "Typing...") return t;
         return "他";
     }
+    function taAvatarSrc() {
+        var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
+        if (live) {
+            var s = live.getAttribute("src") || "";
+            if (s) return s;
+        }
+        var raw = mainData().taAvatar || "";
+        return /^(data:image\/|https?:\/\/|blob:)/.test(raw) ? raw : "";
+    }
 
     /* ================= 主题 ================= */
     function isDarkNow() {
@@ -71,7 +87,6 @@
         if (mode === "light") return false;
         try { return window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; }
     }
-
     function applyThemeNow(dark) {
         document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
         var meta = document.querySelector('meta[name="theme-color"]');
@@ -82,7 +97,6 @@
     var LIGHT_BOTTOM = ["#ffffff", "#ffffffff"];
     var DARK_TOP = ["#1e2024"];
     var DARK_BOTTOM = ["#202226"];
-
     var normalizing = false;
     function normalizeHeroColors() {
         if (normalizing) return;
@@ -93,7 +107,6 @@
         var top = hc.top && typeof hc.top === "object" ? hc.top : null;
         var bottom = hc.bottom && typeof hc.bottom === "object" ? hc.bottom : null;
         var changed = false;
-
         function check(el, list) {
             if (!el) return;
             var c = String(el.color || "").toLowerCase();
@@ -102,7 +115,6 @@
         }
         if (dark) { check(top, LIGHT_TOP); check(bottom, LIGHT_BOTTOM); }
         else { check(top, DARK_TOP); check(bottom, DARK_BOTTOM); }
-
         if (!changed) return;
         normalizing = true;
         saveMain(d);
@@ -143,34 +155,191 @@
         if (["tail", "large", "small", "square"].indexOf(p) < 0) p = "tail";
         return p;
     }
-
     function syncBubblePreset() {
         var p = currentPreset();
         var root = document.documentElement;
         if (root.getAttribute("data-bubble-preset") !== p) root.setAttribute("data-bubble-preset", p);
-
         var h = document.querySelector('[data-key="bubble.height"]');
         if (h && h.getAttribute("min") !== "4") { h.setAttribute("min", "4"); h.min = 4; }
         var r = document.querySelector('[data-key="bubble.radius"]');
         if (r && r.getAttribute("min") !== "0") { r.setAttribute("min", "0"); r.min = 0; }
-
         var cards = document.querySelectorAll("[data-preset]");
-        for (var i = 0; i < cards.length; i++) {
-            cards[i].classList.toggle("selected", cards[i].getAttribute("data-preset") === p);
-        }
+        for (var i = 0; i < cards.length; i++) cards[i].classList.toggle("selected", cards[i].getAttribute("data-preset") === p);
     }
 
+    /* ================= 未读红点：电话 + 微信兜底 ================= */
+    function paintDot(el, cls, n) {
+        if (!el) return;
+        var box = el.querySelector(".app-icon-box") || el;
+        var dot = box.querySelector("." + cls);
+        if (!n) { if (dot && dot.parentNode) dot.parentNode.removeChild(dot); return; }
+        if (!dot) {
+            dot = document.createElement("span");
+            dot.className = cls;
+            try { if (getComputedStyle(box).position === "static") box.style.position = "relative"; } catch (e) { box.style.position = "relative"; }
+            box.appendChild(dot);
+        }
+        dot.textContent = n > 99 ? "99+" : String(n);
+    }
+
+    function refreshPhoneBadge() {
+        var s = getUnread();
+        var calls = getCalls();
+        var n = 0;
+        for (var i = 0; i < calls.length; i++) if ((Number(calls[i] && calls[i].time) || 0) > s.call) n++;
+        paintDot($("btnPhone"), "philos-dot", n);
+    }
+
+    function refreshWxBadgeFallback() {
+        var s = getUnread();
+        var d = null;
+        try { d = JSON.parse(localStorage.getItem(WX_KEY) || "null"); } catch (e) { d = null; }
+        var n = 0;
+        if (d && Array.isArray(d.history)) {
+            d.history.forEach(function (m) {
+                if (!m || m.from !== "ta") return;
+                if ((Number(m.time) || 0) > s.wx) n++;
+            });
+        }
+        var v = document.getElementById("wechatView");
+        if (v && v.classList.contains("show")) {
+            if (s.wx !== Date.now()) { s.wx = Date.now(); saveUnread(s); }
+            paintDot($("btnWechat"), "wx-unread", 0);
+            return;
+        }
+        paintDot($("btnWechat"), "wx-unread", n);
+    }
+
+    function markRead() {
+        var s = getUnread();
+        s.call = Date.now();
+        saveUnread(s);
+        setTimeout(refreshPhoneBadge, 40);
+    }
+
+    /* ================= 拨出电话（只有你能挂断） ================= */
+    var outCall = { active: false, connected: false, seconds: 0, ticker: null, connectTimer: null, minimized: false };
+
+    function buildOutCall() {
+        if ($("philosCallOut")) return;
+        var wrap = document.createElement("div");
+        wrap.className = "call-in";
+        wrap.id = "philosCallOut";
+        wrap.innerHTML =
+            '<div class="call-in-card">' +
+                '<button class="call-min" id="coutMin" type="button" aria-label="最小化"><svg class="svg-icon" viewBox="0 0 24 24"><use href="#ic-down-double"></use></svg></button>' +
+                '<div class="call-in-body">' +
+                    '<div class="call-in-avatar" id="coutAvatar">Ta</div>' +
+                    '<div class="call-in-name" id="coutName">他</div>' +
+                    '<div class="call-in-state" id="coutState">正在呼叫…</div>' +
+                '</div>' +
+                '<div class="call-in-actions" id="coutActions">' +
+                    '<div class="call-in-act">' +
+                        '<button class="call-in-btn hang round" id="coutHang" type="button" aria-label="挂断">' +
+                            '<svg class="svg-icon" viewBox="0 0 24 24" style="transform:rotate(135deg)"><use href="#ic-phone"></use></svg>' +
+                        '</button><span class="call-in-act-label">挂断</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(wrap);
+        $("coutHang").addEventListener("click", hangOutCall);
+        $("coutMin").addEventListener("click", function () {
+            outCall.minimized = true;
+            wrap.classList.remove("show");
+            var pill = $("philosOutPill");
+            if (!pill) {
+                pill = document.createElement("button");
+                pill.type = "button";
+                pill.id = "philosOutPill";
+                pill.className = "call-mini-pill";
+                pill.innerHTML = '<i></i><span>通话中</span>';
+                pill.addEventListener("click", function () {
+                    outCall.minimized = false;
+                    pill.classList.remove("show");
+                    wrap.classList.add("show");
+                });
+                document.body.appendChild(pill);
+            }
+            var lb = pill.querySelector("span");
+            if (lb) lb.textContent = outCall.connected ? ("通话中 " + fmtDur(outCall.seconds)) : "正在呼叫";
+            pill.classList.add("show");
+        });
+    }
+
+    function updateOutPill() {
+        var pill = $("philosOutPill");
+        if (!pill || !outCall.active) return;
+        var lb = pill.querySelector("span");
+        if (lb) lb.textContent = outCall.connected ? ("通话中 " + fmtDur(outCall.seconds)) : "正在呼叫";
+    }
+
+    function startOutCall() {
+        injectStyles();
+        buildOutCall();
+        if (outCall.active) return;
+        outCall.active = true;
+        outCall.connected = false;
+        outCall.seconds = 0;
+        outCall.minimized = false;
+
+        var av = $("coutAvatar");
+        var src = taAvatarSrc();
+        if (av) {
+            if (src) av.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
+            else av.textContent = (systemName() || "他").slice(0, 2);
+        }
+        var nm = $("coutName");
+        if (nm) nm.textContent = systemName();
+        var st = $("coutState");
+        if (st) st.textContent = "正在呼叫…";
+        $("philosCallOut").classList.add("show");
+
+        var wait = 2200 + Math.random() * 3200;
+        outCall.connectTimer = setTimeout(function () {
+            if (!outCall.active) return;
+            outCall.connected = true;
+            var s = $("coutState");
+            if (s) s.textContent = "通话中 00:00";
+            updateOutPill();
+            outCall.ticker = setInterval(function () {
+                outCall.seconds++;
+                var el = $("coutState");
+                if (el) el.textContent = "通话中 " + fmtDur(outCall.seconds);
+                updateOutPill();
+            }, 1000);
+        }, wait);
+    }
+
+    function hangOutCall() {
+        if (!outCall.active) return;
+        if (outCall.ticker) clearInterval(outCall.ticker);
+        if (outCall.connectTimer) clearTimeout(outCall.connectTimer);
+        var text = outCall.connected ? ("语音通话 时长 " + fmtDur(outCall.seconds)) : "已取消";
+        if (window.philosPushMessage) window.philosPushMessage({ type: "call", text: text, time: Date.now() });
+        var wrap = $("philosCallOut");
+        if (wrap) wrap.classList.remove("show");
+        var pill = $("philosOutPill");
+        if (pill) pill.classList.remove("show");
+        outCall.active = false;
+        outCall.connected = false;
+        outCall.seconds = 0;
+        outCall.minimized = false;
+    }
+
+    /* 接管聊天页的通话键：用我们自己的通话界面，只有你能挂断 */
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
-        if (!t.closest("[data-preset]")) return;
-        setTimeout(syncBubblePreset, 30);
+        if (!t.closest("#btnChatCall")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        startOutCall();
     }, true);
 
     /* ================= 频率页 ================= */
     var MODE_ROWS = [["text", "文字"], ["emoji", "emoji"], ["sticker", "表情包"], ["textEmoji", "文字 + emoji"], ["combo", "多条组合"], ["sentence", "造句"]];
     var MODE_DEFAULTS = { text: 40, emoji: 10, sticker: 10, textEmoji: 20, combo: 20, sentence: 10 };
-    var CAP_MIN = 120;
 
     function replyModes() {
         var d = mainData();
@@ -227,9 +396,8 @@
                 var cur = replyModes();
                 cur[key] = Number(e.target.value) || 0;
                 MODE_ROWS.forEach(function (row) {
-                    var k = row[0];
-                    var lbl = card.querySelector('[data-pct-val="' + k + '"]');
-                    if (lbl) lbl.textContent = percentOf(cur, k) + "%";
+                    var lbl = card.querySelector('[data-pct-val="' + row[0] + '"]');
+                    if (lbl) lbl.textContent = percentOf(cur, row[0]) + "%";
                 });
             }
             var sk = e.target.getAttribute && e.target.getAttribute("data-sent-key");
@@ -242,10 +410,7 @@
 
         card.addEventListener("change", function (e) {
             var key = e.target.getAttribute && e.target.getAttribute("data-pct-key");
-            if (key) {
-                if (window.philosSetReplyWeights) window.philosSetReplyWeights(replyModes());
-                return;
-            }
+            if (key) { if (window.philosSetReplyWeights) window.philosSetReplyWeights(replyModes()); return; }
             var sk = e.target.getAttribute && e.target.getAttribute("data-sent-key");
             if (sk) {
                 var d = mainData();
@@ -299,11 +464,10 @@
         cards.forEach(function (el) { if (used.indexOf(el) < 0) body.appendChild(el); });
     }
 
-    /* 间隔上限 120 分钟 */
     var clamping = false;
     function capIntervals() {
-        [["permission.activeMax"], ["permission.callMax"]].forEach(function (pair) {
-            var el = document.querySelector('[data-key="' + pair[0] + '"]');
+        ["permission.activeMax", "permission.callMax"].forEach(function (k) {
+            var el = document.querySelector('[data-key="' + k + '"]');
             if (!el) return;
             if (el.getAttribute("max") !== String(CAP_MIN)) { el.setAttribute("max", String(CAP_MIN)); el.max = CAP_MIN; }
             if (Number(el.value) > CAP_MIN) el.value = CAP_MIN;
@@ -313,7 +477,6 @@
             if (patMax.getAttribute("max") !== String(CAP_MIN)) { patMax.setAttribute("max", String(CAP_MIN)); patMax.max = CAP_MIN; }
             if (Number(patMax.value) > CAP_MIN) patMax.value = CAP_MIN;
         }
-
         if (clamping) return;
         var changed = false;
         var d = mainData();
@@ -339,11 +502,7 @@
         }
     }
 
-    function ensureFreqReady() {
-        buildPercentCard();
-        orderFreq();
-        capIntervals();
-    }
+    function ensureFreqReady() { buildPercentCard(); orderFreq(); capIntervals(); }
 
     document.addEventListener("click", function (e) {
         var t = e.target;
@@ -353,7 +512,7 @@
         setTimeout(ensureFreqReady, 120);
     }, true);
 
-    /* ================= 造句分类：改名 / 删除 ================= */
+    /* ================= 造句分类 ================= */
     function wordStore() {
         var v = null;
         try { v = JSON.parse(localStorage.getItem(WORD_KEY) || "null"); } catch (e) { v = null; }
@@ -369,7 +528,6 @@
     function saveWordStore(v) { try { localStorage.setItem(WORD_KEY, JSON.stringify(v)); } catch (e) { alert("保存失败。"); } }
 
     var wcatEditing = "";
-
     function buildCatSheet() {
         if ($("wceSheet")) return;
         var mask = document.createElement("div");
@@ -390,7 +548,6 @@
         $("wceSave").addEventListener("click", saveCatRename);
         $("wceDel").addEventListener("click", deleteCat);
     }
-
     function openCatSheet(name) {
         buildCatSheet();
         wcatEditing = name;
@@ -400,46 +557,34 @@
         $("wceSheet").classList.add("show");
         setTimeout(function () { try { $("wceInput").focus(); $("wceInput").select(); } catch (e) {} }, 60);
     }
-
     function closeCatSheet() {
         var mask = $("wceMask"), sheet = $("wceSheet");
         if (mask) mask.classList.remove("show");
         if (sheet) sheet.classList.remove("show");
         wcatEditing = "";
     }
-
-    function refreshWordUI() {
-        var chip = document.querySelector("[data-sub-chips] .ck-chip");
-        if (chip) chip.click();
-    }
-
+    function refreshWordUI() { var chip = document.querySelector("[data-sub-chips] .ck-chip"); if (chip) chip.click(); }
     function saveCatRename() {
         var next = ($("wceInput") ? $("wceInput").value : "").trim();
         if (!wcatEditing) { closeCatSheet(); return; }
         if (!next || next === wcatEditing) { closeCatSheet(); return; }
         if (next === "全部" || next === "未分类") { alert("这个名字不能用。"); return; }
-
         var st = wordStore();
         var i = st.categories.indexOf(wcatEditing);
         if (i >= 0) st.categories[i] = next;
         else st.categories.push(next);
         st.categories = st.categories.filter(function (n, idx, arr) { return n && arr.indexOf(n) === idx; });
-        st.items.forEach(function (it) {
-            if (it && (it.category || "未分类") === wcatEditing) it.category = next;
-        });
+        st.items.forEach(function (it) { if (it && (it.category || "未分类") === wcatEditing) it.category = next; });
         saveWordStore(st);
         closeCatSheet();
         refreshWordUI();
     }
-
     function deleteCat() {
         if (!wcatEditing) return;
         if (!confirm("删除分类「" + wcatEditing + "」？里面的词会移到「未分类」。")) return;
         var st = wordStore();
         st.categories = st.categories.filter(function (n) { return n !== wcatEditing; });
-        st.items.forEach(function (it) {
-            if (it && (it.category || "未分类") === wcatEditing) it.category = "未分类";
-        });
+        st.items.forEach(function (it) { if (it && (it.category || "未分类") === wcatEditing) it.category = "未分类"; });
         saveWordStore(st);
         closeCatSheet();
         refreshWordUI();
@@ -482,7 +627,8 @@
             ".ph-call-text{font-size:14px;line-height:1.5;color:#252b33;word-break:break-word;}" +
             ".ph-call-time{font-size:11.5px;color:rgba(45,55,70,0.55);margin-top:4px;}" +
             ".ph-empty{text-align:center;font-size:13px;color:rgba(45,55,70,0.55);padding:40px 0;}" +
-            ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:8;pointer-events:none;box-sizing:border-box;}" +
+            ".philos-dot{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:12;pointer-events:none;box-sizing:border-box;}" +
+            ".wx-unread{position:absolute;top:-4px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff3b30;color:#fff;font-size:10px;line-height:17px;text-align:center;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.28);z-index:12;pointer-events:none;box-sizing:border-box;}" +
             "[data-philos-theme-row]{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 16px;min-height:52px;}" +
             "[data-philos-theme-row] > span{font-size:16px;color:var(--text-primary);}" +
             "[data-philos-theme-row] .switch{flex:0 0 auto;margin:0;}" +
@@ -498,6 +644,10 @@
             "html[data-bubble-preset=\"small\"] .msg-row .msg-bubble,html[data-bubble-preset=\"small\"] .pv-row .pv-bubble{border-radius:calc(var(--bubble-radius,16px) * 0.6) !important;" +
                 "padding-top:calc(var(--bubble-pad-y,10px) * 0.7) !important;padding-bottom:calc(var(--bubble-pad-y,10px) * 0.7) !important;}" +
             "html[data-bubble-preset=\"square\"] .msg-row .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row .pv-bubble{border-radius:5px !important;}" +
+            /* 通话小窗永远在最上层（包括微信、图库等全屏页面之上） */
+            ".call-pill,.call-mini-pill{position:fixed !important;z-index:700 !important;}" +
+            ".call-pill{right:16px !important;bottom:calc(env(safe-area-inset-bottom) + 92px) !important;}" +
+            ".call-mini-pill{right:16px !important;bottom:calc(env(safe-area-inset-bottom) + 150px) !important;}" +
             ".wce-mask{position:fixed;inset:0;z-index:940;background:rgba(16,20,26,0.32);display:none;}" +
             ".wce-mask.show{display:block;}" +
             ".wce-sheet{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.94);opacity:0;pointer-events:none;z-index:941;" +
@@ -532,13 +682,7 @@
 
     function renderAvatar() {
         if (!avatarEl) return;
-        var src = "";
-        var live = document.querySelector("#headerAvatar img, #taProfileAvatar img, #callAvatar img, #peekAvatar img");
-        if (live) src = live.getAttribute("src") || "";
-        if (!src) {
-            var raw = mainData().taAvatar || "";
-            if (/^(data:image\/|https?:\/\/|blob:)/.test(raw)) src = raw;
-        }
+        var src = taAvatarSrc();
         if (src) avatarEl.innerHTML = '<img src="' + src.replace(/"/g, "&quot;") + '" alt="">';
         else avatarEl.textContent = (systemName() || "他").slice(0, 2);
     }
@@ -575,38 +719,6 @@
             card.appendChild(time);
             listEl.appendChild(card);
         });
-    }
-
-    function paintBadge(n) {
-        var el = $("btnPhone");
-        if (!el) return;
-        var box = el.querySelector(".app-icon-box") || el;
-        var dot = box.querySelector(".philos-dot");
-        if (!n) { if (dot && dot.parentNode) dot.parentNode.removeChild(dot); return; }
-        if (!dot) {
-            dot = document.createElement("span");
-            dot.className = "philos-dot";
-            try { if (getComputedStyle(box).position === "static") box.style.position = "relative"; } catch (e) { box.style.position = "relative"; }
-            box.appendChild(dot);
-        }
-        dot.textContent = n > 99 ? "99+" : String(n);
-    }
-
-    function refreshBadge() {
-        var s = getUnread();
-        var calls = getCalls();
-        var n = 0;
-        for (var i = 0; i < calls.length; i++) {
-            if ((Number(calls[i] && calls[i].time) || 0) > s.call) n++;
-        }
-        paintBadge(n);
-    }
-
-    function markRead() {
-        var s = getUnread();
-        s.call = Date.now();
-        saveUnread(s);
-        setTimeout(refreshBadge, 40);
     }
 
     function compressImage(file, cb) {
@@ -689,12 +801,7 @@
 
         avatarEl.addEventListener("click", function () {
             close();
-            var chat = $("appChat");
-            if (chat) chat.click();
-            setTimeout(function () {
-                var call = $("btnChatCall");
-                if (call) call.click();
-            }, 420);
+            startOutCall();
         });
     }
 
@@ -729,23 +836,28 @@
         normalizeHeroColors();
         syncBubblePreset();
         capIntervals();
-        refreshBadge();
+        refreshPhoneBadge();
+        refreshWxBadgeFallback();
         if (unreadTimer) clearInterval(unreadTimer);
         unreadTimer = setInterval(function () {
             if (document.hidden) return;
             ensureThemeRow();
             syncBubblePreset();
-            refreshBadge();
+            refreshPhoneBadge();
+            refreshWxBadgeFallback();
             if (view && view.classList.contains("show")) { renderAvatar(); renderName(); }
             var fv = document.getElementById("freqView");
             if (fv && fv.classList.contains("show")) ensureFreqReady();
-        }, 2000);
-        document.addEventListener("visibilitychange", function () { if (!document.hidden) { refreshBadge(); syncBubblePreset(); } });
-        window.addEventListener("focus", function () { syncBubblePreset(); });
+        }, 1500);
+        document.addEventListener("visibilitychange", function () {
+            if (!document.hidden) { refreshPhoneBadge(); refreshWxBadgeFallback(); syncBubblePreset(); }
+        });
+        window.addEventListener("focus", function () { syncBubblePreset(); refreshWxBadgeFallback(); });
     }
 
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
     else setTimeout(init, 0);
 
     window.PhilosOpenPhone = open;
+    window.PhilosStartCall = startOutCall;
 })();
