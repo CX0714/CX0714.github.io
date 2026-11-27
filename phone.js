@@ -1,5 +1,5 @@
-/* Philos 电话 v10：自带拨出通话（只有你能挂断）/ 通话小窗永远压在最上层 / 微信未读红点兜底 /
-   深色开关 / 大组件配色纠正 / 分类换行 / 造句分类 / 气泡预设 / 频率页即时 + 间隔上限 120 */
+/* Philos 电话 v11：拨出电话有接通/未接听/对方挂断三种结果（接通在 10 秒内任意时刻，接通后只有你能挂断）
+   另含：通话小窗最高层 / 微信未读红点兜底 / 深色开关 / 大组件配色纠正 / 分类换行 / 造句分类 / 气泡预设 / 频率页即时 + 间隔上限 120 */
 (function () {
     "use strict";
 
@@ -18,10 +18,7 @@
     function mainData() { try { return JSON.parse(localStorage.getItem(MAIN_KEY) || "{}"); } catch (e) { return {}; } }
     function saveMain(d) { try { localStorage.setItem(MAIN_KEY, JSON.stringify(d)); } catch (e) {} }
     function pad(n) { return n < 10 ? "0" + n : "" + n; }
-    function fmtDur(sec) {
-        var m = Math.floor(sec / 60), s = sec % 60;
-        return pad(m) + ":" + pad(s);
-    }
+    function fmtDur(sec) { return pad(Math.floor(sec / 60)) + ":" + pad(sec % 60); }
 
     function phoneData() {
         var d = null;
@@ -167,7 +164,7 @@
         for (var i = 0; i < cards.length; i++) cards[i].classList.toggle("selected", cards[i].getAttribute("data-preset") === p);
     }
 
-    /* ================= 未读红点：电话 + 微信兜底 ================= */
+    /* ================= 未读红点 ================= */
     function paintDot(el, cls, n) {
         if (!el) return;
         var box = el.querySelector(".app-icon-box") || el;
@@ -203,7 +200,8 @@
         }
         var v = document.getElementById("wechatView");
         if (v && v.classList.contains("show")) {
-            if (s.wx !== Date.now()) { s.wx = Date.now(); saveUnread(s); }
+            s.wx = Date.now();
+            saveUnread(s);
             paintDot($("btnWechat"), "wx-unread", 0);
             return;
         }
@@ -217,8 +215,8 @@
         setTimeout(refreshPhoneBadge, 40);
     }
 
-    /* ================= 拨出电话（只有你能挂断） ================= */
-    var outCall = { active: false, connected: false, seconds: 0, ticker: null, connectTimer: null, minimized: false };
+    /* ================= 拨出电话：接通 / 未接听 / 对方挂断 ================= */
+    var outCall = { active: false, connected: false, seconds: 0, ticker: null, timer: null, minimized: false, done: false };
 
     function buildOutCall() {
         if ($("philosCallOut")) return;
@@ -242,7 +240,7 @@
                 '</div>' +
             '</div>';
         document.body.appendChild(wrap);
-        $("coutHang").addEventListener("click", hangOutCall);
+        $("coutHang").addEventListener("click", function () { hangOutCall(); });
         $("coutMin").addEventListener("click", function () {
             outCall.minimized = true;
             wrap.classList.remove("show");
@@ -252,7 +250,7 @@
                 pill.type = "button";
                 pill.id = "philosOutPill";
                 pill.className = "call-mini-pill";
-                pill.innerHTML = '<i></i><span>通话中</span>';
+                pill.innerHTML = '<i></i><span>正在呼叫</span>';
                 pill.addEventListener("click", function () {
                     outCall.minimized = false;
                     pill.classList.remove("show");
@@ -260,8 +258,7 @@
                 });
                 document.body.appendChild(pill);
             }
-            var lb = pill.querySelector("span");
-            if (lb) lb.textContent = outCall.connected ? ("通话中 " + fmtDur(outCall.seconds)) : "正在呼叫";
+            updateOutPill();
             pill.classList.add("show");
         });
     }
@@ -273,6 +270,28 @@
         if (lb) lb.textContent = outCall.connected ? ("通话中 " + fmtDur(outCall.seconds)) : "正在呼叫";
     }
 
+    function clearOutTimers() {
+        if (outCall.ticker) { clearInterval(outCall.ticker); outCall.ticker = null; }
+        if (outCall.timer) { clearTimeout(outCall.timer); outCall.timer = null; }
+    }
+
+    function closeOutOverlay() {
+        var wrap = $("philosCallOut");
+        if (wrap) wrap.classList.remove("show");
+        var pill = $("philosOutPill");
+        if (pill) pill.classList.remove("show");
+        outCall.active = false;
+        outCall.connected = false;
+        outCall.seconds = 0;
+        outCall.minimized = false;
+        outCall.done = false;
+    }
+
+    function recordCall(text) {
+        if (!text) return;
+        if (window.philosPushMessage) window.philosPushMessage({ type: "call", text: text, time: Date.now() });
+    }
+
     function startOutCall() {
         injectStyles();
         buildOutCall();
@@ -281,6 +300,7 @@
         outCall.connected = false;
         outCall.seconds = 0;
         outCall.minimized = false;
+        outCall.done = false;
 
         var av = $("coutAvatar");
         var src = taAvatarSrc();
@@ -292,41 +312,55 @@
         if (nm) nm.textContent = systemName();
         var st = $("coutState");
         if (st) st.textContent = "正在呼叫…";
+
+        /* 三种结果：接通 62% / 未接听 23% / 对方挂断 15% */
+        var r = Math.random();
+        var outcome = r < 0.62 ? "connect" : (r < 0.85 ? "noAnswer" : "rejected");
+        var wait;
+        if (outcome === "connect") wait = 1000 + Math.random() * 9000;      /* 10 秒内任意时刻接通 */
+        else if (outcome === "noAnswer") wait = 9000 + Math.random() * 13000;
+        else wait = 2500 + Math.random() * 4500;
+
         $("philosCallOut").classList.add("show");
 
-        var wait = 2200 + Math.random() * 3200;
-        outCall.connectTimer = setTimeout(function () {
-            if (!outCall.active) return;
-            outCall.connected = true;
-            var s = $("coutState");
-            if (s) s.textContent = "通话中 00:00";
-            updateOutPill();
-            outCall.ticker = setInterval(function () {
-                outCall.seconds++;
-                var el = $("coutState");
-                if (el) el.textContent = "通话中 " + fmtDur(outCall.seconds);
+        outCall.timer = setTimeout(function () {
+            if (!outCall.active || outCall.done) return;
+
+            if (outcome === "connect") {
+                outCall.connected = true;
+                var s = $("coutState");
+                if (s) s.textContent = "通话中 00:00";
                 updateOutPill();
-            }, 1000);
+                var pill = $("philosOutPill");
+                if (pill && outCall.minimized) pill.classList.add("show");
+                outCall.ticker = setInterval(function () {
+                    outCall.seconds++;
+                    var el = $("coutState");
+                    if (el) el.textContent = "通话中 " + fmtDur(outCall.seconds);
+                    updateOutPill();
+                }, 1000);
+                return;
+            }
+
+            outCall.done = true;
+            clearOutTimers();
+            var stt = $("coutState");
+            if (stt) stt.textContent = outcome === "noAnswer" ? "未接听" : "对方已挂断";
+            recordCall(outcome === "noAnswer" ? "未接听" : "对方已挂断");
+            setTimeout(function () { if (outCall.done) closeOutOverlay(); }, 1300);
         }, wait);
     }
 
     function hangOutCall() {
         if (!outCall.active) return;
-        if (outCall.ticker) clearInterval(outCall.ticker);
-        if (outCall.connectTimer) clearTimeout(outCall.connectTimer);
-        var text = outCall.connected ? ("语音通话 时长 " + fmtDur(outCall.seconds)) : "已取消";
-        if (window.philosPushMessage) window.philosPushMessage({ type: "call", text: text, time: Date.now() });
-        var wrap = $("philosCallOut");
-        if (wrap) wrap.classList.remove("show");
-        var pill = $("philosOutPill");
-        if (pill) pill.classList.remove("show");
-        outCall.active = false;
-        outCall.connected = false;
-        outCall.seconds = 0;
-        outCall.minimized = false;
+        if (outCall.done) { closeOutOverlay(); return; }
+        outCall.done = true;
+        clearOutTimers();
+        if (outCall.connected) recordCall("语音通话 时长 " + fmtDur(outCall.seconds));
+        else recordCall("已取消");
+        closeOutOverlay();
     }
 
-    /* 接管聊天页的通话键：用我们自己的通话界面，只有你能挂断 */
     document.addEventListener("click", function (e) {
         var t = e.target;
         if (!t || !t.closest) return;
@@ -644,7 +678,6 @@
             "html[data-bubble-preset=\"small\"] .msg-row .msg-bubble,html[data-bubble-preset=\"small\"] .pv-row .pv-bubble{border-radius:calc(var(--bubble-radius,16px) * 0.6) !important;" +
                 "padding-top:calc(var(--bubble-pad-y,10px) * 0.7) !important;padding-bottom:calc(var(--bubble-pad-y,10px) * 0.7) !important;}" +
             "html[data-bubble-preset=\"square\"] .msg-row .msg-bubble,html[data-bubble-preset=\"square\"] .pv-row .pv-bubble{border-radius:5px !important;}" +
-            /* 通话小窗永远在最上层（包括微信、图库等全屏页面之上） */
             ".call-pill,.call-mini-pill{position:fixed !important;z-index:700 !important;}" +
             ".call-pill{right:16px !important;bottom:calc(env(safe-area-inset-bottom) + 92px) !important;}" +
             ".call-mini-pill{right:16px !important;bottom:calc(env(safe-area-inset-bottom) + 150px) !important;}" +
@@ -799,10 +832,7 @@
             }, 500);
         });
 
-        avatarEl.addEventListener("click", function () {
-            close();
-            startOutCall();
-        });
+        avatarEl.addEventListener("click", function () { close(); startOutCall(); });
     }
 
     function open() {
